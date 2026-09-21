@@ -1,0 +1,2196 @@
+openapi: 3.1.2
+info:
+  title: Spring AWS Portfolio API
+  version: 0.2.0
+  summary: MVP HTTP contract for the Spring AWS Portfolio project.
+  description: |
+    Design-first API contract for the first-party React + Spring Boot application.
+
+    Authentication uses a server-side Spring Session persisted through JDBC. Production
+    uses an HttpOnly/Secure `__Host-SESSION` cookie. Unsafe requests require the CSRF
+    token returned by `GET /api/v1/auth/csrf` in the `X-CSRF-TOKEN` header.
+
+    Assessment scoring metadata (`dimension`, keyed pole, scoring/ambiguity rules and
+    DefinitionVersion internals) is never exposed through the public questionnaire DTOs.
+servers:
+  - url: /
+tags:
+  - name: Authentication
+  - name: Users
+  - name: Assessments
+  - name: Assessment Sessions
+  - name: Clarifications
+  - name: Groups
+  - name: Join Requests
+  - name: Assessment Sharing
+security:
+  - SessionCookie: []
+paths:
+  /api/v1/auth/csrf:
+    get:
+      tags: [Authentication]
+      operationId: getCsrfToken
+      summary: Get a CSRF token for the current browser session.
+      description: |
+        May be called by anonymous or authenticated clients. The token is sent in
+        `X-CSRF-TOKEN` on subsequent unsafe requests. The server may establish an
+        anonymous HTTP session while issuing the token.
+      security: []
+      responses:
+        '200':
+          description: CSRF token issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfTokenResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/register:
+    post:
+      tags: [Authentication]
+      operationId: registerUser
+      summary: Register a new account.
+      description: Registration does not automatically authenticate the new account.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+      responses:
+        '201':
+          description: Account created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      summary: Authenticate using email and password.
+      description: |
+        On success, the server persists the SecurityContext in the HTTP session and
+        rotates the session identifier. Production sends an HttpOnly/Secure
+        `__Host-SESSION` cookie. Unknown email and wrong password both return the same
+        public `INVALID_CREDENTIALS` error.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication succeeded.
+          headers:
+            Set-Cookie:
+              description: Production sets/rotates the HttpOnly session cookie.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      operationId: logout
+      summary: Invalidate the current authenticated session.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Session invalidated and authentication cleared.
+          headers:
+            Set-Cookie:
+              description: The server expires the session cookie.
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/users/me:
+    get:
+      tags: [Users]
+      operationId: getCurrentUser
+      summary: Get the currently authenticated user.
+      responses:
+        '200':
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessments:
+    get:
+      tags: [Assessments]
+      operationId: listAvailableAssessments
+      summary: List assessment types currently available to start.
+      responses:
+        '200':
+          description: Available assessment catalog.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentCatalogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessments/{assessmentCode}:
+    parameters:
+      - $ref: '#/components/parameters/AssessmentCodePath'
+    get:
+      tags: [Assessments]
+      operationId: getAssessmentDetails
+      summary: Get public rendering data for the currently available assessment version.
+      description: |
+        Returns question prompts/order and answer-scale labels needed by the SPA.
+        It deliberately does not expose scoring metadata such as dimension assignment,
+        keyed pole, scoring rules, ambiguity rules or finalization rules.
+      responses:
+        '200':
+          description: Assessment details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentDetailsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessments/{assessmentCode}/sessions:
+    parameters:
+      - $ref: '#/components/parameters/AssessmentCodePath'
+    post:
+      tags: [Assessment Sessions]
+      operationId: startAssessment
+      summary: Create or resume the active attempt for an assessment.
+      description: |
+        If no active Session exists, creates one using the unique AVAILABLE
+        DefinitionVersion and returns 201. If an active Session already exists, returns
+        it with 200 without abandoning progress.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Existing active Session returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartAssessmentResponse'
+        '201':
+          description: New active Session created.
+          headers:
+            Location:
+              description: URL of the new AssessmentSession resource.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartAssessmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessments/{assessmentCode}/sessions/active:
+    parameters:
+      - $ref: '#/components/parameters/AssessmentCodePath'
+    get:
+      tags: [Assessment Sessions]
+      operationId: getActiveAssessmentSession
+      summary: Get the authenticated user's active Session for an assessment.
+      responses:
+        '200':
+          description: Active Session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions:
+    get:
+      tags: [Assessment Sessions]
+      operationId: listAssessmentHistory
+      summary: List the authenticated user's completed assessment history.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: MVP history only exposes completed assessments.
+          schema:
+            type: string
+            enum: [COMPLETED]
+            default: COMPLETED
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/SizeQuery'
+      responses:
+        '200':
+          description: Assessment history page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentHistoryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+    get:
+      tags: [Assessment Sessions]
+      operationId: getAssessmentSession
+      summary: Get an owned AssessmentSession and its current workflow state.
+      description: A guessed Session owned by another user is intentionally reported as 404.
+      responses:
+        '200':
+          description: AssessmentSession detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Assessment Sessions]
+      operationId: deleteHistoricalAssessment
+      summary: Delete an owned historical assessment.
+      description: Ends active Group shares referencing the Session and hard-deletes owned assessment content atomically.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Historical Assessment deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/restart:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+    post:
+      tags: [Assessment Sessions]
+      operationId: restartAssessmentSession
+      summary: Abandon this identified active attempt and create its replacement atomically.
+      description: |
+        Allowed only from active non-terminal states. Retry against an already-abandoned
+        old Session must not abandon the replacement; the client recovers by reading the
+        active Session for the assessment code.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '201':
+          description: Replacement Session created.
+          headers:
+            Location:
+              description: URL of the replacement AssessmentSession.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestartAssessmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/questionnaire:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+    get:
+      tags: [Assessment Sessions]
+      operationId: getSessionQuestionnaire
+      summary: Get the questionnaire bound to this Session and its current response snapshot.
+      description: |
+        Rendering data comes from the exact AssessmentDefinitionVersion already bound to
+        the Session. It never substitutes the currently AVAILABLE catalog version. Scoring
+        metadata remains server-side.
+      responses:
+        '200':
+          description: Session-bound questionnaire and current response snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionQuestionnaireResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Assessment Sessions]
+      operationId: saveQuestionnaireProgress
+      summary: Replace the current questionnaire draft snapshot.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionnaireSnapshotRequest'
+      responses:
+        '200':
+          description: Draft snapshot saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/questionnaire/submission:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+    post:
+      tags: [Assessment Sessions]
+      operationId: submitQuestionnaire
+      summary: Submit the final questionnaire snapshot and run deterministic post-processing atomically.
+      description: |
+        If the first submission committed but the HTTP response was lost, a retry returns
+        `409 ASSESSMENT_ALREADY_SUBMITTED`; the client then GETs this Session to recover
+        authoritative state. No second scoring run occurs.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionnaireSnapshotRequest'
+      responses:
+        '200':
+          description: Submission accepted and deterministic post-processing committed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/start:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+      - $ref: '#/components/parameters/DimensionCodePath'
+    post:
+      tags: [Clarifications]
+      operationId: startClarification
+      summary: Start clarification for one eligible ambiguous dimension.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Clarification entered active interaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClarificationInteractionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/messages:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+      - $ref: '#/components/parameters/DimensionCodePath'
+    post:
+      tags: [Clarifications]
+      operationId: continueClarification
+      summary: Continue the current clarification interaction with a user message.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClarificationMessageRequest'
+      responses:
+        '200':
+          description: Clarification interaction advanced or produced an accepted result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClarificationInteractionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/retry:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+      - $ref: '#/components/parameters/DimensionCodePath'
+    post:
+      tags: [Clarifications]
+      operationId: retryClarification
+      summary: Retry a `FAILED_RETRYABLE` clarification lifecycle.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Clarification retry started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClarificationInteractionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/skip:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+      - $ref: '#/components/parameters/DimensionCodePath'
+    post:
+      tags: [Clarifications]
+      operationId: skipClarification
+      summary: Skip one eligible clarification and re-evaluate finalization readiness.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Clarification skipped and Session state updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/clarifications/skip-remaining:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+    post:
+      tags: [Clarifications]
+      operationId: skipRemainingClarifications
+      summary: Skip all remaining eligible clarifications.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: Remaining clarifications skipped and Session state updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+      - $ref: '#/components/parameters/DimensionCodePath'
+    put:
+      tags: [Assessment Sessions]
+      operationId: submitDimensionTieBreak
+      summary: Record the user's explicit final pole selection for a required exact tie.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TieBreakRequest'
+      responses:
+        '200':
+          description: Tie-break fact accepted and Session state updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups:
+    post:
+      tags: [Groups]
+      operationId: createGroup
+      summary: Create a Group; creator becomes the first Admin and active Member.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Group created.
+          headers:
+            Location:
+              description: URL of the created Group.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags: [Groups]
+      operationId: getMyGroups
+      summary: List Groups in which the authenticated user has an ACTIVE Membership.
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/SizeQuery'
+      responses:
+        '200':
+          description: My Groups page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyGroupsPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    get:
+      tags: [Groups]
+      operationId: getGroup
+      summary: Get a Group visible to the authenticated user.
+      responses:
+        '200':
+          description: Group detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/members:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    get:
+      tags: [Groups]
+      operationId: getGroupMembers
+      summary: List active members of a visible Group.
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/Size50Query'
+      responses:
+        '200':
+          description: Active Group members.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembersPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/members/me:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    delete:
+      tags: [Groups]
+      operationId: leaveGroup
+      summary: End the authenticated user's current active Membership.
+      description: Current Admin cannot leave; they must transfer Admin or disband the Group.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Membership ended and any active Share ended.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/admin:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    put:
+      tags: [Groups]
+      operationId: transferGroupAdmin
+      summary: Transfer Admin authority to another active Membership.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferAdminRequest'
+      responses:
+        '200':
+          description: Admin transferred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/disband:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    post:
+      tags: [Groups]
+      operationId: disbandGroup
+      summary: Irreversibly disband the Group.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: Group disbanded; memberships, pending requests and active shares transitioned consistently.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/group-join-requests:
+    post:
+      tags: [Join Requests]
+      operationId: requestToJoinGroup
+      summary: Submit a JoinRequest using a GroupCode.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJoinRequestRequest'
+      responses:
+        '201':
+          description: Pending JoinRequest created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinRequestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags: [Join Requests]
+      operationId: getMyJoinRequests
+      summary: List the authenticated user's JoinRequest history.
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/SizeQuery'
+      responses:
+        '200':
+          description: My JoinRequests page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinRequestsPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/join-requests:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    get:
+      tags: [Join Requests]
+      operationId: getPendingJoinRequests
+      summary: List pending JoinRequests for a Group; current Admin only.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDING]
+            default: PENDING
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/SizeQuery'
+      responses:
+        '200':
+          description: Pending JoinRequests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinRequestsPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/join-requests/{joinRequestId}/approval:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+      - $ref: '#/components/parameters/JoinRequestIdPath'
+    post:
+      tags: [Join Requests]
+      operationId: approveJoinRequest
+      summary: Approve a pending JoinRequest and create a new active Membership atomically.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: JoinRequest approved and Membership created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproveJoinRequestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/join-requests/{joinRequestId}/rejection:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+      - $ref: '#/components/parameters/JoinRequestIdPath'
+    post:
+      tags: [Join Requests]
+      operationId: rejectJoinRequest
+      summary: Reject a pending JoinRequest; current Admin only.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '200':
+          description: JoinRequest rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinRequestResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/members/me/assessment-share:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    post:
+      tags: [Assessment Sharing]
+      operationId: startAssessmentShare
+      summary: Start sharing one owned completed AssessmentSession with this Group.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentShareRequest'
+      responses:
+        '201':
+          description: Active Share created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentShareResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Assessment Sharing]
+      operationId: changeAssessmentShare
+      summary: Replace the currently shared result atomically.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentShareRequest'
+      responses:
+        '200':
+          description: Active Share replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentShareResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Assessment Sharing]
+      operationId: stopAssessmentShare
+      summary: Stop the authenticated member's active Share.
+      description: Retry-friendly; returns 204 even when no active Share remains.
+      parameters:
+        - $ref: '#/components/parameters/CsrfHeader'
+      responses:
+        '204':
+          description: No active Share remains for the current Membership.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/shared-assessments:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+    get:
+      tags: [Assessment Sharing]
+      operationId: getGroupSharedAssessments
+      summary: List active members' currently shared assessment results.
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/Size50Query'
+      responses:
+        '200':
+          description: Visible shared result page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedAssessmentsPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/groups/{groupId}/members/{membershipId}/shared-assessment:
+    parameters:
+      - $ref: '#/components/parameters/GroupIdPath'
+      - $ref: '#/components/parameters/MembershipIdPath'
+    get:
+      tags: [Assessment Sharing]
+      operationId: getMemberSharedAssessment
+      summary: Get one active member's currently shared assessment result.
+      responses:
+        '200':
+          description: Shared result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedAssessmentItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-SESSION
+      description: |
+        Production server-side session cookie. It is HttpOnly, Secure, SameSite=Lax,
+        Path=/ and has no Domain attribute. The local development profile may use the
+        non-Secure name `SESSION`; the production contract is shown here.
+
+  parameters:
+    CsrfHeader:
+      name: X-CSRF-TOKEN
+      in: header
+      required: true
+      description: Token obtained from `GET /api/v1/auth/csrf`; required for unsafe requests.
+      schema:
+        type: string
+        minLength: 1
+    AssessmentCodePath:
+      name: assessmentCode
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    SessionIdPath:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    GroupIdPath:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    JoinRequestIdPath:
+      name: joinRequestId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    MembershipIdPath:
+      name: membershipId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    DimensionCodePath:
+      name: dimensionCode
+      in: path
+      required: true
+      description: Definition-driven dimension code; not restricted to the current personality assessment's four codes at transport level.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    SizeQuery:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Size50Query:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+
+  responses:
+    BadRequest:
+      description: Malformed JSON, missing/invalid transport fields, or query/path validation failure.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Unauthorized:
+      description: Authentication is missing/expired/invalid, or credentials are invalid for login.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Forbidden:
+      description: Authenticated/anonymous request is forbidden, including CSRF validation failure where applicable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Resource does not exist or is intentionally hidden from this actor.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Conflict:
+      description: Current business/resource state conflicts with the requested action.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    UnprocessableContent:
+      description: Structurally valid input has invalid business semantics.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ServiceUnavailable:
+      description: Temporary external dependency failure, such as an AI clarification provider failure.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    InternalServerError:
+      description: Unexpected server failure.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+
+    Instant:
+      type: string
+      format: date-time
+
+    CsrfTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [headerName, token]
+      properties:
+        headerName:
+          type: string
+          const: X-CSRF-TOKEN
+        token:
+          type: string
+          minLength: 1
+
+    RegisterUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, displayName]
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 15
+          maxLength: 128
+          writeOnly: true
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+          writeOnly: true
+
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+
+    CurrentUserResponse:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+
+    AssessmentCatalogResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentSummary'
+
+    AssessmentSummary:
+      type: object
+      additionalProperties: false
+      required: [code, name, availableVersion, questionCount]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        availableVersion:
+          type: string
+        questionCount:
+          type: integer
+          minimum: 1
+
+    AssessmentDetailsResponse:
+      type: object
+      additionalProperties: false
+      required: [code, name, version, questionCount, questionnaire]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        questionCount:
+          type: integer
+          minimum: 1
+        questionnaire:
+          $ref: '#/components/schemas/PublicQuestionnaireDefinition'
+
+    PublicQuestionnaireDefinition:
+      type: object
+      additionalProperties: false
+      required: [questions, answerScale]
+      description: Rendering-only questionnaire data; scoring metadata is intentionally omitted.
+      properties:
+        questions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PublicQuestion'
+        answerScale:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/AnswerScaleOption'
+
+    PublicQuestion:
+      type: object
+      additionalProperties: false
+      required: [questionId, position, prompt]
+      properties:
+        questionId:
+          type: string
+          minLength: 1
+        position:
+          type: integer
+          minimum: 1
+        prompt:
+          type: string
+          minLength: 1
+
+    AnswerScaleOption:
+      type: object
+      additionalProperties: false
+      required: [value, label]
+      properties:
+        value:
+          type: integer
+        label:
+          type: string
+
+
+    SessionQuestionnaireResponse:
+      type: object
+      additionalProperties: false
+      required: [assessment, questionnaire, response]
+      properties:
+        assessment:
+          $ref: '#/components/schemas/BoundAssessmentRef'
+        questionnaire:
+          $ref: '#/components/schemas/PublicQuestionnaireDefinition'
+        response:
+          $ref: '#/components/schemas/QuestionnaireState'
+
+    StartAssessmentResponse:
+      type: object
+      additionalProperties: false
+      required: [created, session]
+      properties:
+        created:
+          type: boolean
+        session:
+          $ref: '#/components/schemas/AssessmentSessionResponse'
+
+    RestartAssessmentResponse:
+      type: object
+      additionalProperties: false
+      required: [abandonedSessionId, session]
+      properties:
+        abandonedSessionId:
+          $ref: '#/components/schemas/Uuid'
+        session:
+          $ref: '#/components/schemas/AssessmentSessionResponse'
+
+    QuestionnaireSnapshotRequest:
+      type: object
+      additionalProperties: false
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          description: |
+            Complete current snapshot. Completeness, duplicate question IDs and allowed
+            answer values are validated against the Session's bound DefinitionVersion.
+          items:
+            $ref: '#/components/schemas/QuestionAnswer'
+
+    QuestionAnswer:
+      type: object
+      additionalProperties: false
+      required: [questionId, value]
+      properties:
+        questionId:
+          type: string
+          minLength: 1
+        value:
+          type: integer
+          description: Definition-driven canonical answer value; current personality v1 uses 1..5.
+
+    AssessmentSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - assessment
+        - status
+        - questionnaire
+        - initialResult
+        - clarifications
+        - tieBreaks
+        - finalResult
+        - workflow
+        - createdAt
+        - completedAt
+        - abandonedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        assessment:
+          $ref: '#/components/schemas/BoundAssessmentRef'
+        status:
+          $ref: '#/components/schemas/AssessmentSessionStatus'
+        questionnaire:
+          $ref: '#/components/schemas/QuestionnaireState'
+        initialResult:
+          anyOf:
+            - $ref: '#/components/schemas/InitialAssessmentResult'
+            - type: 'null'
+        clarifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClarificationState'
+        tieBreaks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TieBreakState'
+        finalResult:
+          anyOf:
+            - $ref: '#/components/schemas/FinalAssessmentResult'
+            - type: 'null'
+        workflow:
+          $ref: '#/components/schemas/AssessmentWorkflow'
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+        completedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        abandonedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+
+    BoundAssessmentRef:
+      type: object
+      additionalProperties: false
+      required: [code, version]
+      properties:
+        code:
+          type: string
+        version:
+          type: string
+
+    AssessmentSessionStatus:
+      type: string
+      enum:
+        - IN_PROGRESS
+        - AWAITING_CLARIFICATION
+        - CLARIFICATION_IN_PROGRESS
+        - COMPLETED
+        - ABANDONED
+
+    QuestionnaireState:
+      type: object
+      additionalProperties: false
+      required: [answers, submitted, submittedAt]
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionAnswer'
+        submitted:
+          type: boolean
+        submittedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+
+    InitialAssessmentResult:
+      type: object
+      additionalProperties: false
+      required: [dimensions]
+      properties:
+        dimensions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/InitialDimensionResult'
+
+    InitialDimensionResult:
+      type: object
+      additionalProperties: false
+      required: [dimensionCode, rawScore, ambiguous, evidence]
+      properties:
+        dimensionCode:
+          type: string
+        rawScore:
+          type: integer
+        questionnairePreference:
+          type: [string, 'null']
+          description: Null for an exact tie.
+        ambiguous:
+          type: boolean
+        evidence:
+          $ref: '#/components/schemas/QuestionnaireEvidence'
+
+    QuestionnaireEvidence:
+      type: object
+      additionalProperties: false
+      required: [poleA, poleAPercentage, poleB, poleBPercentage]
+      properties:
+        poleA:
+          type: string
+        poleAPercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        poleB:
+          type: string
+        poleBPercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    ClarificationState:
+      type: object
+      additionalProperties: false
+      required: [dimensionCode, status, result, startedAt, acceptedAt]
+      properties:
+        dimensionCode:
+          type: string
+        status:
+          $ref: '#/components/schemas/ClarificationStatus'
+        result:
+          anyOf:
+            - $ref: '#/components/schemas/ClarificationResult'
+            - type: 'null'
+        startedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        acceptedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+
+    ClarificationStatus:
+      type: string
+      enum:
+        - PENDING
+        - IN_PROGRESS
+        - CLARIFIED
+        - SKIPPED
+        - FAILED_RETRYABLE
+
+    ClarificationResult:
+      oneOf:
+        - $ref: '#/components/schemas/ResolvedClarificationResult'
+        - $ref: '#/components/schemas/UnclearClarificationResult'
+
+    ResolvedClarificationResult:
+      type: object
+      additionalProperties: false
+      required: [resolution, suggestedPole, confidence]
+      properties:
+        resolution:
+          type: string
+          const: RESOLVED
+        suggestedPole:
+          type: string
+          minLength: 1
+        confidence:
+          type: string
+          description: Provider/domain confidence label retained as accepted business evidence.
+        reasoningSummary:
+          type: [string, 'null']
+          description: Optional concise product/audit summary; never model private chain-of-thought.
+
+    UnclearClarificationResult:
+      type: object
+      additionalProperties: false
+      required: [resolution, suggestedPole, confidence]
+      properties:
+        resolution:
+          type: string
+          const: UNCLEAR
+        suggestedPole:
+          type: 'null'
+          description: UNCLEAR is an accepted business result and therefore has no selected pole.
+        confidence:
+          type: string
+          description: Provider/domain confidence label retained as accepted business evidence.
+        reasoningSummary:
+          type: [string, 'null']
+          description: Optional concise product/audit summary; never model private chain-of-thought.
+
+    TieBreakState:
+      type: object
+      additionalProperties: false
+      required: [dimensionCode, selectedPole, decidedAt]
+      properties:
+        dimensionCode:
+          type: string
+        selectedPole:
+          type: string
+        decidedAt:
+          $ref: '#/components/schemas/Instant'
+
+    FinalAssessmentResult:
+      type: object
+      additionalProperties: false
+      required: [finalType, dimensions]
+      properties:
+        finalType:
+          type: string
+          minLength: 1
+        dimensions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/FinalDimensionConclusion'
+
+    FinalDimensionConclusion:
+      type: object
+      additionalProperties: false
+      required: [dimensionCode, finalPreference, source, overrodeBaseline]
+      properties:
+        dimensionCode:
+          type: string
+        questionnairePreference:
+          type: [string, 'null']
+        finalPreference:
+          type: string
+        source:
+          $ref: '#/components/schemas/FinalDecisionSource'
+        overrodeBaseline:
+          type: boolean
+
+    FinalDecisionSource:
+      type: string
+      enum:
+        - QUESTIONNAIRE
+        - QUESTIONNAIRE_CONFIRMED_BY_CLARIFICATION
+        - AI_CLARIFICATION
+        - QUESTIONNAIRE_FALLBACK
+        - USER_TIE_BREAK
+
+    AssessmentWorkflow:
+      type: object
+      additionalProperties: false
+      required:
+        - pendingClarificationDimensions
+        - retryableClarificationDimensions
+        - tieBreakRequiredDimensions
+        - completed
+      properties:
+        pendingClarificationDimensions:
+          type: array
+          items:
+            type: string
+        retryableClarificationDimensions:
+          type: array
+          items:
+            type: string
+        tieBreakRequiredDimensions:
+          type: array
+          items:
+            type: string
+        completed:
+          type: boolean
+
+    ClarificationMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+
+    ClarificationInteractionResponse:
+      type: object
+      additionalProperties: false
+      required: [sessionId, dimensionCode, clarificationStatus, assistantMessage, result, sessionStatus, workflow]
+      properties:
+        sessionId:
+          $ref: '#/components/schemas/Uuid'
+        dimensionCode:
+          type: string
+        clarificationStatus:
+          $ref: '#/components/schemas/ClarificationStatus'
+        assistantMessage:
+          type: [string, 'null']
+          description: Runtime interaction text; not durable Assessment history.
+        result:
+          anyOf:
+            - $ref: '#/components/schemas/ClarificationResult'
+            - type: 'null'
+        sessionStatus:
+          $ref: '#/components/schemas/AssessmentSessionStatus'
+        workflow:
+          $ref: '#/components/schemas/AssessmentWorkflow'
+
+    TieBreakRequest:
+      type: object
+      additionalProperties: false
+      required: [selectedPole]
+      properties:
+        selectedPole:
+          type: string
+          minLength: 1
+
+    AssessmentHistoryItem:
+      type: object
+      additionalProperties: false
+      required: [id, assessmentCode, assessmentName, version, finalType, completedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        assessmentCode:
+          type: string
+        assessmentName:
+          type: string
+        version:
+          type: string
+        finalType:
+          type: string
+        completedAt:
+          $ref: '#/components/schemas/Instant'
+
+    AssessmentHistoryPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AssessmentHistoryItem'
+
+    CreateGroupRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    GroupResponse:
+      type: object
+      additionalProperties: false
+      required: [id, name, groupCode, createdByUserId, adminUserId, status, createdAt, disbandedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        groupCode:
+          type: string
+          pattern: '^[0-9A-HJKMNP-TV-Z]{10}$'
+        createdByUserId:
+          $ref: '#/components/schemas/Uuid'
+        adminUserId:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          type: string
+          enum: [ACTIVE, DISBANDED]
+        createdAt:
+          $ref: '#/components/schemas/Instant'
+        disbandedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+
+    MyGroupItem:
+      type: object
+      additionalProperties: false
+      required: [groupId, name, membershipId, isAdmin, isCreator, joinedAt]
+      properties:
+        groupId:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        membershipId:
+          $ref: '#/components/schemas/Uuid'
+        isAdmin:
+          type: boolean
+        isCreator:
+          type: boolean
+        joinedAt:
+          $ref: '#/components/schemas/Instant'
+
+    MyGroupsPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/MyGroupItem'
+
+    GroupMemberItem:
+      type: object
+      additionalProperties: false
+      required: [membershipId, userId, displayName, isAdmin, isCreator, joinedAt]
+      properties:
+        membershipId:
+          $ref: '#/components/schemas/Uuid'
+        userId:
+          $ref: '#/components/schemas/Uuid'
+        displayName:
+          type: string
+        isAdmin:
+          type: boolean
+        isCreator:
+          type: boolean
+        joinedAt:
+          $ref: '#/components/schemas/Instant'
+
+    GroupMembersPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GroupMemberItem'
+
+    TransferAdminRequest:
+      type: object
+      additionalProperties: false
+      required: [newAdminMembershipId]
+      properties:
+        newAdminMembershipId:
+          $ref: '#/components/schemas/Uuid'
+
+    CreateJoinRequestRequest:
+      type: object
+      additionalProperties: false
+      required: [groupCode]
+      properties:
+        groupCode:
+          type: string
+          pattern: '^[0-9A-HJKMNP-TV-Z]{10}$'
+
+    JoinRequestResponse:
+      type: object
+      additionalProperties: false
+      required: [id, group, userId, displayName, status, requestedAt, expiresAt, resolvedAt, resolvedByUserId, rejectionReason]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        group:
+          $ref: '#/components/schemas/GroupSummaryRef'
+        userId:
+          $ref: '#/components/schemas/Uuid'
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        requestedAt:
+          $ref: '#/components/schemas/Instant'
+        expiresAt:
+          $ref: '#/components/schemas/Instant'
+        resolvedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        resolvedByUserId:
+          anyOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        rejectionReason:
+          type: [string, 'null']
+          enum: [ADMIN_REJECTED, TIMED_OUT, GROUP_DISBANDED, null]
+
+    GroupSummaryRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+
+    MembershipResponse:
+      type: object
+      additionalProperties: false
+      required: [id, groupId, userId, status, joinedAt, endedAt, endReason]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        groupId:
+          $ref: '#/components/schemas/Uuid'
+        userId:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          type: string
+          enum: [ACTIVE, ENDED]
+        joinedAt:
+          $ref: '#/components/schemas/Instant'
+        endedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        endReason:
+          type: [string, 'null']
+          enum: [LEFT, GROUP_DISBANDED, null]
+
+    ApproveJoinRequestResponse:
+      type: object
+      additionalProperties: false
+      required: [joinRequest, membership]
+      properties:
+        joinRequest:
+          $ref: '#/components/schemas/JoinRequestResponse'
+        membership:
+          $ref: '#/components/schemas/MembershipResponse'
+
+    JoinRequestsPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/JoinRequestResponse'
+
+    AssessmentShareRequest:
+      type: object
+      additionalProperties: false
+      required: [assessmentSessionId]
+      properties:
+        assessmentSessionId:
+          $ref: '#/components/schemas/Uuid'
+
+    AssessmentShareResponse:
+      type: object
+      additionalProperties: false
+      required: [shareId, membershipId, assessmentSessionId, status, sharedAt, endedAt, endReason]
+      properties:
+        shareId:
+          $ref: '#/components/schemas/Uuid'
+        membershipId:
+          $ref: '#/components/schemas/Uuid'
+        assessmentSessionId:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          type: string
+          enum: [ACTIVE, ENDED]
+        sharedAt:
+          $ref: '#/components/schemas/Instant'
+        endedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        endReason:
+          type: [string, 'null']
+          enum:
+            - STOPPED_BY_MEMBER
+            - RESULT_REPLACED
+            - MEMBERSHIP_ENDED
+            - GROUP_DISBANDED
+            - ASSESSMENT_DELETED
+            - null
+
+    SharedAssessmentItem:
+      type: object
+      additionalProperties: false
+      required: [membershipId, userId, displayName, assessment]
+      properties:
+        membershipId:
+          $ref: '#/components/schemas/Uuid'
+        userId:
+          $ref: '#/components/schemas/Uuid'
+        displayName:
+          type: string
+        assessment:
+          $ref: '#/components/schemas/ShareableAssessmentResult'
+
+    ShareableAssessmentResult:
+      type: object
+      additionalProperties: false
+      description: Narrow Group-facing result; never contains questionnaire answers or private AI interaction data.
+      required: [assessmentSessionId, assessmentCode, version, finalType, completedAt]
+      properties:
+        assessmentSessionId:
+          $ref: '#/components/schemas/Uuid'
+        assessmentCode:
+          type: string
+        version:
+          type: string
+        finalType:
+          type: string
+        completedAt:
+          $ref: '#/components/schemas/Instant'
+
+    SharedAssessmentsPage:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SharedAssessmentItem'
+
+    PageMetadata:
+      type: object
+      required: [page, size, totalElements, totalPages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          description: Stable problem type URI/reference, e.g. `/problems/join-request-already-pending`.
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: [string, 'null']
+        instance:
+          type: [string, 'null']
+        code:
+          type: string
+          pattern: '^[A-Z0-9_]+$'
+          description: Stable application error code for frontend branching.
+        traceId:
+          type: [string, 'null']
+        fieldErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+        retryAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+          description: Present for errors such as JOIN_REQUEST_COOLDOWN_ACTIVE when applicable.
+
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+        code:
+          type: string
+        message:
+          type: string

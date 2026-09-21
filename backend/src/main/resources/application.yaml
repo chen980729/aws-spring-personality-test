@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: spring-aws-portfolio-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/portfolio}
+    username: ${DB_USERNAME:portfolio}
+    password: ${DB_PASSWORD:portfolio}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
