@@ -16,9 +16,7 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.NONE
-)
+@SpringBootTest
 @Testcontainers
 class JpaUserAccountRepositoryAdapterIntegrationTest {
 

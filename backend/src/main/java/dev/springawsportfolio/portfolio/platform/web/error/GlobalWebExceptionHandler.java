@@ -1,5 +1,8 @@
 package dev.springawsportfolio.portfolio.platform.web.error;
 
+import dev.springawsportfolio.portfolio.platform.web.error.security.AccessDeniedApiException;
+import dev.springawsportfolio.portfolio.platform.web.error.security.AuthenticationRequiredException;
+import dev.springawsportfolio.portfolio.platform.web.error.security.CsrfValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -62,6 +65,66 @@ public class GlobalWebExceptionHandler {
         problem.setProperty(
                 "code",
                 "MALFORMED_JSON"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(AuthenticationRequiredException.class)
+    ProblemDetail handleAuthenticationRequired() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+
+        problem.setType(
+                URI.create("/problems/authentication-required")
+        );
+        problem.setTitle("Authentication required");
+        problem.setDetail(
+                "Authentication is required to access this resource."
+        );
+        problem.setProperty(
+                "code",
+                "AUTHENTICATION_REQUIRED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(CsrfValidationException.class)
+    ProblemDetail handleCsrfValidation() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+
+        problem.setType(
+                URI.create("/problems/csrf-validation-failed")
+        );
+        problem.setTitle("CSRF validation failed");
+        problem.setDetail(
+                "The CSRF token is missing or invalid."
+        );
+        problem.setProperty(
+                "code",
+                "CSRF_VALIDATION_FAILED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(AccessDeniedApiException.class)
+    ProblemDetail handleAccessDenied() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+
+        problem.setType(
+                URI.create("/problems/access-denied")
+        );
+        problem.setTitle("Access denied");
+        problem.setDetail(
+                "You do not have permission to access this resource."
+        );
+        problem.setProperty(
+                "code",
+                "ACCESS_DENIED"
         );
 
         return problem;

@@ -5,6 +5,7 @@ import dev.springawsportfolio.portfolio.identity.application.exception.InvalidEm
 import dev.springawsportfolio.portfolio.identity.application.exception.InvalidPasswordException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -67,6 +68,31 @@ public class IdentityExceptionHandler {
         problem.setProperty(
                 "code",
                 "INVALID_PASSWORD"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    ProblemDetail handleInvalidCredentials() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.UNAUTHORIZED
+                );
+
+        problem.setType(
+                URI.create("/problems/invalid-credentials")
+        );
+
+        problem.setTitle("Invalid credentials");
+
+        problem.setDetail(
+                "The email or password is invalid."
+        );
+
+        problem.setProperty(
+                "code",
+                "INVALID_CREDENTIALS"
         );
 
         return problem;
