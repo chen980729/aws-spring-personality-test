@@ -5,7 +5,10 @@ import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentS
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSession;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionId;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionStatus;
+import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.entity.AssessmentSessionJpaEntity;
+import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.mapper.AssessmentResultPersistenceMapper;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.mapper.AssessmentSessionPersistenceMapper;
+import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.mapper.QuestionnaireResponsePersistenceMapper;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.repository.PostgresAssessmentSessionAtomicCreator;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.repository.SpringDataAssessmentSessionRepository;
 import dev.springawsportfolio.portfolio.identity.api.UserId;
@@ -38,14 +41,26 @@ public class JpaAssessmentSessionRepositoryAdapter
 
     private final AssessmentSessionPersistenceMapper mapper;
 
+    private final QuestionnaireResponsePersistenceMapper
+            questionnaireResponseMapper;
+
+    private final AssessmentResultPersistenceMapper
+            resultMapper;
+
     public JpaAssessmentSessionRepositoryAdapter(
             SpringDataAssessmentSessionRepository repository,
             PostgresAssessmentSessionAtomicCreator atomicCreator,
-            AssessmentSessionPersistenceMapper mapper
+            AssessmentSessionPersistenceMapper mapper,
+            QuestionnaireResponsePersistenceMapper questionnaireResponseMapper,
+            AssessmentResultPersistenceMapper resultMapper
     ) {
         this.repository = repository;
         this.atomicCreator = atomicCreator;
         this.mapper = mapper;
+        this.questionnaireResponseMapper =
+                questionnaireResponseMapper;
+        this.resultMapper =
+                resultMapper;
     }
 
     @Override
@@ -88,6 +103,44 @@ public class JpaAssessmentSessionRepositoryAdapter
 
         return atomicCreator.tryCreate(
                 session
+        );
+    }
+
+    @Override
+    public void update(
+            AssessmentSession session
+    ) {
+        AssessmentSessionJpaEntity entity =
+                repository
+                        .findByIdAndUserId(
+                                session.id().value(),
+                                session.ownerUserId().value()
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "AssessmentSession disappeared "
+                                                        + "during update: "
+                                                        + session
+                                                        .id()
+                                                        .value()
+                                        )
+                        );
+
+        entity.updateFrom(
+                session,
+
+                questionnaireResponseMapper.toJsonNode(
+                        session.questionnaireResponse()
+                ),
+
+                resultMapper.toInitialJsonNode(
+                        session.initialResult()
+                ),
+
+                resultMapper.toFinalJsonNode(
+                        session.finalResult()
+                )
         );
     }
 }

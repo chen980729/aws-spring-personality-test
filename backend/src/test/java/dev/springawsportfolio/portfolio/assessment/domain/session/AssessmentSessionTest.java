@@ -2,7 +2,14 @@ package dev.springawsportfolio.portfolio.assessment.domain.session;
 
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionId;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.PoleCode;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.QuestionId;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalAssessmentResult;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalDecisionSource;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalDimensionConclusion;
+import dev.springawsportfolio.portfolio.assessment.domain.result.InitialAssessmentResult;
+import dev.springawsportfolio.portfolio.assessment.domain.result.InitialDimensionResult;
 import dev.springawsportfolio.portfolio.assessment.domain.session.questionnaire.Answer;
 import dev.springawsportfolio.portfolio.assessment.domain.session.questionnaire.QuestionnaireResponse;
 import dev.springawsportfolio.portfolio.identity.api.UserId;
@@ -27,6 +34,12 @@ class AssessmentSessionTest {
 
     private static final Instant SUBMITTED_AT =
             CREATED_AT.plusSeconds(30);
+
+    private static final DimensionCode DIMENSION =
+            new DimensionCode("XY");
+
+    private static final PoleCode POLE_X =
+            new PoleCode("X");
 
     @Test
     void startsInProgressBoundToOwnerAndDefinitionVersion() {
@@ -78,11 +91,6 @@ class AssessmentSessionTest {
                 session.status()
         );
 
-        assertEquals(
-                CREATED_AT,
-                session.createdAt()
-        );
-
         assertTrue(
                 session.isActive()
         );
@@ -99,32 +107,15 @@ class AssessmentSessionTest {
         );
 
         assertNull(
-                session.questionnaireSubmittedAt()
+                session.initialResult()
+        );
+
+        assertNull(
+                session.finalResult()
         );
 
         assertNull(
                 session.completedAt()
-        );
-
-        assertNull(
-                session.abandonedAt()
-        );
-    }
-
-    @Test
-    void newSessionStartsWithEmptyQuestionnaireResponse() {
-        AssessmentSession session =
-                newInProgressSession();
-
-        assertTrue(
-                session
-                        .questionnaireResponse()
-                        .answers()
-                        .isEmpty()
-        );
-
-        assertFalse(
-                session.isQuestionnaireSubmitted()
         );
     }
 
@@ -134,14 +125,7 @@ class AssessmentSessionTest {
                 newInProgressSession();
 
         QuestionnaireResponse response =
-                new QuestionnaireResponse(
-                        List.of(
-                                new Answer(
-                                        new QuestionId("Q1"),
-                                        5
-                                )
-                        )
-                );
+                response();
 
         session.replaceQuestionnaireResponse(
                 response
@@ -154,37 +138,276 @@ class AssessmentSessionTest {
     }
 
     @Test
-    void rejectsReplacingQuestionnaireResponseAfterSubmission() {
+    void submitsAmbiguousResultAndAwaitsClarification() {
         AssessmentSession session =
-                restoredSession(
-                        AssessmentSessionStatus
-                                .AWAITING_CLARIFICATION,
-                        SUBMITTED_AT,
+                newInProgressSession();
+
+        QuestionnaireResponse finalResponse =
+                response();
+
+        InitialAssessmentResult initialResult =
+                ambiguousInitialResult();
+
+        AssessmentSubmissionOutcome outcome =
+                session.submit(
+                        finalResponse,
+                        initialResult,
                         null,
-                        null
+                        SUBMITTED_AT
                 );
 
-        QuestionnaireResponse replacement =
-                new QuestionnaireResponse(
-                        List.of(
-                                new Answer(
-                                        new QuestionId("Q1"),
-                                        5
-                                )
-                        )
+        assertEquals(
+                AssessmentSessionStatus
+                        .AWAITING_CLARIFICATION,
+                session.status()
+        );
+
+        assertTrue(
+                session.isQuestionnaireSubmitted()
+        );
+
+        assertEquals(
+                SUBMITTED_AT,
+                session.questionnaireSubmittedAt()
+        );
+
+        assertEquals(
+                finalResponse,
+                session.questionnaireResponse()
+        );
+
+        assertEquals(
+                initialResult,
+                session.initialResult()
+        );
+
+        assertNull(
+                session.finalResult()
+        );
+
+        assertNull(
+                session.completedAt()
+        );
+
+        assertFalse(
+                outcome.completed()
+        );
+
+        assertEquals(
+                List.of(DIMENSION),
+                outcome.ambiguousDimensions()
+        );
+    }
+
+    @Test
+    void submitsClearResultAndCompletesImmediately() {
+        AssessmentSession session =
+                newInProgressSession();
+
+        QuestionnaireResponse finalResponse =
+                response();
+
+        InitialAssessmentResult initialResult =
+                clearInitialResult();
+
+        FinalAssessmentResult finalResult =
+                finalResult();
+
+        AssessmentSubmissionOutcome outcome =
+                session.submit(
+                        finalResponse,
+                        initialResult,
+                        finalResult,
+                        SUBMITTED_AT
                 );
+
+        assertEquals(
+                AssessmentSessionStatus.COMPLETED,
+                session.status()
+        );
+
+        assertFalse(
+                session.isActive()
+        );
+
+        assertEquals(
+                SUBMITTED_AT,
+                session.questionnaireSubmittedAt()
+        );
+
+        assertEquals(
+                initialResult,
+                session.initialResult()
+        );
+
+        assertEquals(
+                finalResult,
+                session.finalResult()
+        );
+
+        assertEquals(
+                SUBMITTED_AT,
+                session.completedAt()
+        );
+
+        assertTrue(
+                outcome.completed()
+        );
+
+        assertTrue(
+                outcome
+                        .ambiguousDimensions()
+                        .isEmpty()
+        );
+    }
+
+    @Test
+    void rejectsImmediateFinalResultWhenAmbiguityExists() {
+        AssessmentSession session =
+                newInProgressSession();
 
         assertThrows(
-                IllegalStateException.class,
+                IllegalArgumentException.class,
                 () ->
-                        session.replaceQuestionnaireResponse(
-                                replacement
+                        session.submit(
+                                response(),
+                                ambiguousInitialResult(),
+                                finalResult(),
+                                SUBMITTED_AT
                         )
         );
     }
 
     @Test
-    void abandonsActiveSession() {
+    void requiresImmediateFinalResultWhenNoAmbiguityExists() {
+        AssessmentSession session =
+                newInProgressSession();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        session.submit(
+                                response(),
+                                clearInitialResult(),
+                                null,
+                                SUBMITTED_AT
+                        )
+        );
+    }
+
+    @Test
+    void rejectsSecondSubmission() {
+        AssessmentSession session =
+                newInProgressSession();
+
+        session.submit(
+                response(),
+                clearInitialResult(),
+                finalResult(),
+                SUBMITTED_AT
+        );
+
+        assertThrows(
+                IllegalStateException.class,
+                () ->
+                        session.submit(
+                                response(),
+                                clearInitialResult(),
+                                finalResult(),
+                                SUBMITTED_AT.plusSeconds(1)
+                        )
+        );
+    }
+
+    @Test
+    void rejectsQuestionnaireReplacementAfterSubmission() {
+        AssessmentSession session =
+                newInProgressSession();
+
+        session.submit(
+                response(),
+                ambiguousInitialResult(),
+                null,
+                SUBMITTED_AT
+        );
+
+        assertThrows(
+                IllegalStateException.class,
+                () ->
+                        session.replaceQuestionnaireResponse(
+                                QuestionnaireResponse.empty()
+                        )
+        );
+    }
+
+    @Test
+    void rejectsSubmissionBeforeCreation() {
+        AssessmentSession session =
+                newInProgressSession();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        session.submit(
+                                response(),
+                                clearInitialResult(),
+                                finalResult(),
+                                CREATED_AT.minusSeconds(1)
+                        )
+        );
+    }
+
+    @Test
+    void rejectsCompletedRestoreWithoutFinalResult() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        AssessmentSession.restore(
+                                AssessmentSessionId.newId(),
+                                new UserId(
+                                        UUID.randomUUID()
+                                ),
+                                AssessmentDefinitionId.newId(),
+                                AssessmentDefinitionVersionId.newId(),
+                                AssessmentSessionStatus.COMPLETED,
+                                response(),
+                                SUBMITTED_AT,
+                                clearInitialResult(),
+                                null,
+                                CREATED_AT,
+                                SUBMITTED_AT,
+                                null
+                        )
+        );
+    }
+
+    @Test
+    void rejectsPostSubmissionActiveRestoreWithoutInitialResult() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        AssessmentSession.restore(
+                                AssessmentSessionId.newId(),
+                                new UserId(
+                                        UUID.randomUUID()
+                                ),
+                                AssessmentDefinitionId.newId(),
+                                AssessmentDefinitionVersionId.newId(),
+                                AssessmentSessionStatus
+                                        .AWAITING_CLARIFICATION,
+                                response(),
+                                SUBMITTED_AT,
+                                null,
+                                null,
+                                CREATED_AT,
+                                null,
+                                null
+                        )
+        );
+    }
+
+    @Test
+    void canAbandonInProgressSession() {
         AssessmentSession session =
                 newInProgressSession();
 
@@ -200,211 +423,71 @@ class AssessmentSessionTest {
                 session.status()
         );
 
-        assertFalse(
-                session.isActive()
-        );
-
         assertEquals(
                 abandonedAt,
                 session.abandonedAt()
         );
+    }
+
+    @Test
+    void canAbandonPostSubmissionSessionAndPreserveInitialEvidence() {
+        AssessmentSession session =
+                newInProgressSession();
+
+        InitialAssessmentResult initialResult =
+                ambiguousInitialResult();
+
+        session.submit(
+                response(),
+                initialResult,
+                null,
+                SUBMITTED_AT
+        );
+
+        Instant abandonedAt =
+                SUBMITTED_AT.plusSeconds(30);
+
+        session.abandon(
+                abandonedAt
+        );
+
+        assertEquals(
+                AssessmentSessionStatus.ABANDONED,
+                session.status()
+        );
+
+        assertEquals(
+                initialResult,
+                session.initialResult()
+        );
+
+        assertEquals(
+                SUBMITTED_AT,
+                session.questionnaireSubmittedAt()
+        );
 
         assertNull(
-                session.completedAt()
-        );
-    }
-
-    @Test
-    void canAbandonAwaitingClarificationSession() {
-        AssessmentSession session =
-                restoredSession(
-                        AssessmentSessionStatus
-                                .AWAITING_CLARIFICATION,
-                        SUBMITTED_AT,
-                        null,
-                        null
-                );
-
-        session.abandon(
-                CREATED_AT.plusSeconds(60)
-        );
-
-        assertEquals(
-                AssessmentSessionStatus.ABANDONED,
-                session.status()
-        );
-    }
-
-    @Test
-    void canAbandonClarificationInProgressSession() {
-        AssessmentSession session =
-                restoredSession(
-                        AssessmentSessionStatus
-                                .CLARIFICATION_IN_PROGRESS,
-                        SUBMITTED_AT,
-                        null,
-                        null
-                );
-
-        session.abandon(
-                CREATED_AT.plusSeconds(60)
-        );
-
-        assertEquals(
-                AssessmentSessionStatus.ABANDONED,
-                session.status()
+                session.finalResult()
         );
     }
 
     @Test
     void rejectsAbandoningCompletedSession() {
         AssessmentSession session =
-                restoredSession(
-                        AssessmentSessionStatus.COMPLETED,
-                        SUBMITTED_AT,
-                        CREATED_AT.plusSeconds(60),
-                        null
-                );
-
-        assertThrows(
-                IllegalStateException.class,
-                () ->
-                        session.abandon(
-                                CREATED_AT.plusSeconds(120)
-                        )
-        );
-    }
-
-    @Test
-    void rejectsAbandoningAlreadyAbandonedSession() {
-        AssessmentSession session =
-                restoredSession(
-                        AssessmentSessionStatus.ABANDONED,
-                        null,
-                        null,
-                        CREATED_AT.plusSeconds(60)
-                );
-
-        assertThrows(
-                IllegalStateException.class,
-                () ->
-                        session.abandon(
-                                CREATED_AT.plusSeconds(120)
-                        )
-        );
-    }
-
-    @Test
-    void rejectsAbandonmentBeforeCreation() {
-        AssessmentSession session =
                 newInProgressSession();
 
+        session.submit(
+                response(),
+                clearInitialResult(),
+                finalResult(),
+                SUBMITTED_AT
+        );
+
         assertThrows(
-                IllegalArgumentException.class,
+                IllegalStateException.class,
                 () ->
                         session.abandon(
-                                CREATED_AT.minusSeconds(1)
-                        )
-        );
-    }
-
-    @Test
-    void rejectsActiveSessionWithTerminalTimestamp() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        restoredSession(
-                                AssessmentSessionStatus.IN_PROGRESS,
-                                null,
-                                null,
-                                CREATED_AT.plusSeconds(60)
-                        )
-        );
-    }
-
-    @Test
-    void rejectsAwaitingClarificationSessionWithoutSubmission() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        restoredSession(
-                                AssessmentSessionStatus
-                                        .AWAITING_CLARIFICATION,
-                                null,
-                                null,
-                                null
-                        )
-        );
-    }
-
-    @Test
-    void rejectsClarificationInProgressSessionWithoutSubmission() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        restoredSession(
-                                AssessmentSessionStatus
-                                        .CLARIFICATION_IN_PROGRESS,
-                                null,
-                                null,
-                                null
-                        )
-        );
-    }
-
-    @Test
-    void rejectsCompletedSessionWithoutCompletedAt() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        restoredSession(
-                                AssessmentSessionStatus.COMPLETED,
-                                SUBMITTED_AT,
-                                null,
-                                null
-                        )
-        );
-    }
-
-    @Test
-    void rejectsCompletedSessionWithoutSubmission() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        restoredSession(
-                                AssessmentSessionStatus.COMPLETED,
-                                null,
-                                CREATED_AT.plusSeconds(60),
-                                null
-                        )
-        );
-    }
-
-    @Test
-    void rejectsAbandonedSessionWithoutAbandonedAt() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        restoredSession(
-                                AssessmentSessionStatus.ABANDONED,
-                                null,
-                                null,
-                                null
-                        )
-        );
-    }
-
-    @Test
-    void rejectsSubmissionTimestampBeforeCreation() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        restoredSession(
-                                AssessmentSessionStatus
-                                        .AWAITING_CLARIFICATION,
-                                CREATED_AT.minusSeconds(1),
-                                null,
-                                null
+                                SUBMITTED_AT.plusSeconds(30)
                         )
         );
     }
@@ -421,25 +504,53 @@ class AssessmentSessionTest {
         );
     }
 
-    private AssessmentSession restoredSession(
-            AssessmentSessionStatus status,
-            Instant submittedAt,
-            Instant completedAt,
-            Instant abandonedAt
-    ) {
-        return AssessmentSession.restore(
-                AssessmentSessionId.newId(),
-                new UserId(
-                        UUID.randomUUID()
-                ),
-                AssessmentDefinitionId.newId(),
-                AssessmentDefinitionVersionId.newId(),
-                status,
-                QuestionnaireResponse.empty(),
-                submittedAt,
-                CREATED_AT,
-                completedAt,
-                abandonedAt
+    private QuestionnaireResponse response() {
+        return new QuestionnaireResponse(
+                List.of(
+                        new Answer(
+                                new QuestionId("Q1"),
+                                5
+                        )
+                )
+        );
+    }
+
+    private InitialAssessmentResult clearInitialResult() {
+        return new InitialAssessmentResult(
+                List.of(
+                        new InitialDimensionResult(
+                                DIMENSION,
+                                3,
+                                POLE_X,
+                                false
+                        )
+                )
+        );
+    }
+
+    private InitialAssessmentResult ambiguousInitialResult() {
+        return new InitialAssessmentResult(
+                List.of(
+                        new InitialDimensionResult(
+                                DIMENSION,
+                                2,
+                                POLE_X,
+                                true
+                        )
+                )
+        );
+    }
+
+    private FinalAssessmentResult finalResult() {
+        return new FinalAssessmentResult(
+                "X",
+                List.of(
+                        new FinalDimensionConclusion(
+                                DIMENSION,
+                                POLE_X,
+                                FinalDecisionSource.QUESTIONNAIRE
+                        )
+                )
         );
     }
 }

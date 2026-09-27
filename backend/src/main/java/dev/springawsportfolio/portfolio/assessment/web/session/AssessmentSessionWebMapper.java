@@ -3,7 +3,8 @@ package dev.springawsportfolio.portfolio.assessment.web.session;
 import dev.springawsportfolio.portfolio.assessment.application.command.start.StartAssessmentResult;
 import dev.springawsportfolio.portfolio.assessment.application.query.session.GetSessionQuestionnaireResult;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
-import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionStatus;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalDimensionConclusion;
+import dev.springawsportfolio.portfolio.assessment.domain.result.InitialDimensionResult;
 import dev.springawsportfolio.portfolio.assessment.web.session.dto.AssessmentSessionResponse;
 import dev.springawsportfolio.portfolio.assessment.web.session.dto.SessionQuestionnaireResponse;
 import dev.springawsportfolio.portfolio.assessment.web.session.dto.StartAssessmentResponse;
@@ -28,24 +29,6 @@ public final class AssessmentSessionWebMapper {
     public AssessmentSessionResponse toSessionResponse(
             AssessmentSessionResult session
     ) {
-        /*
-         * Before Submit is implemented, the current application
-         * can truthfully construct the complete Session HTTP model
-         * only for a pre-submission IN_PROGRESS Session.
-         *
-         * Do not silently fabricate post-submission result data.
-         */
-        if (
-                session.status()
-                        != AssessmentSessionStatus.IN_PROGRESS
-        ) {
-            throw new IllegalStateException(
-                    "full HTTP session mapping "
-                            + "is not yet implemented for status: "
-                            + session.status()
-            );
-        }
-
         var answers =
                 session
                         .answers()
@@ -77,25 +60,254 @@ public final class AssessmentSessionWebMapper {
                         session.questionnaireSubmittedAt()
                 ),
 
-                null,
+                mapInitialResult(
+                        session
+                ),
 
-                List.of(),
+                mapClarifications(
+                        session
+                ),
 
-                List.of(),
+                mapTieBreaks(
+                        session
+                ),
 
-                null,
+                mapFinalResult(
+                        session
+                ),
 
                 new AssessmentSessionResponse
                         .AssessmentWorkflowResponse(
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        false
+                        session
+                                .workflow()
+                                .pendingClarificationDimensions(),
+                        session
+                                .workflow()
+                                .retryableClarificationDimensions(),
+                        session
+                                .workflow()
+                                .tieBreakRequiredDimensions(),
+                        session
+                                .workflow()
+                                .completed()
                 ),
 
                 session.createdAt(),
                 session.completedAt(),
                 session.abandonedAt()
+        );
+    }
+
+    private AssessmentSessionResponse
+            .InitialAssessmentResultResponse
+    mapInitialResult(
+            AssessmentSessionResult session
+    ) {
+        if (session.initialResult() == null) {
+            return null;
+        }
+
+        List<AssessmentSessionResponse
+                .InitialDimensionResultResponse>
+                dimensions =
+                session
+                        .initialResult()
+                        .dimensions()
+                        .stream()
+                        .map(dimension ->
+                                mapInitialDimension(
+                                        session,
+                                        dimension
+                                )
+                        )
+                        .toList();
+
+        return new AssessmentSessionResponse
+                .InitialAssessmentResultResponse(
+                dimensions
+        );
+    }
+
+    private AssessmentSessionResponse
+            .InitialDimensionResultResponse
+    mapInitialDimension(
+            AssessmentSessionResult session,
+            InitialDimensionResult dimension
+    ) {
+        AssessmentSessionResult.DimensionEvidenceResult
+                evidence =
+                session
+                        .dimensionEvidence()
+                        .stream()
+                        .filter(candidate ->
+                                candidate
+                                        .dimensionCode()
+                                        .equals(
+                                                dimension
+                                                        .dimension()
+                                                        .value()
+                                        )
+                        )
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "missing questionnaire "
+                                                        + "evidence for dimension: "
+                                                        + dimension
+                                                        .dimension()
+                                                        .value()
+                                        )
+                        );
+
+        return new AssessmentSessionResponse
+                .InitialDimensionResultResponse(
+                dimension
+                        .dimension()
+                        .value(),
+                dimension.rawScore(),
+                dimension
+                        .questionnairePreference()
+                        == null
+                        ? null
+                        : dimension
+                        .questionnairePreference()
+                        .value(),
+                dimension.ambiguous(),
+
+                new AssessmentSessionResponse
+                        .QuestionnaireEvidenceResponse(
+                        evidence.poleA(),
+                        evidence.poleAPercentage(),
+                        evidence.poleB(),
+                        evidence.poleBPercentage()
+                )
+        );
+    }
+
+    private List<AssessmentSessionResponse
+            .ClarificationStateResponse>
+    mapClarifications(
+            AssessmentSessionResult session
+    ) {
+        return session
+                .clarifications()
+                .stream()
+                .map(clarification ->
+                        new AssessmentSessionResponse
+                                .ClarificationStateResponse(
+                                clarification.dimensionCode(),
+                                clarification.status().name(),
+                                null,
+                                clarification.startedAt(),
+                                clarification.acceptedAt()
+                        )
+                )
+                .toList();
+    }
+
+    private List<AssessmentSessionResponse
+            .TieBreakStateResponse>
+    mapTieBreaks(
+            AssessmentSessionResult session
+    ) {
+        return session
+                .tieBreaks()
+                .stream()
+                .map(tieBreak ->
+                        new AssessmentSessionResponse
+                                .TieBreakStateResponse(
+                                tieBreak.dimensionCode(),
+                                tieBreak.selectedPole(),
+                                tieBreak.decidedAt()
+                        )
+                )
+                .toList();
+    }
+
+    private AssessmentSessionResponse
+            .FinalAssessmentResultResponse
+    mapFinalResult(
+            AssessmentSessionResult session
+    ) {
+        if (session.finalResult() == null) {
+            return null;
+        }
+
+        var dimensions =
+                session
+                        .finalResult()
+                        .dimensions()
+                        .stream()
+                        .map(dimension ->
+                                mapFinalDimension(
+                                        session,
+                                        dimension
+                                )
+                        )
+                        .toList();
+
+        return new AssessmentSessionResponse
+                .FinalAssessmentResultResponse(
+                session
+                        .finalResult()
+                        .finalType(),
+                dimensions
+        );
+    }
+
+    private AssessmentSessionResponse
+            .FinalDimensionConclusionResponse
+    mapFinalDimension(
+            AssessmentSessionResult session,
+            FinalDimensionConclusion conclusion
+    ) {
+        String questionnairePreference =
+                session
+                        .initialResult()
+                        .dimensions()
+                        .stream()
+                        .filter(initial ->
+                                initial
+                                        .dimension()
+                                        .equals(
+                                                conclusion.dimension()
+                                        )
+                        )
+                        .map(initial ->
+                                initial
+                                        .questionnairePreference()
+                                        == null
+                                        ? null
+                                        : initial
+                                        .questionnairePreference()
+                                        .value()
+                        )
+                        .findFirst()
+                        .orElse(null);
+
+        boolean overrodeBaseline =
+                questionnairePreference != null
+                        && !questionnairePreference
+                        .equals(
+                                conclusion
+                                        .finalPreference()
+                                        .value()
+                        );
+
+        return new AssessmentSessionResponse
+                .FinalDimensionConclusionResponse(
+                conclusion
+                        .dimension()
+                        .value(),
+                questionnairePreference,
+                conclusion
+                        .finalPreference()
+                        .value(),
+                conclusion
+                        .decisionSource()
+                        .name(),
+                overrodeBaseline
         );
     }
 

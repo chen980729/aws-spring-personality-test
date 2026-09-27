@@ -4,7 +4,6 @@ import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSess
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 public record AssessmentSessionResponse(
@@ -12,55 +11,15 @@ public record AssessmentSessionResponse(
         BoundAssessmentResponse assessment,
         AssessmentSessionStatus status,
         QuestionnaireStateResponse questionnaire,
-        Object initialResult,
-        List<?> clarifications,
-        List<?> tieBreaks,
-        Object finalResult,
+        InitialAssessmentResultResponse initialResult,
+        List<ClarificationStateResponse> clarifications,
+        List<TieBreakStateResponse> tieBreaks,
+        FinalAssessmentResultResponse finalResult,
         AssessmentWorkflowResponse workflow,
         Instant createdAt,
         Instant completedAt,
         Instant abandonedAt
 ) {
-
-    public AssessmentSessionResponse {
-        Objects.requireNonNull(
-                id,
-                "id must not be null"
-        );
-
-        Objects.requireNonNull(
-                assessment,
-                "assessment must not be null"
-        );
-
-        Objects.requireNonNull(
-                status,
-                "status must not be null"
-        );
-
-        Objects.requireNonNull(
-                questionnaire,
-                "questionnaire must not be null"
-        );
-
-        Objects.requireNonNull(
-                clarifications,
-                "clarifications must not be null"
-        );
-
-        Objects.requireNonNull(
-                tieBreaks,
-                "tieBreaks must not be null"
-        );
-
-        Objects.requireNonNull(
-                workflow,
-                "workflow must not be null"
-        );
-
-        clarifications = List.copyOf(clarifications);
-        tieBreaks = List.copyOf(tieBreaks);
-    }
 
     public record BoundAssessmentResponse(
             String code,
@@ -73,20 +32,85 @@ public record AssessmentSessionResponse(
             boolean submitted,
             Instant submittedAt
     ) {
-
-        public QuestionnaireStateResponse {
-            Objects.requireNonNull(
-                    answers,
-                    "answers must not be null"
-            );
-
-            answers = List.copyOf(answers);
-        }
     }
 
     public record QuestionAnswerResponse(
             String questionId,
             int value
+    ) {
+    }
+
+    public record InitialAssessmentResultResponse(
+            List<InitialDimensionResultResponse> dimensions
+    ) {
+    }
+
+    public record InitialDimensionResultResponse(
+            String dimensionCode,
+            int rawScore,
+            String questionnairePreference,
+            boolean ambiguous,
+            QuestionnaireEvidenceResponse evidence
+    ) {
+    }
+
+    public record QuestionnaireEvidenceResponse(
+            String poleA,
+            double poleAPercentage,
+            String poleB,
+            double poleBPercentage
+    ) {
+    }
+
+    public record ClarificationStateResponse(
+            String dimensionCode,
+            String status,
+            ClarificationResultResponse result,
+            Instant startedAt,
+            Instant acceptedAt
+    ) {
+    }
+
+    public sealed interface ClarificationResultResponse
+            permits ResolvedClarificationResultResponse,
+            UnclearClarificationResultResponse {
+    }
+
+    public record ResolvedClarificationResultResponse(
+            String resolution,
+            String suggestedPole,
+            String confidence,
+            String reasoningSummary
+    ) implements ClarificationResultResponse {
+    }
+
+    public record UnclearClarificationResultResponse(
+            String resolution,
+            String suggestedPole,
+            String confidence,
+            String reasoningSummary
+    ) implements ClarificationResultResponse {
+    }
+
+    public record TieBreakStateResponse(
+            String dimensionCode,
+            String selectedPole,
+            Instant decidedAt
+    ) {
+    }
+
+    public record FinalAssessmentResultResponse(
+            String finalType,
+            List<FinalDimensionConclusionResponse> dimensions
+    ) {
+    }
+
+    public record FinalDimensionConclusionResponse(
+            String dimensionCode,
+            String questionnairePreference,
+            String finalPreference,
+            String source,
+            boolean overrodeBaseline
     ) {
     }
 
@@ -96,22 +120,5 @@ public record AssessmentSessionResponse(
             List<String> tieBreakRequiredDimensions,
             boolean completed
     ) {
-
-        public AssessmentWorkflowResponse {
-            pendingClarificationDimensions =
-                    List.copyOf(
-                            pendingClarificationDimensions
-                    );
-
-            retryableClarificationDimensions =
-                    List.copyOf(
-                            retryableClarificationDimensions
-                    );
-
-            tieBreakRequiredDimensions =
-                    List.copyOf(
-                            tieBreakRequiredDimensions
-                    );
-        }
     }
 }

@@ -62,6 +62,41 @@ public final class QuestionnaireResponsePersistenceMapper {
         );
     }
 
+    public JsonNode toJsonNode(
+            QuestionnaireResponse response
+    ) {
+        Objects.requireNonNull(
+                response,
+                "response must not be null"
+        );
+
+        List<QuestionnaireResponseJson.AnswerJson>
+                answers =
+                response
+                        .answers()
+                        .stream()
+                        .map(answer ->
+                                new QuestionnaireResponseJson
+                                        .AnswerJson(
+                                        answer
+                                                .questionId()
+                                                .value(),
+                                        answer.value()
+                                )
+                        )
+                        .toList();
+
+        QuestionnaireResponseJson json =
+                new QuestionnaireResponseJson(
+                        answers
+                );
+
+        return jsonMapper.convertValue(
+                json,
+                JsonNode.class
+        );
+    }
+
     private Answer mapAnswer(
             QuestionnaireResponseJson.AnswerJson json
     ) {

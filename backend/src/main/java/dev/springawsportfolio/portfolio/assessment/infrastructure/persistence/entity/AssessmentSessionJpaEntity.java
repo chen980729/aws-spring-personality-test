@@ -1,5 +1,6 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.entity;
 
+import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSession;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -10,6 +11,7 @@ import org.hibernate.type.SqlTypes;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -102,6 +104,87 @@ public class AssessmentSessionJpaEntity {
     private long version;
 
     protected AssessmentSessionJpaEntity() {
+    }
+
+    public void updateFrom(
+            AssessmentSession session,
+            JsonNode questionnaireResponse,
+            JsonNode initialResult,
+            JsonNode finalResult
+    ) {
+        Objects.requireNonNull(
+                session,
+                "session must not be null"
+        );
+
+        Objects.requireNonNull(
+                questionnaireResponse,
+                "questionnaireResponse must not be null"
+        );
+
+        if (
+                !id.equals(
+                        session.id().value()
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "cannot change AssessmentSession id"
+            );
+        }
+
+        if (
+                !userId.equals(
+                        session.ownerUserId().value()
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "cannot change AssessmentSession owner"
+            );
+        }
+
+        if (
+                !definitionId.equals(
+                        session.definitionId().value()
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "cannot change AssessmentSession definition"
+            );
+        }
+
+        if (
+                !definitionVersionId.equals(
+                        session
+                                .definitionVersionId()
+                                .value()
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "cannot change AssessmentSession "
+                            + "definition version"
+            );
+        }
+
+        this.status =
+                session.status().name();
+
+        this.questionnaireResponse =
+                questionnaireResponse;
+
+        this.questionnaireSubmittedAt =
+                session.questionnaireSubmittedAt();
+
+        this.initialResult =
+                initialResult;
+
+        this.finalResult =
+                finalResult;
+
+        this.completedAt =
+                session.completedAt();
+
+        this.abandonedAt =
+                session.abandonedAt();
     }
 
     public UUID getId() {

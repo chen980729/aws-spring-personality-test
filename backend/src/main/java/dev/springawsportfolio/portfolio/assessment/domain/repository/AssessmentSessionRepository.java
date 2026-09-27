@@ -28,4 +28,13 @@ public interface AssessmentSessionRepository {
     boolean tryCreateActive(
             AssessmentSession session
     );
+
+    /**
+     * Persists the mutable state of an existing AssessmentSession.
+     *
+     * This operation does not create a new Session.
+     */
+    void update(
+            AssessmentSession session
+    );
 }
