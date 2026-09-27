@@ -1,7 +1,7 @@
 # Backend Design Status & Implementation Handoff
 
-> **Status:** Backend Detailed Design v1.0 — Accepted / Ready for Implementation  
-> **Last updated:** 2026-09-21
+> **Status:** Historical design-to-implementation handoff; implementation has progressed through Assessment Step 6
+> **Last updated:** 2026-09-28
 
 ## 1. What is frozen enough to implement
 
@@ -45,13 +45,13 @@ Assessment and Group Domain Models are the business source of truth.
 - RFC 9457 Problem Details + stable application `code`.
 - explicit client recovery for lost Submit/Restart responses.
 - owner-vs-shared Assessment privacy representations.
-- exact DTO/security schemas are published in `docs/api/openapi.yaml` (v0.2.0).
+- exact DTO/security schemas are published in `docs/api/openapi.yaml` (current contract v0.3.0).
 
 ## 2. Final review + intentionally deferred slice decisions
 
 ### Backend v1.0 status
 
-`docs/api/openapi.yaml` contains the exact DTO/security contract, including Session-bound questionnaire retrieval, clarification `UNCLEAR` semantics, Group display identity, and authentication/CSRF behavior. Backend Detailed Design is **Accepted / Ready for Implementation**.
+`docs/api/openapi.yaml` contains the exact DTO/security contract, including Session-bound questionnaire retrieval, clarification `UNCLEAR` semantics, Group display identity, and authentication/CSRF behavior. The design baseline remains accepted; the repository has since implemented Identity/Security and Assessment through Step 6.
 
 ### Deferred slice-specific decisions that need not block skeleton creation
 
@@ -69,11 +69,13 @@ Assessment and Group Domain Models are the business source of truth.
 
 ### Phase 2 — persistence foundation
 
-1. Flyway V1–V4.
+1. Flyway V1-V4 (current applied history).
 2. JPA entities.
 3. persistence mappers/adapters.
 4. constraint/repository integration tests.
-5. Assessment reference-data V6 seed.
+5. Assessment reference-data seed in V4.
+
+These foundation items are now implemented; future migrations continue from V5 without renumbering applied versions.
 
 ### Phase 3 — Identity/Security foundation
 
@@ -142,7 +144,7 @@ Authentication/Security design is accepted
 OpenAPI exact DTO contract is accepted
 ```
 
-At the current checkpoint, Authentication/Security and the OpenAPI v0.2.0 exact DTO contract are accepted. Backend Detailed Design v1.0 is ready for implementation.
+At the current repository checkpoint, Authentication/Security and Assessment Steps 1-6 are implemented and tested. OpenAPI v0.3.0 is the active exact DTO contract. Step 7 Clarification/Tie-break mutation is the next backend implementation focus.
 
 ## 5. Implementation principle for Codex
 

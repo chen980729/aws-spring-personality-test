@@ -1,7 +1,7 @@
 # Persistence / PostgreSQL Detailed Design
 
-> **Status:** Accepted MVP Detailed Design — Final Alignment Applied  
-> **Last updated:** 2026-09-20
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 6
+> **Last updated:** 2026-09-28
 
 ## 1. Persistence stack
 
@@ -83,7 +83,7 @@ specification
 
 This deliberately avoids exploding the 48-question questionnaire and small result objects into many relational rows when they are loaded/replaced as units.
 
-`DimensionClarification` and user tie-break facts remain relational because they have their own lifecycle/uniqueness semantics.
+`DimensionClarification` remains relational because it is a separate Assessment Aggregate with its own durable lifecycle/uniqueness semantics (ADR-0016). User tie-break facts are also relational because they have independent uniqueness/query semantics.
 
 ## 6. Generic Assessment schema rule
 
@@ -149,7 +149,7 @@ A partial unique index permits at most one `IN_PROGRESS` clarification per Sessi
 
 Historical Assessment uses **hard delete** in MVP.
 
-The deletion workflow first ends all active Group shares referencing the Session, then deletes the Session. Session-owned clarification/tie-break children cascade with it.
+The deletion workflow first ends all active Group shares referencing the Session, then deletes the Session. Session-dependent clarification/tie-break rows are physically deleted with it. A database cascade here expresses lifecycle cleanup, not that `DimensionClarification` belongs to the same DDD Aggregate.
 
 Group share history keeps the old `assessment_session_id` as an opaque historical identity.
 
@@ -195,7 +195,7 @@ Use foreign keys for stable ownership/references inside the same persistent doma
 
 Default delete policy is `RESTRICT` for retained business history.
 
-Use `ON DELETE CASCADE` only for true Aggregate-owned data such as AssessmentSession clarification/tie-break child rows.
+Use `ON DELETE CASCADE` only where the referenced row has no valid lifecycle after its parent is deleted. For Assessment hard deletion this includes Clarification/tie-break rows; the cascade is a physical lifecycle rule and does not redefine the ADR-0016 Aggregate boundary.
 
 Database cascade must not replace explicit lifecycle operations such as Group disband.
 
@@ -242,7 +242,7 @@ Cross Assessment/Group:
 
 Assessment draft autosave mainly relies on optimistic locking.
 
-Clarification, skip, tie-break and finalization phases use short AssessmentSession root locks so multiple child-state changes cannot independently conclude that another unresolved dimension still exists and thereby miss finalization.
+Clarification, skip, tie-break and finalization phases use short AssessmentSession root locks so separate Clarification Aggregate mutations cannot independently conclude that another unresolved dimension still exists and thereby miss finalization.
 
 Locks are never held across LLM network calls.
 

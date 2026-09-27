@@ -1335,7 +1335,7 @@ Final Type
 - [ ] 历史 answers、InitialResult、ClarificationResult、FinalResult 不被未来版本覆盖。
 - [ ] deterministic assessment components 可以基于 retained specification 重现；LLM clarification 只要求 traceable / explainable，不要求 strict reproducibility。
 - [ ] 用户可以查看历史完成的测试结果。
-- [ ] 删除测试历史时，按项目统一 delete policy 处理该 Assessment 及其 owned child records。
+- [ ] 删除测试历史时，按项目统一 delete policy 处理该 Assessment 及其 Session-dependent persisted records。
 
 ---
 

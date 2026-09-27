@@ -9,7 +9,7 @@ The Assessment owner may delete historical private Assessment content, while Gro
 
 ## Decision
 
-Historical AssessmentSession deletion is a coordinated hard delete. Before deletion, active Group shares referencing the Session are ended with `ASSESSMENT_DELETED`. Session-owned child rows cascade with the Session.
+Historical AssessmentSession deletion is a coordinated hard delete. Before deletion, active Group shares referencing the Session are ended with `ASSESSMENT_DELETED`. Session-dependent Assessment data (including Clarification and tie-break rows) is physically deleted with the Session. Database cascade is allowed for cleanup and does not imply that every dependent row belongs to the same DDD Aggregate.
 
 `group_assessment_shares.assessment_session_id` intentionally has no database FK to `assessment_sessions`; ended Share history retains the old UUID as an opaque historical reference.
 

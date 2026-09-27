@@ -84,7 +84,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** architecture/application/persistence/REST/Security design is aligned. OpenAPI v0.2.0 exact DTO/security contract is accepted. Backend Detailed Design v1.0 is **Accepted / Ready for Implementation**.
+**Current status:** design remains accepted and implementation is aligned through **Assessment Step 6**. OpenAPI v0.3.0 is synchronized with the implemented History contract. Step 7 Clarification/Tie-break mutation is next.
 
 ### Domain/Application
 
@@ -116,7 +116,7 @@ Accepted persistence artifacts are `docs/backend/04-persistence-postgresql-desig
 
 - [x] HTTP resource/use-case mapping.
 - [x] Routes and methods.
-- [x] Exact DTO schema / OpenAPI v0.2.0 accepted for implementation.
+- [x] Exact DTO schema / OpenAPI v0.3.0 synchronized through Assessment Step 6.
 - [x] Status/error mapping.
 - [x] Business authentication/authorization boundary.
 - [x] Authentication transport/security mechanics (server-side Session + JDBC + cookie + CSRF).
@@ -167,16 +167,23 @@ Frontend must express user intent; it must not become the source of truth for ba
 
 ## 9. Backend Implementation
 
-- [ ] Java 21 + Spring Boot implementation.
-- [ ] PostgreSQL persistence.
-- [ ] Authentication.
-- [ ] Assessment domain/application logic.
-- [ ] Deterministic scoring and ambiguity logic.
-- [ ] AI integration adapter.
-- [ ] Historical assessment deletion.
+Current backend checkpoint: **Assessment Step 6 complete**.
+
+- [x] Java 21 + Spring Boot implementation foundation.
+- [x] PostgreSQL persistence foundation with Flyway + JPA/Hibernate.
+- [x] Authentication: Register / Login / Session / CSRF / `/me` / Logout.
+- [x] Assessment catalog, Start/Resume, Session-bound questionnaire read and autosave.
+- [x] deterministic Submit, scoring, ambiguity evaluation and immediate finalization.
+- [x] Restart / Start New with targeted locking and retry/recovery semantics.
+- [x] completed Assessment History + Historical Detail read side.
+- [ ] Clarification + Tie-break mutation workflow (Step 7).
+- [ ] real AI integration adapter / runtime context (Step 8 or implementation slice following Step 7 boundaries).
+- [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
-- [ ] Unit/integration tests.
-- [ ] Concurrency/retry/recovery tests for critical invariants.
+- [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-6 coverage.
+- [x] Restart concurrency/retry/recovery tests for implemented critical invariants.
+- [ ] Clarification/finalization concurrency tests.
+- [ ] Group/sharing/deletion concurrency tests.
 
 ## 10. Containerization and Local Environment
 

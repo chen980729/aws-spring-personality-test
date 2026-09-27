@@ -80,7 +80,7 @@ Owns:
 - Questionnaire response and submission semantics.
 - Deterministic scoring and ambiguity evaluation.
 - `InitialAssessmentResult`.
-- `DimensionClarification` business lifecycle.
+- `DimensionClarification` business lifecycle as a separate Assessment Aggregate coordinated with `AssessmentSession` (ADR-0016).
 - `FinalAssessmentResult`.
 - Assessment history as a query over persisted sessions.
 - Historical assessment deletion as an owner capability.
@@ -95,7 +95,7 @@ Owns:
 - Admin/member rules.
 - Membership-related authorization semantics.
 
-Group does not own assessment-result source data. The current Group capability set is **requirements-derived and provisional** until a lightweight Group Domain Review is completed before implementation.
+Group does not own assessment-result source data. The MVP Group capability set has completed its lightweight Domain Review and is frozen in `docs/domain/group-spec-aligned.md`; future changes should be driven by implementation findings or new requirements.
 
 ### 4.4 AI Integration
 
@@ -414,7 +414,7 @@ The following are no longer open: `ABANDONED` source states, Group sharing-conse
 
 ## 16. Detailed Design Ownership
 
-This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` and are part of the accepted Backend v1.0 contract.
+This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (currently contract v0.3.0).
 
 Still deferred to specialist design:
 

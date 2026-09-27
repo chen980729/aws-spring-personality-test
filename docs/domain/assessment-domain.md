@@ -1,7 +1,7 @@
 # Assessment Domain Model
 
-> **Status:** Accepted Assessment Domain Baseline — implementation-aligned through Step 5  
-> **Last updated:** 2026-09-27
+> **Status:** Accepted Assessment Domain Baseline — implementation-aligned through Step 6
+> **Last updated:** 2026-09-28
 
 ## 1. Scope
 
@@ -156,16 +156,26 @@ AssessmentSession (Entity / Aggregate Root)
 │   └── Answer[] (VO)
 ├── InitialAssessmentResult (VO)
 │   └── InitialDimensionResult[] (VO)
-├── DimensionClarification[] (Entity)
-│   ├── ClarificationResult (VO)
-│   └── AIProvenance (VO)
 └── FinalAssessmentResult (VO)
     └── FinalDimensionConclusion[] (VO)
 ```
 
-`DimensionClarification` remains inside the Session Aggregate for MVP because eligibility and completion readiness depend directly on the session's immutable initial evidence and unresolved ambiguous dimensions.
+`AssessmentSession` owns the attempt lifecycle, immutable submitted evidence, Session status, and final result. It is also the concurrency anchor for clarification/finalization commands, but it does not contain the persisted Clarification collection in its in-memory Aggregate.
 
-### 7.2 AssessmentDefinitionVersion Aggregate
+### 7.2 DimensionClarification Aggregate
+
+```text
+DimensionClarification (Entity / Aggregate Root)
+├── AssessmentSessionId (reference)
+├── DimensionCode
+├── lifecycle status
+├── ClarificationResult (VO, when accepted)
+└── AIProvenance (VO, when accepted)
+```
+
+One logical `DimensionClarification` exists for one `AssessmentSession + Dimension`. It is a separate Assessment Aggregate because it has its own durable lifecycle and must cross an external LLM boundary without holding the Session transaction open. Session-wide eligibility/finalization rules are coordinated by Assessment Application using `AssessmentSession` as the concurrency/revalidation anchor plus durable uniqueness constraints. See ADR-0016 for the implementation-facing consistency decision.
+
+### 7.3 AssessmentDefinitionVersion Aggregate
 
 ```text
 AssessmentDefinitionVersion (Entity / Aggregate Root)
@@ -179,11 +189,11 @@ AssessmentDefinitionVersion (Entity / Aggregate Root)
 
 Once executable/available to users, this specification is immutable.
 
-### 7.3 AssessmentDefinition Aggregate
+### 7.4 AssessmentDefinition Aggregate
 
 `AssessmentDefinition` remains a small provisional Aggregate Root representing the long-lived assessment identity and potential future version-governance boundary. It must not receive artificial behavior merely to justify Aggregate status.
 
-## 8. AssessmentSession Aggregate Invariants
+## 8. Assessment Workflow Invariants
 
 ### AS-INV-01 Stable Session Context
 
@@ -203,15 +213,15 @@ Before questionnaire submit, the Session may replace its `QuestionnaireResponse`
 
 ### AS-INV-05 Clarification Eligibility
 
-Only dimensions already classified as ambiguous in the `InitialAssessmentResult` are eligible for clarification.
+Only dimensions already classified as ambiguous in the parent Session's `InitialAssessmentResult` are eligible for clarification. Because `DimensionClarification` is a separate Aggregate, the Assessment Application revalidates this rule against the locked Session before mutation.
 
 ### AS-INV-06 One Clarification Lifecycle per Dimension
 
-At most one logical `DimensionClarification` exists per `Session + Dimension`. Retries remain within that lifecycle.
+At most one logical `DimensionClarification` exists per `Session + Dimension`. Retries remain within that Aggregate lifecycle. Durable uniqueness is enforced by persistence as well as in normal Application validation.
 
 ### AS-INV-07 Single Active Clarification (MVP)
 
-At most one `DimensionClarification` may be `IN_PROGRESS` in an `AssessmentSession` at a time. A different eligible dimension may start clarification only when no other clarification is actively `IN_PROGRESS`. Parallel clarification conversations are not supported in MVP.
+At most one `DimensionClarification` may be `IN_PROGRESS` for one `AssessmentSession` at a time. A different eligible dimension may start only when no other Clarification Aggregate is actively `IN_PROGRESS`. Application coordination uses the Session concurrency anchor and durable conditional uniqueness; parallel clarification conversations are not supported in MVP.
 
 ### AS-INV-08 Clarification State Consistency
 
@@ -221,7 +231,7 @@ At most one `DimensionClarification` may be `IN_PROGRESS` in an `AssessmentSessi
 
 ### AS-INV-09 Completion Readiness
 
-All ambiguous dimensions must be `CLARIFIED` or `SKIPPED` before completion. If there were no ambiguous dimensions, this condition is naturally satisfied.
+All ambiguous dimensions must have corresponding Clarification Aggregates in terminal workflow states `CLARIFIED` or `SKIPPED` before completion. If there were no ambiguous dimensions, this condition is naturally satisfied. Finalization evaluates this cross-Aggregate fact under the locked Session transaction.
 
 ### AS-INV-10 Completion Consistency
 
@@ -271,6 +281,10 @@ All deterministic computation and decision-making for a Session must use the exa
 ### DOMAIN-INV-06 One AVAILABLE Version per Definition (MVP)
 
 For one `AssessmentDefinition`, at most one `AssessmentDefinitionVersion` may be `AVAILABLE` at a time. `StartAssessment(assessmentCode)` therefore resolves one unique executable version without requiring the client to select a version.
+
+### DOMAIN-INV-07 Session / Clarification Coordination
+
+Clarification mutations that can affect Session status or finalization must coordinate the `AssessmentSession` and target `DimensionClarification` Aggregate within one short consistency boundary, using the Session as the concurrency/revalidation anchor. No consistency lock is held across an external LLM call; the result may be accepted only after both Aggregates are reloaded/revalidated so stale results cannot mutate an abandoned or changed Session. Concrete row-lock/constraint mechanics live in Backend Detailed Design.
 
 ## 10. Versioning and Governance Rules
 
@@ -325,13 +339,13 @@ MVP does not guarantee exact mid-conversation resume. If temporary context is lo
 
 Completed assessment content is immutable while the record exists, but the owner has the business right to delete a historical assessment.
 
-MVP uses **hard deletion** of the owned historical `AssessmentSession` and its Session-owned child data. Before deletion, cross-module orchestration ends every ACTIVE Group Share that references the Session using reason `ASSESSMENT_DELETED`. Group retains the ended consent/share history and the historical opaque AssessmentSession identifier; it does not retain Assessment private content.
+MVP uses **hard deletion** of the owned historical `AssessmentSession` and its Session-dependent persisted data (including Clarification and tie-break rows). A database cascade may perform physical cleanup even though `DimensionClarification` is a separate DDD Aggregate. Before deletion, cross-module orchestration ends every ACTIVE Group Share that references the Session using reason `ASSESSMENT_DELETED`. Group retains the ended consent/share history and the historical opaque AssessmentSession identifier; it does not retain Assessment private content.
 
 Account deletion is a separate deferred capability and requires its own future deletion/anonymization policy.
 
 ## 14. Open Questions
 
-- User-facing amount of deterministic/AI provenance in Result/History UI.
+- Exact business-level clarification/provenance fields exposed in Result/History UI, within the already-frozen privacy boundary that excludes provider/model/prompt execution metadata.
 - Temporary multi-turn AI runtime-context implementation.
 - Detailed future account-deletion/anonymization policy.
 

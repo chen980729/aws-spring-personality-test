@@ -1,7 +1,7 @@
 openapi: 3.1.2
 info:
   title: Spring AWS Portfolio API
-  version: 0.2.0
+  version: 0.3.0
   summary: MVP HTTP contract for the Spring AWS Portfolio project.
   description: |
     Design-first API contract for the first-party React + Spring Boot application.
@@ -1823,15 +1823,13 @@ components:
     AssessmentHistoryItem:
       type: object
       additionalProperties: false
-      required: [id, assessmentCode, assessmentName, version, finalType, completedAt]
+      required: [sessionId, assessmentCode, assessmentVersion, finalType, completedAt]
       properties:
-        id:
+        sessionId:
           $ref: '#/components/schemas/Uuid'
         assessmentCode:
           type: string
-        assessmentName:
-          type: string
-        version:
+        assessmentVersion:
           type: string
         finalType:
           type: string

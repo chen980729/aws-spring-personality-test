@@ -1,22 +1,22 @@
 # Flyway Schema & JPA Persistence Mapping
 
-> **Status:** Accepted MVP Detailed Design — Final Alignment Applied  
-> **Last updated:** 2026-09-21
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 6
+> **Last updated:** 2026-09-28
 
 ## 1. Migration layout
 
-Recommended initial migrations:
+The applied migration history is authoritative and must not be renumbered:
 
 ```text
 V1__create_identity_tables.sql
 V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
-V4__create_group_tables.sql
-V5__create_domain_indexes.sql
-V6__seed_sixteen_personality_v1.sql
+V4__seed_sixteen_personality_v1.sql
 ```
 
-PK/FK/CHECK/ordinary UNIQUE constraints stay near table creation. Partial unique and query-oriented indexes are grouped in V5. V6 seeds immutable application-owned reference data. `V2` contains the PostgreSQL schema required by the project's pinned Spring Session JDBC version and is owned by Flyway rather than runtime auto-initialization.
+`V3` creates the Assessment tables together with the Assessment partial-unique/query indexes required by the initial schema. `V4` seeds immutable application-owned Sixteen Personality reference data. `V2` contains the PostgreSQL schema required by the project's pinned Spring Session JDBC version and is owned by Flyway rather than runtime auto-initialization.
+
+Group schema has not been migrated yet. Future migrations begin at `V5` (or later) and should add Group tables/indexes without rewriting or renumbering V1-V4. New indexes for already-deployed tables also receive a new forward-only migration rather than editing an applied migration.
 
 ## 2. Naming convention
 
@@ -27,7 +27,7 @@ PK: pk_<table>
 FK: fk_<table>_<meaning>
 UNIQUE: uq_<meaning>
 CHECK: ck_<meaning>
-index: idx_<meaning>
+index: ix_<meaning>
 ```
 
 Constraint names are part of operational diagnostics and may be used to translate expected concurrency violations into stable application conflicts.
@@ -89,7 +89,7 @@ Constraints include:
 - status in `DRAFT/AVAILABLE/RETIRED`.
 - specification must be a JSON object.
 - DRAFT has no `published_at`; AVAILABLE/RETIRED do.
-- V5 partial unique index: at most one `AVAILABLE` row per `definition_id`.
+- V3 partial unique index: at most one `AVAILABLE` row per `definition_id`.
 
 ## 5. AssessmentSession table
 
@@ -276,7 +276,7 @@ Initial access-path indexes include:
 
 Do not add redundant indexes already served by PK/UNIQUE prefix ordering without an actual query reason.
 
-## 11. V6 reference-data seed
+## 11. V4 reference-data seed
 
 Seed `SIXTEEN_PERSONALITY` AssessmentDefinition and immutable version `1.0` using fixed UUIDs and fixed publication timestamps.
 
@@ -317,11 +317,11 @@ This prevents a Domain Java refactor from silently redefining the database JSON 
 
 ## 14. JPA relationship policy
 
-Cross-Aggregate entities store scalar IDs. Do not create a bidirectional Group object graph merely because foreign keys exist.
+Cross-Aggregate entities store scalar IDs. Do not create a bidirectional object graph merely because foreign keys exist.
 
-AssessmentSession-owned child rows may be loaded explicitly by the Session repository adapter rather than immediately introducing cascading `@OneToMany` graphs.
+`AssessmentSession` and `DimensionClarification` are separate Assessment Aggregate Roots (ADR-0016). Infrastructure therefore exposes Domain repository abstractions for each Aggregate where mutation/read behavior requires them. `DimensionClarification` references its parent Session by scalar `AssessmentSessionId`; it is not modeled as a cascading JPA `@OneToMany` collection on the Session Domain object.
 
-The physical child Spring Data repositories are infrastructure details; Application still sees one `AssessmentSessionRepository` Aggregate boundary.
+A physical `ON DELETE CASCADE` from Session to Clarification/tie-break rows is allowed for hard-delete cleanup because those rows have no valid persistence lifecycle after their Session is deleted. That physical rule must not be interpreted as an in-memory Aggregate ownership rule.
 
 ## 15. Lock methods
 

@@ -1,7 +1,7 @@
 # REST API & HTTP Contract Design
 
-> **Status:** Accepted REST Semantics — implementation-aligned through Assessment Step 5  
-> **Last updated:** 2026-09-27  
+> **Status:** Accepted REST Semantics — implementation-aligned through Assessment Step 6
+> **Last updated:** 2026-09-28
 > **Security transport:** server-side Session + Spring Session JDBC + Secure/HttpOnly cookie + CSRF
 
 ## 1. API style
@@ -391,25 +391,18 @@ docs/api/openapi.yaml
 OpenAPI Specification: 3.1.2
 ```
 
-The standalone `openapi.yaml` source was not part of the materials updated in this Step 5 review. It must be synchronized with the Step 5 Restart refinement before the next contract release. Required synchronization items are:
+The machine-readable contract is synchronized through Assessment Step 6 and published as OpenAPI **v0.3.0**. The Step 5 Restart contract is included, and the Step 6 History item matches the implemented response exactly:
 
 ```text
-POST /api/v1/assessment-sessions/{sessionId}/restart
-
-201 Created
-Location header
-RestartAssessmentResponse
-  - abandonedSessionId
-  - session: AssessmentSessionResponse
-
-409 ASSESSMENT_SESSION_ALREADY_ABANDONED
-409 ASSESSMENT_SESSION_ALREADY_COMPLETED
-404 ASSESSMENT_SESSION_NOT_FOUND
-401 authentication failure
-403 CSRF failure
+AssessmentHistoryItem
+  - sessionId
+  - assessmentCode
+  - assessmentVersion
+  - finalType
+  - completedAt
 ```
 
-When that machine-readable file is updated, bump its contract version deliberately rather than silently changing the existing published version.
+The v0.3.0 bump is deliberate because the previously accepted History schema used different field names and an extra `assessmentName`; changing that published design contract silently would make implementation/documentation drift harder to detect.
 
 It freezes:
 

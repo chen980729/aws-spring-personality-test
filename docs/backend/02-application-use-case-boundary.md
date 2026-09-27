@@ -1,7 +1,7 @@
 # Backend Application Use Case Boundary
 
-> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 5  
-> **Last updated:** 2026-09-27
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 6
+> **Last updated:** 2026-09-28
 
 ## 1. Application-layer responsibility
 
@@ -152,9 +152,11 @@ Commands:
 - Skip remaining clarifications.
 - Submit dimension tie-break.
 
-Only ambiguous dimensions may enter clarification. At most one dimension may be `IN_PROGRESS` per Session.
+Only ambiguous dimensions may enter clarification. At most one dimension may be `IN_PROGRESS` per Session. `DimensionClarification` is a separate Assessment Aggregate Root (ADR-0016), while `AssessmentSession` remains the concurrency/finalization anchor.
 
-Technical AI failures become `FAILED_RETRYABLE`; they must never be reinterpreted as the business result `UNCLEAR`. `RetryDimensionClarification` transitions the same logical clarification lifecycle back into active processing after revalidation; retry never creates a second `DimensionClarification` for the same Session + Dimension.
+Clarification mutations therefore lock/revalidate the Session, load the target Clarification Aggregate, and persist the required Session + Clarification changes in one short local transaction. PostgreSQL uniqueness protects one lifecycle per Session/dimension and at most one `IN_PROGRESS` Clarification per Session.
+
+Technical AI failures become `FAILED_RETRYABLE`; they must never be reinterpreted as the business result `UNCLEAR`. `RetryDimensionClarification` transitions the same logical Clarification Aggregate back into active processing after revalidation; retry never creates a second `DimensionClarification` for the same Session + Dimension.
 
 ### External LLM transaction rule
 
@@ -250,7 +252,7 @@ Validate the replacement Assessment first, then end the old Share with `RESULT_R
 
 1. lock/validate owned deletable AssessmentSession.
 2. Group ends all active Shares referencing it with `ASSESSMENT_DELETED`.
-3. Assessment hard-deletes the historical Session and owned child data.
+3. Assessment hard-deletes the historical Session and its Session-dependent persisted data.
 4. commit atomically.
 
 ## 10. Cross-module orchestration queries
@@ -285,7 +287,7 @@ Group Admin does **not** become an Assessment administrator.
 
 ## 13. Command vs Query persistence
 
-Commands operate through Domain Aggregates and Domain Repository abstractions to protect invariants.
+Commands operate through Domain Aggregates and Domain Repository abstractions to protect invariants. A use case may coordinate more than one Aggregate when the workflow requires it; for example, Clarification commands coordinate `AssessmentSession` and `DimensionClarification` under the Session lock instead of pretending both live in one in-memory Aggregate.
 
 Queries may use direct optimized projections when no Domain mutation is occurring. Example: `GetMyGroups` may read a projection rather than hydrating full Group and Membership Aggregates.
 

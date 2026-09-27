@@ -472,9 +472,9 @@ Future clarification states can be read without changing the historical Session 
 
 The database already persists AI provenance fields such as provider, model identifier, and clarification policy revision.
 
-Step 6 deliberately does not expose those fields through the public Session DTO.
+Step 6 deliberately does not expose those internal execution fields through the public Session DTO. The privacy boundary is already frozen: provider/model/prompt execution metadata remain internal.
 
-The exact public provenance contract should be decided when the real AI Clarification workflow is implemented, rather than freezing it prematurely.
+Step 7/8 may decide which **business-level** clarification/provenance fields (for example decision source or a safe result summary) belong in a future Result/History DTO, but that decision must remain inside the frozen privacy boundary above.
 
 ### Pagination choice
 
@@ -570,12 +570,12 @@ Because Group sharing is not implemented yet, completing this use case before th
 
 ### API / Documentation Synchronization
 
-Before declaring the entire Assessment module finished:
+Restart, History, and Session Detail are now synchronized in `docs/api/openapi.yaml` v0.3.0. Before declaring the entire Assessment module finished:
 
 ```text
-synchronize docs/api/openapi.yaml
-with the implemented Restart, History, Session Detail,
-clarification and tie-break contracts
+revalidate/update docs/api/openapi.yaml
+against the implemented Step 7 clarification/tie-break behavior
+and Step 8 AI integration contract
 
 update REST / Domain / Application docs after Step 7/8
 

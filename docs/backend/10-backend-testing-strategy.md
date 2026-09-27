@@ -1,8 +1,8 @@
 # Backend Testing Strategy & Current Coverage
 
-> **Status:** Active implementation guidance  
-> **Last reviewed:** 2026-09-27  
-> **Current coverage checkpoint:** Assessment through Restart / Start New (Step 5)
+> **Status:** Active implementation guidance
+> **Last reviewed:** 2026-09-28
+> **Current coverage checkpoint:** Assessment through History + Historical Detail (Step 6)
 
 ## 1. Testing principle
 
@@ -381,7 +381,7 @@ For Assessment and Group implementation, follow these rules:
 6. **Add focused full-stack tests only for flows where cross-layer behavior is itself the risk.** Keep them few and meaningful.
 7. **Treat production configuration as testable behavior.** Cookie/security/AWS profile assumptions should eventually have configuration-level tests.
 
-## 11. Current Assessment coverage through Step 5
+## 11. Current Assessment coverage through Step 6
 
 The Assessment implementation now follows the intended layered strategy.
 
@@ -411,6 +411,8 @@ Autosave
 SubmitQuestionnaire
 GetAssessmentSession
 RestartAssessmentSession
+ListAssessmentHistory
+Get historical AssessmentSession detail
 ```
 
 Ports are mocked at this layer rather than mocking internal Domain behavior.
@@ -431,6 +433,9 @@ InitialAssessmentResult / FinalAssessmentResult persistence
 PENDING clarification creation
 Restart row locking and replacement persistence ordering
 concurrent Restart against the same old Session
+completed-only History projection and pagination
+owner-isolated History reads
+authoritative persisted Clarification/Tie-break workflow reads for Session detail
 ```
 
 The Restart concurrency acceptance criterion is:
@@ -459,6 +464,8 @@ Autosave
 Submission
 Session detail
 Restart
+History with default/explicit pagination
+historical Session detail
 authentication
 CSRF
 privacy-safe 404 behavior
@@ -481,25 +488,31 @@ submission retry conflict
 restart
 restart retry recovery
 active successor recovery
+completed History paging
+historical detail read-back
 ```
 
-## 12. Next testing focus: Assessment History / Detail
+## 12. Next testing focus: Clarification + Tie-break (Step 7)
 
-For Step 6, add tests around the historical read contract rather than repeating lifecycle tests already proven here.
+Step 6 closed the History/Historical Detail read-side goals above. Step 7 should focus on mutation-side workflow invariants rather than duplicating existing read tests.
 
 Priority areas:
 
 ```text
-completed-history owner scoping
-stable completedAt DESC ordering
-page / size validation
-history list projection
-historical detail against the exact bound DefinitionVersion
-ABANDONED exclusion from completed history
-privacy-safe 404 for another user's detail
-future hard-delete orchestration boundary
+PENDING -> IN_PROGRESS under Session lock
+one IN_PROGRESS Clarification per Session
+only initially ambiguous dimensions are eligible
+IN_PROGRESS -> CLARIFIED with accepted result/provenance
+IN_PROGRESS -> FAILED_RETRYABLE on technical AI failure
+FAILED_RETRYABLE -> IN_PROGRESS retry on the same logical Clarification Aggregate
+skip one / skip remaining
+late provider result discarded after Session abandonment or stale state change
+no DB transaction/lock held across the external LLM call
+exact-tie detection and explicit user tie-break
+automatic finalization once every ambiguous dimension is terminal
+concurrent start/finalization races against real PostgreSQL
 ```
 
-Keep pagination/query tests focused on externally visible ordering and ownership. Do not hydrate full Aggregates merely to prove a read projection when no mutation is occurring.
+Because ADR-0016 makes `DimensionClarification` a separate Aggregate, Application tests should explicitly verify Session + Clarification coordination, while PostgreSQL integration tests prove the partial unique index and Session-lock concurrency assumptions.
 
 The Identity/Security test infrastructure remains reusable for authenticated Assessment and future Group endpoint testing.

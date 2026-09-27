@@ -87,7 +87,7 @@ MVP requirements:
 - A completed assessment's contents are immutable: answers and accepted results cannot be edited in place.
 - The owner can delete a historical assessment record.
 
-Immutability governs modification, not deletion. MVP historical-assessment deletion is a hard delete of the owned AssessmentSession and Session-owned child data after Group orchestration ends any ACTIVE Shares that reference it; ended Group share/consent history is retained without retaining the private Assessment content.
+Immutability governs modification, not deletion. MVP historical-assessment deletion is a hard delete of the owned AssessmentSession and its Session-dependent persisted Assessment data after Group orchestration ends any ACTIVE Shares that reference it; ended Group share/consent history is retained without retaining the private Assessment content.
 
 ### 4.6 Group and Sharing
 
