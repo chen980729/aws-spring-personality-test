@@ -1,7 +1,9 @@
 package dev.springawsportfolio.portfolio.assessment.application.command.start;
 
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.AssessmentSessionWorkflowQuery;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
@@ -28,12 +30,16 @@ public class StartAssessmentService {
     private final AssessmentSessionRepository
             sessionRepository;
 
+    private final AssessmentSessionWorkflowQuery
+            workflowQuery;
+
     private final Clock clock;
 
     public StartAssessmentService(
             AssessmentDefinitionRepository definitionRepository,
             AssessmentDefinitionVersionRepository versionRepository,
             AssessmentSessionRepository sessionRepository,
+            AssessmentSessionWorkflowQuery workflowQuery,
             Clock clock
     ) {
         this.definitionRepository =
@@ -44,6 +50,9 @@ public class StartAssessmentService {
 
         this.sessionRepository =
                 sessionRepository;
+
+        this.workflowQuery =
+                workflowQuery;
 
         this.clock =
                 Objects.requireNonNull(
@@ -129,7 +138,8 @@ public class StartAssessmentService {
                     true,
                     definition,
                     availableVersion,
-                    candidate
+                    candidate,
+                    AssessmentSessionWorkflowSnapshot.empty()
             );
         }
 
@@ -185,7 +195,10 @@ public class StartAssessmentService {
                 false,
                 definition,
                 boundVersion,
-                session
+                session,
+                workflowQuery.findBySessionId(
+                        session.id()
+                )
         );
     }
 
@@ -193,14 +206,16 @@ public class StartAssessmentService {
             boolean created,
             AssessmentDefinition definition,
             AssessmentDefinitionVersion version,
-            AssessmentSession session
+            AssessmentSession session,
+            AssessmentSessionWorkflowSnapshot workflowSnapshot
     ) {
         return new StartAssessmentResult(
                 created,
                 AssessmentSessionResult.from(
                         definition,
                         version,
-                        session
+                        session,
+                        workflowSnapshot
                 )
         );
     }

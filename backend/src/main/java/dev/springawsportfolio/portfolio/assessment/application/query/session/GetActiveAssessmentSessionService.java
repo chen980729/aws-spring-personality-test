@@ -2,7 +2,9 @@ package dev.springawsportfolio.portfolio.assessment.application.query.session;
 
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.AssessmentSessionWorkflowQuery;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
@@ -27,10 +29,14 @@ public class GetActiveAssessmentSessionService {
     private final AssessmentSessionRepository
             sessionRepository;
 
+    private final AssessmentSessionWorkflowQuery
+            workflowQuery;
+
     public GetActiveAssessmentSessionService(
             AssessmentDefinitionRepository definitionRepository,
             AssessmentDefinitionVersionRepository versionRepository,
-            AssessmentSessionRepository sessionRepository
+            AssessmentSessionRepository sessionRepository,
+            AssessmentSessionWorkflowQuery workflowQuery
     ) {
         this.definitionRepository =
                 definitionRepository;
@@ -40,6 +46,9 @@ public class GetActiveAssessmentSessionService {
 
         this.sessionRepository =
                 sessionRepository;
+
+        this.workflowQuery =
+                workflowQuery;
     }
 
     @Transactional(readOnly = true)
@@ -85,14 +94,6 @@ public class GetActiveAssessmentSessionService {
                                 AssessmentSessionNotFoundException::new
                         );
 
-        /*
-         * Critical version-binding rule:
-         *
-         * An existing Session must always use the exact
-         * DefinitionVersion with which it was created.
-         *
-         * Never resolve the current AVAILABLE version here.
-         */
         AssessmentDefinitionVersion version =
                 versionRepository
                         .findById(
@@ -109,10 +110,16 @@ public class GetActiveAssessmentSessionService {
                                         )
                         );
 
+        AssessmentSessionWorkflowSnapshot workflowSnapshot =
+                workflowQuery.findBySessionId(
+                        session.id()
+                );
+
         return AssessmentSessionResult.from(
                 definition,
                 version,
-                session
+                session,
+                workflowSnapshot
         );
     }
 }

@@ -1,0 +1,201 @@
+package dev.springawsportfolio.portfolio.assessment.web.session;
+
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
+import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
+import dev.springawsportfolio.portfolio.assessment.domain.result.InitialAssessmentResult;
+import dev.springawsportfolio.portfolio.assessment.domain.result.InitialDimensionResult;
+import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionStatus;
+import dev.springawsportfolio.portfolio.assessment.web.session.dto.AssessmentSessionResponse;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+class AssessmentSessionWebMapperTest {
+
+    private final AssessmentSessionWebMapper mapper =
+            new AssessmentSessionWebMapper();
+
+    @Test
+    void mapsPersistedClarificationResultAndTieBreak() {
+        Instant submittedAt =
+                Instant.parse(
+                        "2026-09-27T10:00:00Z"
+                );
+
+        Instant startedAt =
+                Instant.parse(
+                        "2026-09-27T10:01:00Z"
+                );
+
+        Instant acceptedAt =
+                Instant.parse(
+                        "2026-09-27T10:02:00Z"
+                );
+
+        Instant decidedAt =
+                Instant.parse(
+                        "2026-09-27T10:03:00Z"
+                );
+
+        InitialAssessmentResult initialResult =
+                new InitialAssessmentResult(
+                        List.of(
+                                new InitialDimensionResult(
+                                        new DimensionCode("XY"),
+                                        0,
+                                        null,
+                                        true
+                                )
+                        )
+                );
+
+        AssessmentSessionResult session =
+                new AssessmentSessionResult(
+                        UUID.randomUUID(),
+                        "TEST_ASSESSMENT",
+                        "1.0",
+                        AssessmentSessionStatus
+                                .AWAITING_CLARIFICATION,
+                        List.of(),
+                        submittedAt,
+                        initialResult,
+                        List.of(
+                                new AssessmentSessionResult
+                                        .DimensionEvidenceResult(
+                                        "XY",
+                                        "X",
+                                        50.0,
+                                        "Y",
+                                        50.0
+                                )
+                        ),
+                        List.of(
+                                new AssessmentSessionResult
+                                        .ClarificationStateResult(
+                                        "XY",
+                                        DimensionClarificationStatus
+                                                .CLARIFIED,
+                                        new AssessmentSessionResult
+                                                .ClarificationResultData(
+                                                AssessmentSessionWorkflowSnapshot
+                                                        .ClarificationResolution
+                                                        .UNCLEAR,
+                                                null,
+                                                "LOW",
+                                                "The evidence remained balanced."
+                                        ),
+                                        startedAt,
+                                        acceptedAt
+                                )
+                        ),
+                        List.of(
+                                new AssessmentSessionResult
+                                        .TieBreakStateResult(
+                                        "XY",
+                                        "X",
+                                        decidedAt
+                                )
+                        ),
+                        null,
+                        new AssessmentSessionResult
+                                .WorkflowResult(
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                false
+                        ),
+                        Instant.parse(
+                                "2026-09-27T09:00:00Z"
+                        ),
+                        null,
+                        null
+                );
+
+        AssessmentSessionResponse response =
+                mapper.toSessionResponse(
+                        session
+                );
+
+        assertEquals(
+                1,
+                response.clarifications().size()
+        );
+
+        AssessmentSessionResponse.ClarificationStateResponse
+                clarification =
+                response
+                        .clarifications()
+                        .getFirst();
+
+        assertEquals(
+                "CLARIFIED",
+                clarification.status()
+        );
+
+        AssessmentSessionResponse
+                .UnclearClarificationResultResponse clarificationResult =
+                assertInstanceOf(
+                        AssessmentSessionResponse
+                                .UnclearClarificationResultResponse.class,
+                        clarification.result()
+                );
+
+        assertEquals(
+                "UNCLEAR",
+                clarificationResult.resolution()
+        );
+
+        assertNull(
+                clarificationResult.suggestedPole()
+        );
+
+        assertEquals(
+                "LOW",
+                clarificationResult.confidence()
+        );
+
+        assertEquals(
+                "The evidence remained balanced.",
+                clarificationResult.reasoningSummary()
+        );
+
+        assertEquals(
+                startedAt,
+                clarification.startedAt()
+        );
+
+        assertEquals(
+                acceptedAt,
+                clarification.acceptedAt()
+        );
+
+        assertEquals(
+                1,
+                response.tieBreaks().size()
+        );
+
+        assertEquals(
+                "X",
+                response
+                        .tieBreaks()
+                        .getFirst()
+                        .selectedPole()
+        );
+
+        assertEquals(
+                decidedAt,
+                response
+                        .tieBreaks()
+                        .getFirst()
+                        .decidedAt()
+        );
+    }
+}

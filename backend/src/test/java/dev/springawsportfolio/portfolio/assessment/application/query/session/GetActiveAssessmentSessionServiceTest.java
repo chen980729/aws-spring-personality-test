@@ -2,7 +2,9 @@ package dev.springawsportfolio.portfolio.assessment.application.query.session;
 
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.AssessmentSessionWorkflowQuery;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
@@ -68,6 +70,9 @@ class GetActiveAssessmentSessionServiceTest {
     private AssessmentSessionRepository
             sessionRepository;
 
+    private AssessmentSessionWorkflowQuery
+            workflowQuery;
+
     private GetActiveAssessmentSessionService service;
 
     private UserId actorUserId;
@@ -89,11 +94,26 @@ class GetActiveAssessmentSessionServiceTest {
                         AssessmentSessionRepository.class
                 );
 
+        workflowQuery =
+                mock(
+                        AssessmentSessionWorkflowQuery.class
+                );
+
+        when(
+                workflowQuery.findBySessionId(
+                        any()
+                )
+        )
+                .thenReturn(
+                        AssessmentSessionWorkflowSnapshot.empty()
+                );
+
         service =
                 new GetActiveAssessmentSessionService(
                         definitionRepository,
                         versionRepository,
-                        sessionRepository
+                        sessionRepository,
+                        workflowQuery
                 );
 
         actorUserId =

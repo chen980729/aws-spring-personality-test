@@ -1,22 +1,23 @@
 package dev.springawsportfolio.portfolio.assessment.web.session;
 
-import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireResult;
-import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
-import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentAlreadySubmittedException;
-import dev.springawsportfolio.portfolio.assessment.application.exception.QuestionnaireIncompleteException;
+import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionService;
+import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyAbandonedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyCompletedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
-import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
-import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
-import dev.springawsportfolio.portfolio.assessment.domain.result.InitialAssessmentResult;
-import dev.springawsportfolio.portfolio.assessment.domain.result.InitialDimensionResult;
+import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionId;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionStatus;
 import dev.springawsportfolio.portfolio.assessment.web.error.AssessmentExceptionHandler;
+import dev.springawsportfolio.portfolio.identity.api.UserId;
 import dev.springawsportfolio.portfolio.identity.infrastructure.security.authentication.AuthenticatedUserPrincipal;
 import dev.springawsportfolio.portfolio.identity.infrastructure.security.config.SecurityConfig;
 import dev.springawsportfolio.portfolio.identity.infrastructure.security.web.ApiAccessDeniedHandler;
 import dev.springawsportfolio.portfolio.identity.infrastructure.security.web.ApiAuthenticationEntryPoint;
 import dev.springawsportfolio.portfolio.identity.infrastructure.security.web.ApiLogoutSuccessHandler;
 import dev.springawsportfolio.portfolio.platform.web.error.GlobalWebExceptionHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,6 +26,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.DeferredSecurityContext;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -36,16 +40,18 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        AssessmentSessionSubmissionController.class
+        AssessmentSessionRestartController.class
 )
 @Import({
         GlobalWebExceptionHandler.class,
@@ -56,14 +62,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ApiLogoutSuccessHandler.class,
         AssessmentSessionWebMapper.class
 })
-class AssessmentSessionSubmissionControllerTest {
+class AssessmentSessionRestartControllerTest {
 
     @Autowired
     MockMvc mockMvc;
 
     @MockitoBean
-    SubmitQuestionnaireService
-            submitQuestionnaireService;
+    RestartAssessmentSessionService
+            restartAssessmentSessionService;
 
     @MockitoBean
     AuthenticationManager authenticationManager;
@@ -75,25 +81,60 @@ class AssessmentSessionSubmissionControllerTest {
     SessionAuthenticationStrategy
             sessionAuthenticationStrategy;
 
+    @BeforeEach
+    void setUpSecurityContextRepository() {
+        given(securityContextRepository.loadDeferredContext(any()))
+                .willAnswer(invocation -> {
+                    SecurityContext empty =
+                            SecurityContextHolder.createEmptyContext(); // 每个请求只建一次
+
+                    return new DeferredSecurityContext() {
+                        @Override
+                        public SecurityContext get() {
+                            return empty; // 同一个请求内始终返回同一个对象
+                        }
+
+                        @Override
+                        public boolean isGenerated() {
+                            return true;
+                        }
+                    };
+                });
+    }
+
     @Test
-    void submitsQuestionnaireAndReturnsAwaitingClarificationState()
+    void restartsAssessmentAndReturnsCreatedReplacement()
             throws Exception {
 
         UUID userId =
                 UUID.randomUUID();
 
-        UUID sessionId =
+        UUID oldSessionId =
                 UUID.randomUUID();
 
+        UUID newSessionId =
+                UUID.randomUUID();
+
+        RestartAssessmentSessionCommand command =
+                new RestartAssessmentSessionCommand(
+                        new UserId(
+                                userId
+                        ),
+                        new AssessmentSessionId(
+                                oldSessionId
+                        )
+                );
+
         given(
-                submitQuestionnaireService.execute(
-                        any()
+                restartAssessmentSessionService.execute(
+                        eq(command)
                 )
         )
                 .willReturn(
-                        new SubmitQuestionnaireResult(
-                                awaitingClarificationResult(
-                                        sessionId
+                        new RestartAssessmentSessionResult(
+                                oldSessionId,
+                                replacementResult(
+                                        newSessionId
                                 )
                         )
                 );
@@ -101,8 +142,8 @@ class AssessmentSessionSubmissionControllerTest {
         mockMvc.perform(
                         post(
                                 "/api/v1/assessment-sessions/"
-                                        + sessionId
-                                        + "/questionnaire/submission"
+                                        + oldSessionId
+                                        + "/restart"
                         )
                                 .with(
                                         authenticatedUser(
@@ -112,113 +153,79 @@ class AssessmentSessionSubmissionControllerTest {
                                 .with(
                                         csrf().asHeader()
                                 )
-                                .contentType(
-                                        "application/json"
-                                )
-                                .content(
-                                        """
-                                        {
-                                          "answers": [
-                                            {
-                                              "questionId": "Q1",
-                                              "value": 5
-                                            }
-                                          ]
-                                        }
-                                        """
-                                )
                 )
                 .andExpect(
-                        status().isOk()
+                        status().isCreated()
                 )
                 .andExpect(
-                        jsonPath("$.id")
-                                .value(
-                                        sessionId.toString()
-                                )
-                )
-                .andExpect(
-                        jsonPath("$.status")
-                                .value(
-                                        "AWAITING_CLARIFICATION"
-                                )
-                )
-                .andExpect(
-                        jsonPath(
-                                "$.questionnaire.submitted"
+                        header().string(
+                                "Location",
+                                "/api/v1/assessment-sessions/"
+                                        + newSessionId
                         )
-                                .value(true)
                 )
                 .andExpect(
                         jsonPath(
-                                "$.initialResult.dimensions[0].dimensionCode"
+                                "$.abandonedSessionId"
                         )
-                                .value("XY")
+                                .value(
+                                        oldSessionId.toString()
+                                )
                 )
                 .andExpect(
                         jsonPath(
-                                "$.initialResult.dimensions[0].rawScore"
+                                "$.session.id"
+                        )
+                                .value(
+                                        newSessionId.toString()
+                                )
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.session.status"
+                        )
+                                .value(
+                                        "IN_PROGRESS"
+                                )
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.session.assessment.code"
+                        )
+                                .value(
+                                        "SIXTEEN_PERSONALITY"
+                                )
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.session.assessment.version"
+                        )
+                                .value(
+                                        "1.0"
+                                )
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.session.questionnaire.answers.length()"
                         )
                                 .value(0)
                 )
                 .andExpect(
                         jsonPath(
-                                "$.initialResult.dimensions[0].questionnairePreference"
+                                "$.session.questionnaire.submitted"
                         )
-                                .value(
-                                        org.hamcrest.Matchers.nullValue()
-                                )
+                                .value(false)
                 )
                 .andExpect(
                         jsonPath(
-                                "$.initialResult.dimensions[0].ambiguous"
+                                "$.session.workflow.completed"
                         )
-                                .value(true)
-                )
-                .andExpect(
-                        jsonPath(
-                                "$.initialResult.dimensions[0].evidence.poleA"
-                        )
-                                .value("X")
-                )
-                .andExpect(
-                        jsonPath(
-                                "$.initialResult.dimensions[0].evidence.poleAPercentage"
-                        )
-                                .value(50.0)
-                )
-                .andExpect(
-                        jsonPath(
-                                "$.clarifications[0].dimensionCode"
-                        )
-                                .value("XY")
-                )
-                .andExpect(
-                        jsonPath(
-                                "$.clarifications[0].status"
-                        )
-                                .value("PENDING")
-                )
-                .andExpect(
-                        jsonPath("$.finalResult")
-                                .value(
-                                        org.hamcrest.Matchers.nullValue()
-                                )
-                )
-                .andExpect(
-                        jsonPath(
-                                "$.workflow.pendingClarificationDimensions[0]"
-                        )
-                                .value("XY")
-                )
-                .andExpect(
-                        jsonPath("$.workflow.completed")
                                 .value(false)
                 );
     }
 
     @Test
-    void returns422WhenQuestionnaireIsIncomplete()
+    void returns404WhenOldSessionIsNotAvailableToCurrentUser()
             throws Exception {
 
         UUID userId =
@@ -227,20 +234,30 @@ class AssessmentSessionSubmissionControllerTest {
         UUID sessionId =
                 UUID.randomUUID();
 
+        RestartAssessmentSessionCommand command =
+                new RestartAssessmentSessionCommand(
+                        new UserId(
+                                userId
+                        ),
+                        new AssessmentSessionId(
+                                sessionId
+                        )
+                );
+
         given(
-                submitQuestionnaireService.execute(
-                        any()
+                restartAssessmentSessionService.execute(
+                        eq(command)
                 )
         )
                 .willThrow(
-                        new QuestionnaireIncompleteException()
+                        new AssessmentSessionNotFoundException()
                 );
 
         mockMvc.perform(
                         post(
                                 "/api/v1/assessment-sessions/"
                                         + sessionId
-                                        + "/questionnaire/submission"
+                                        + "/restart"
                         )
                                 .with(
                                         authenticatedUser(
@@ -250,30 +267,20 @@ class AssessmentSessionSubmissionControllerTest {
                                 .with(
                                         csrf().asHeader()
                                 )
-                                .contentType(
-                                        "application/json"
-                                )
-                                .content(
-                                        """
-                                        {
-                                          "answers": []
-                                        }
-                                        """
-                                )
                 )
                 .andExpect(
-                        status().isUnprocessableContent()
+                        status().isNotFound()
                 )
                 .andExpect(
                         jsonPath("$.code")
                                 .value(
-                                        "QUESTIONNAIRE_INCOMPLETE"
+                                        "ASSESSMENT_SESSION_NOT_FOUND"
                                 )
                 );
     }
 
     @Test
-    void returns409WhenQuestionnaireWasAlreadySubmitted()
+    void returns409WhenOldSessionWasAlreadyAbandoned()
             throws Exception {
 
         UUID userId =
@@ -282,20 +289,30 @@ class AssessmentSessionSubmissionControllerTest {
         UUID sessionId =
                 UUID.randomUUID();
 
+        RestartAssessmentSessionCommand command =
+                new RestartAssessmentSessionCommand(
+                        new UserId(
+                                userId
+                        ),
+                        new AssessmentSessionId(
+                                sessionId
+                        )
+                );
+
         given(
-                submitQuestionnaireService.execute(
-                        any()
+                restartAssessmentSessionService.execute(
+                        eq(command)
                 )
         )
                 .willThrow(
-                        new AssessmentAlreadySubmittedException()
+                        new AssessmentSessionAlreadyAbandonedException()
                 );
 
         mockMvc.perform(
                         post(
                                 "/api/v1/assessment-sessions/"
                                         + sessionId
-                                        + "/questionnaire/submission"
+                                        + "/restart"
                         )
                                 .with(
                                         authenticatedUser(
@@ -304,21 +321,6 @@ class AssessmentSessionSubmissionControllerTest {
                                 )
                                 .with(
                                         csrf().asHeader()
-                                )
-                                .contentType(
-                                        "application/json"
-                                )
-                                .content(
-                                        """
-                                        {
-                                          "answers": [
-                                            {
-                                              "questionId": "Q1",
-                                              "value": 5
-                                            }
-                                          ]
-                                        }
-                                        """
                                 )
                 )
                 .andExpect(
@@ -327,7 +329,62 @@ class AssessmentSessionSubmissionControllerTest {
                 .andExpect(
                         jsonPath("$.code")
                                 .value(
-                                        "ASSESSMENT_ALREADY_SUBMITTED"
+                                        "ASSESSMENT_SESSION_ALREADY_ABANDONED"
+                                )
+                );
+    }
+
+    @Test
+    void returns409WhenSessionIsAlreadyCompleted()
+            throws Exception {
+
+        UUID userId =
+                UUID.randomUUID();
+
+        UUID sessionId =
+                UUID.randomUUID();
+
+        RestartAssessmentSessionCommand command =
+                new RestartAssessmentSessionCommand(
+                        new UserId(
+                                userId
+                        ),
+                        new AssessmentSessionId(
+                                sessionId
+                        )
+                );
+
+        given(
+                restartAssessmentSessionService.execute(
+                        eq(command)
+                )
+        )
+                .willThrow(
+                        new AssessmentSessionAlreadyCompletedException()
+                );
+
+        mockMvc.perform(
+                        post(
+                                "/api/v1/assessment-sessions/"
+                                        + sessionId
+                                        + "/restart"
+                        )
+                                .with(
+                                        authenticatedUser(
+                                                userId
+                                        )
+                                )
+                                .with(
+                                        csrf().asHeader()
+                                )
+                )
+                .andExpect(
+                        status().isConflict()
+                )
+                .andExpect(
+                        jsonPath("$.code")
+                                .value(
+                                        "ASSESSMENT_SESSION_ALREADY_COMPLETED"
                                 )
                 );
     }
@@ -346,22 +403,12 @@ class AssessmentSessionSubmissionControllerTest {
                         post(
                                 "/api/v1/assessment-sessions/"
                                         + sessionId
-                                        + "/questionnaire/submission"
+                                        + "/restart"
                         )
                                 .with(
                                         authenticatedUser(
                                                 userId
                                         )
-                                )
-                                .contentType(
-                                        "application/json"
-                                )
-                                .content(
-                                        """
-                                        {
-                                          "answers": []
-                                        }
-                                        """
                                 )
                 )
                 .andExpect(
@@ -375,7 +422,7 @@ class AssessmentSessionSubmissionControllerTest {
                 );
 
         verifyNoInteractions(
-                submitQuestionnaireService
+                restartAssessmentSessionService
         );
     }
 
@@ -390,20 +437,10 @@ class AssessmentSessionSubmissionControllerTest {
                         post(
                                 "/api/v1/assessment-sessions/"
                                         + sessionId
-                                        + "/questionnaire/submission"
+                                        + "/restart"
                         )
                                 .with(
                                         csrf().asHeader()
-                                )
-                                .contentType(
-                                        "application/json"
-                                )
-                                .content(
-                                        """
-                                        {
-                                          "answers": []
-                                        }
-                                        """
                                 )
                 )
                 .andExpect(
@@ -417,86 +454,22 @@ class AssessmentSessionSubmissionControllerTest {
                 );
 
         verifyNoInteractions(
-                submitQuestionnaireService
+                restartAssessmentSessionService
         );
     }
 
-    private AssessmentSessionResult
-    awaitingClarificationResult(
+    private AssessmentSessionResult replacementResult(
             UUID sessionId
     ) {
-        Instant submittedAt =
-                Instant.parse(
-                        "2026-09-27T00:01:00Z"
-                );
-
-        InitialAssessmentResult initialResult =
-                new InitialAssessmentResult(
-                        List.of(
-                                new InitialDimensionResult(
-                                        new DimensionCode("XY"),
-                                        0,
-                                        null,
-                                        true
-                                )
-                        )
-                );
-
         return new AssessmentSessionResult(
                 sessionId,
-                "TEST_ASSESSMENT",
+                "SIXTEEN_PERSONALITY",
                 "1.0",
-                AssessmentSessionStatus
-                        .AWAITING_CLARIFICATION,
-
-                List.of(
-                        new AssessmentSessionResult
-                                .QuestionAnswerResult(
-                                "Q1",
-                                5
-                        )
-                ),
-
-                submittedAt,
-
-                initialResult,
-
-                List.of(
-                        new AssessmentSessionResult
-                                .DimensionEvidenceResult(
-                                "XY",
-                                "X",
-                                50.0,
-                                "Y",
-                                50.0
-                        )
-                ),
-
-                List.of(
-                        new AssessmentSessionResult
-                                .ClarificationStateResult(
-                                "XY",
-                                DimensionClarificationStatus.PENDING,
-                                null,
-                                null,
-                                null
-                        )
-                ),
-
+                AssessmentSessionStatus.IN_PROGRESS,
                 List.of(),
-
                 null,
-
-                new AssessmentSessionResult
-                        .WorkflowResult(
-                        List.of("XY"),
-                        List.of(),
-                        List.of(),
-                        false
-                ),
-
                 Instant.parse(
-                        "2026-09-27T00:00:00Z"
+                        "2026-09-27T10:00:00Z"
                 ),
                 null,
                 null

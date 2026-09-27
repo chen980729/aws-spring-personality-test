@@ -1,8 +1,8 @@
 # Backend Testing Strategy & Current Coverage
 
 > **Status:** Active implementation guidance  
-> **Last reviewed:** 2026-09-23  
-> **Current coverage checkpoint:** Identity/Security authentication lifecycle
+> **Last reviewed:** 2026-09-27  
+> **Current coverage checkpoint:** Assessment through Restart / Start New (Step 5)
 
 ## 1. Testing principle
 
@@ -381,22 +381,125 @@ For Assessment and Group implementation, follow these rules:
 6. **Add focused full-stack tests only for flows where cross-layer behavior is itself the risk.** Keep them few and meaningful.
 7. **Treat production configuration as testable behavior.** Cookie/security/AWS profile assumptions should eventually have configuration-level tests.
 
-## 11. Next testing focus: Assessment
+## 11. Current Assessment coverage through Step 5
 
-The next vertical slice should add tests in roughly this order:
+The Assessment implementation now follows the intended layered strategy.
+
+### 11.1 Domain / pure logic
+
+Current focused coverage includes:
 
 ```text
-Assessment Domain invariants
-  ↓
-Start/Resume/Restart Application tests
-  ↓
-Assessment repository + Flyway/Testcontainers integration
-  ↓
-Assessment Web MVC tests
-  ↓
-Submit + deterministic scoring tests
-  ↓
-focused concurrency/recovery tests
+AssessmentSession lifecycle invariants
+QuestionnaireResponse invariants
+deterministic questionnaire scoring
+ambiguity threshold behavior
+exact-tie behavior
+deterministic immediate finalization
+submission freeze / terminal-state rules
+abandonment rules
 ```
 
-The Identity/Security tests established in this checkpoint become reusable infrastructure for authenticated Assessment endpoint testing.
+### 11.2 Application
+
+Focused Application tests cover:
+
+```text
+Start / Resume
+Session-bound questionnaire read
+Autosave
+SubmitQuestionnaire
+GetAssessmentSession
+RestartAssessmentSession
+```
+
+Ports are mocked at this layer rather than mocking internal Domain behavior.
+
+### 11.3 PostgreSQL / persistence integration
+
+PostgreSQL Testcontainers are used for database-specific behavior including:
+
+```text
+Flyway schema validation
+Definition / Version seed loading
+JSONB round trips
+partial UNIQUE one-active-session invariant
+atomic active-session creation
+optimistic locking for draft writes
+submission persistence
+InitialAssessmentResult / FinalAssessmentResult persistence
+PENDING clarification creation
+Restart row locking and replacement persistence ordering
+concurrent Restart against the same old Session
+```
+
+The Restart concurrency acceptance criterion is:
+
+```text
+two concurrent Restart commands
+against the same old sessionId
+
+-> exactly one replacement succeeds
+-> the other observes the old Session as ABANDONED/conflicts
+-> exactly one active replacement remains
+```
+
+This is intentionally verified against real PostgreSQL rather than H2.
+
+### 11.4 Web MVC / Security
+
+Focused `@WebMvcTest` coverage now includes:
+
+```text
+Assessment catalog/read endpoints
+Start / Resume
+active Session read
+Session-bound questionnaire read
+Autosave
+Submission
+Session detail
+Restart
+authentication
+CSRF
+privacy-safe 404 behavior
+stable 409 / 422 Problem Details
+Location header on created resources
+```
+
+### 11.5 Runtime verification
+
+Important flows are additionally exercised manually through the running application where the risk is cross-layer behavior rather than one isolated class.
+
+Verified milestones include:
+
+```text
+register/login/session/CSRF
+start/resume
+autosave/read-back
+submit/read-back
+submission retry conflict
+restart
+restart retry recovery
+active successor recovery
+```
+
+## 12. Next testing focus: Assessment History / Detail
+
+For Step 6, add tests around the historical read contract rather than repeating lifecycle tests already proven here.
+
+Priority areas:
+
+```text
+completed-history owner scoping
+stable completedAt DESC ordering
+page / size validation
+history list projection
+historical detail against the exact bound DefinitionVersion
+ABANDONED exclusion from completed history
+privacy-safe 404 for another user's detail
+future hard-delete orchestration boundary
+```
+
+Keep pagination/query tests focused on externally visible ordering and ownership. Do not hydrate full Aggregates merely to prove a read projection when no mutation is occurring.
+
+The Identity/Security test infrastructure remains reusable for authenticated Assessment and future Group endpoint testing.

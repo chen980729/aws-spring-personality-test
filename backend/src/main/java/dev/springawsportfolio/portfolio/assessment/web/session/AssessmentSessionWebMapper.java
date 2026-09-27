@@ -198,12 +198,44 @@ public final class AssessmentSessionWebMapper {
                                 .ClarificationStateResponse(
                                 clarification.dimensionCode(),
                                 clarification.status().name(),
-                                null,
+                                mapClarificationResult(
+                                        clarification.result()
+                                ),
                                 clarification.startedAt(),
                                 clarification.acceptedAt()
                         )
                 )
                 .toList();
+    }
+
+    private AssessmentSessionResponse
+            .ClarificationResultResponse
+    mapClarificationResult(
+            AssessmentSessionResult.ClarificationResultData result
+    ) {
+        if (result == null) {
+            return null;
+        }
+
+        return switch (result.resolution()) {
+            case RESOLVED ->
+                    new AssessmentSessionResponse
+                            .ResolvedClarificationResultResponse(
+                            result.resolution().name(),
+                            result.suggestedPole(),
+                            result.confidence(),
+                            result.reasoningSummary()
+                    );
+
+            case UNCLEAR ->
+                    new AssessmentSessionResponse
+                            .UnclearClarificationResultResponse(
+                            result.resolution().name(),
+                            null,
+                            result.confidence(),
+                            result.reasoningSummary()
+                    );
+        };
     }
 
     private List<AssessmentSessionResponse

@@ -1,7 +1,7 @@
 # REST API & HTTP Contract Design
 
-> **Status:** Accepted REST Semantics — exact DTO contract published as OpenAPI v0.2.0  
-> **Last updated:** 2026-09-21  
+> **Status:** Accepted REST Semantics — implementation-aligned through Assessment Step 5  
+> **Last updated:** 2026-09-27  
 > **Security transport:** server-side Session + Spring Session JDBC + Secure/HttpOnly cookie + CSRF
 
 ## 1. API style
@@ -78,11 +78,47 @@ PUT    /api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}
 
 ### RestartAssessmentSession / Start New
 
-`POST /assessment-sessions/{sessionId}/restart` expresses one complete business intent: replace **this identified active attempt** with a new attempt. Backend locks/revalidates the old Session, transitions it to `ABANDONED`, creates the replacement for the same AssessmentDefinition, and commits atomically.
+`POST /assessment-sessions/{sessionId}/restart` expresses one complete business intent: replace **this identified active attempt** with a new attempt. The request has no body; actor identity comes from the authenticated principal and the path identifies the exact old Session.
+
+Backend locks/revalidates the owned old Session, transitions it to `ABANDONED`, creates the replacement for the same `AssessmentDefinition`, binds the replacement to the unique current `AVAILABLE` `AssessmentDefinitionVersion`, and commits atomically.
 
 Allowed old states are `IN_PROGRESS`, `AWAITING_CLARIFICATION`, and `CLARIFICATION_IN_PROGRESS`. `COMPLETED` and `ABANDONED` are terminal.
 
-If the first restart succeeds but its response is lost, retrying against the same old `sessionId` must not abandon the new successor. The retry returns a stable conflict such as `ASSESSMENT_SESSION_ALREADY_ABANDONED`; the client then calls `GET /assessments/{assessmentCode}/sessions/active` to recover the replacement.
+Success contract:
+
+```text
+201 Created
+Location: /api/v1/assessment-sessions/{replacementSessionId}
+```
+
+Response body:
+
+```json
+{
+  "abandonedSessionId": "old-session-id",
+  "session": {
+    "...": "AssessmentSessionResponse for the new IN_PROGRESS attempt"
+  }
+}
+```
+
+The replacement is a fresh Session with an empty questionnaire draft and `submitted = false`. The abandoned old Session keeps its own original DefinitionVersion binding and any already-persisted historical facts.
+
+Restart conflicts are state-specific:
+
+```text
+old Session already ABANDONED
+-> 409 ASSESSMENT_SESSION_ALREADY_ABANDONED
+
+old Session already COMPLETED
+-> 409 ASSESSMENT_SESSION_ALREADY_COMPLETED
+```
+
+A guessed/missing Session or a Session owned by another user returns `404 ASSESSMENT_SESSION_NOT_FOUND`.
+
+If the first restart succeeds but its response is lost, retrying against the same old `sessionId` must not abandon the new successor. The retry returns `409 ASSESSMENT_SESSION_ALREADY_ABANDONED`; the client then calls `GET /assessments/{assessmentCode}/sessions/active` to recover the replacement.
+
+A completed historical attempt is not restarted. “Take Again” after completion uses normal `StartAssessment`; when no active Session exists, Start creates a fresh attempt.
 
 ### Session-bound questionnaire
 
@@ -251,6 +287,8 @@ Do not expose generic arbitrary sorting. Each use case defines stable business o
 - JoinRequest already resolved.
 - Admin attempts Leave.
 - Assessment already submitted.
+- Restart targets an already-abandoned AssessmentSession.
+- Restart targets a completed AssessmentSession.
 - Group already disbanded.
 - concurrent modification.
 
@@ -300,8 +338,11 @@ JOIN_REQUEST_ALREADY_RESOLVED
 JOIN_REQUEST_EXPIRED
 ASSESSMENT_SESSION_NOT_FOUND
 ASSESSMENT_SESSION_ALREADY_ABANDONED
+ASSESSMENT_SESSION_ALREADY_COMPLETED
+ASSESSMENT_SESSION_CONCURRENT_MODIFICATION
 ASSESSMENT_ALREADY_SUBMITTED
 QUESTIONNAIRE_INCOMPLETE
+INVALID_QUESTIONNAIRE_RESPONSE
 CLARIFICATION_NOT_ALLOWED
 CLARIFICATION_NOT_RETRYABLE
 CLARIFICATION_ALREADY_IN_PROGRESS
@@ -337,19 +378,38 @@ The JPA `@Version` value is not exposed as an HTTP contract in MVP. ETag / `If-M
 
 Naturally retry-friendly operations include complete-snapshot PUTs and DELETE of current active resources.
 
-`StartAssessment` uses POST but has create-if-none/resume semantics. Explicit Restart is retry-recoverable because it targets the old Session being replaced rather than “whatever Session is active now”. Submit retry uses the stable conflict + GET recovery protocol described above.
+`StartAssessment` uses POST but has create-if-none/resume semantics. Explicit Restart is retry-recoverable because it targets the old Session being replaced rather than “whatever Session is active now”. A successful Restart returns `201 Created` with a Location for the replacement; retrying the old target returns a stable terminal-state conflict and the client recovers via the active-Session read. Submit retry uses the stable conflict + GET recovery protocol described above.
 
 MVP does not introduce generic `Idempotency-Key` infrastructure. If future operations require stronger duplicate-request replay semantics, add it deliberately.
 
 ## 15. Exact DTO Contract / OpenAPI
 
-The machine-readable contract is now:
+The machine-readable contract lives at:
 
 ```text
 docs/api/openapi.yaml
-OpenAPI contract version: 0.2.0
 OpenAPI Specification: 3.1.2
 ```
+
+The standalone `openapi.yaml` source was not part of the materials updated in this Step 5 review. It must be synchronized with the Step 5 Restart refinement before the next contract release. Required synchronization items are:
+
+```text
+POST /api/v1/assessment-sessions/{sessionId}/restart
+
+201 Created
+Location header
+RestartAssessmentResponse
+  - abandonedSessionId
+  - session: AssessmentSessionResponse
+
+409 ASSESSMENT_SESSION_ALREADY_ABANDONED
+409 ASSESSMENT_SESSION_ALREADY_COMPLETED
+404 ASSESSMENT_SESSION_NOT_FOUND
+401 authentication failure
+403 CSRF failure
+```
+
+When that machine-readable file is updated, bump its contract version deliberately rather than silently changing the existing published version.
 
 It freezes:
 

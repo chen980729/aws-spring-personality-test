@@ -12,6 +12,7 @@ import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.ma
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.repository.PostgresAssessmentSessionAtomicCreator;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.repository.SpringDataAssessmentSessionRepository;
 import dev.springawsportfolio.portfolio.identity.api.UserId;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -47,20 +48,33 @@ public class JpaAssessmentSessionRepositoryAdapter
     private final AssessmentResultPersistenceMapper
             resultMapper;
 
+    private final EntityManager entityManager;
+
     public JpaAssessmentSessionRepositoryAdapter(
             SpringDataAssessmentSessionRepository repository,
             PostgresAssessmentSessionAtomicCreator atomicCreator,
             AssessmentSessionPersistenceMapper mapper,
             QuestionnaireResponsePersistenceMapper questionnaireResponseMapper,
-            AssessmentResultPersistenceMapper resultMapper
+            AssessmentResultPersistenceMapper resultMapper,
+            EntityManager entityManager
     ) {
-        this.repository = repository;
-        this.atomicCreator = atomicCreator;
-        this.mapper = mapper;
+        this.repository =
+                repository;
+
+        this.atomicCreator =
+                atomicCreator;
+
+        this.mapper =
+                mapper;
+
         this.questionnaireResponseMapper =
                 questionnaireResponseMapper;
+
         this.resultMapper =
                 resultMapper;
+
+        this.entityManager =
+                entityManager;
     }
 
     @Override
@@ -74,7 +88,9 @@ public class JpaAssessmentSessionRepositoryAdapter
                         definitionId.value(),
                         ACTIVE_STATUSES
                 )
-                .map(mapper::toDomain);
+                .map(
+                        mapper::toDomain
+                );
     }
 
     @Override
@@ -87,7 +103,25 @@ public class JpaAssessmentSessionRepositoryAdapter
                         sessionId.value(),
                         ownerUserId.value()
                 )
-                .map(mapper::toDomain);
+                .map(
+                        mapper::toDomain
+                );
+    }
+
+    @Override
+    public Optional<AssessmentSession>
+    findOwnedByIdForUpdate(
+            AssessmentSessionId sessionId,
+            UserId ownerUserId
+    ) {
+        return repository
+                .findOwnedByIdForUpdate(
+                        sessionId.value(),
+                        ownerUserId.value()
+                )
+                .map(
+                        mapper::toDomain
+                );
     }
 
     @Override
@@ -111,22 +145,120 @@ public class JpaAssessmentSessionRepositoryAdapter
             AssessmentSession session
     ) {
         AssessmentSessionJpaEntity entity =
-                repository
-                        .findByIdAndUserId(
-                                session.id().value(),
-                                session.ownerUserId().value()
-                        )
-                        .orElseThrow(
-                                () ->
-                                        new IllegalStateException(
-                                                "AssessmentSession disappeared "
-                                                        + "during update: "
-                                                        + session
-                                                        .id()
-                                                        .value()
-                                        )
-                        );
+                findManagedEntity(
+                        session
+                );
 
+        applyMutableState(
+                entity,
+                session
+        );
+    }
+
+    @Override
+    public void replaceActive(
+            AssessmentSession abandonedSession,
+            AssessmentSession replacementSession
+    ) {
+        if (
+                abandonedSession.status()
+                        != AssessmentSessionStatus.ABANDONED
+        ) {
+            throw new IllegalArgumentException(
+                    "old AssessmentSession must already be ABANDONED"
+            );
+        }
+
+        if (!replacementSession.isActive()) {
+            throw new IllegalArgumentException(
+                    "replacement AssessmentSession must be active"
+            );
+        }
+
+        if (
+                !abandonedSession
+                        .ownerUserId()
+                        .equals(
+                                replacementSession.ownerUserId()
+                        )
+        ) {
+            throw new IllegalArgumentException(
+                    "replacement Session must have the same owner"
+            );
+        }
+
+        if (
+                !abandonedSession
+                        .definitionId()
+                        .equals(
+                                replacementSession.definitionId()
+                        )
+        ) {
+            throw new IllegalArgumentException(
+                    "replacement Session must use the same "
+                            + "AssessmentDefinition"
+            );
+        }
+
+        AssessmentSessionJpaEntity entity =
+                findManagedEntity(
+                        abandonedSession
+                );
+
+        applyMutableState(
+                entity,
+                abandonedSession
+        );
+
+        /*
+         * Critical ordering rule:
+         *
+         * PostgreSQL's partial UNIQUE index still sees the old Session
+         * as active until Hibernate actually executes its UPDATE.
+         *
+         * Flush that transition before the JDBC INSERT for the
+         * replacement Session.
+         */
+        entityManager.flush();
+
+        boolean created =
+                atomicCreator.tryCreate(
+                        replacementSession
+                );
+
+        if (!created) {
+            throw new IllegalStateException(
+                    "replacement AssessmentSession could not be created "
+                            + "because another active Session exists"
+            );
+        }
+    }
+
+    private AssessmentSessionJpaEntity
+    findManagedEntity(
+            AssessmentSession session
+    ) {
+        return repository
+                .findByIdAndUserId(
+                        session.id().value(),
+                        session.ownerUserId().value()
+                )
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "AssessmentSession disappeared "
+                                                + "during update: "
+                                                + session
+                                                .id()
+                                                .value()
+                                )
+                );
+    }
+
+    private void applyMutableState(
+            AssessmentSessionJpaEntity entity,
+            AssessmentSession session
+    ) {
         entity.updateFrom(
                 session,
 

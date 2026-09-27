@@ -1,6 +1,8 @@
 package dev.springawsportfolio.portfolio.assessment.application.query.session;
 
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.AssessmentSessionWorkflowQuery;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
@@ -42,6 +44,9 @@ class GetAssessmentSessionServiceTest {
     private AssessmentDefinitionVersionRepository
             versionRepository;
 
+    private AssessmentSessionWorkflowQuery
+            workflowQuery;
+
     private GetAssessmentSessionService service;
 
     private UserId actorUserId;
@@ -63,11 +68,26 @@ class GetAssessmentSessionServiceTest {
                         AssessmentDefinitionVersionRepository.class
                 );
 
+        workflowQuery =
+                mock(
+                        AssessmentSessionWorkflowQuery.class
+                );
+
+        when(
+                workflowQuery.findBySessionId(
+                        any()
+                )
+        )
+                .thenReturn(
+                        AssessmentSessionWorkflowSnapshot.empty()
+                );
+
         service =
                 new GetAssessmentSessionService(
                         sessionRepository,
                         definitionRepository,
-                        versionRepository
+                        versionRepository,
+                        workflowQuery
                 );
 
         actorUserId =

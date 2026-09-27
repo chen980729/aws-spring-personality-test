@@ -6,6 +6,7 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.Assessm
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidQuestionnaireResponseException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.QuestionnaireIncompleteException;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
@@ -216,7 +217,10 @@ public class SubmitQuestionnaireService {
                         definition,
                         version,
                         session,
-                        clarifications
+                        AssessmentSessionWorkflowSnapshot
+                                .fromPendingClarifications(
+                                        clarifications
+                                )
                 );
 
         return new SubmitQuestionnaireResult(

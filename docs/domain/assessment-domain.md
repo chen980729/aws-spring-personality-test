@@ -1,5 +1,8 @@
 # Assessment Domain Model
 
+> **Status:** Accepted Assessment Domain Baseline — implementation-aligned through Step 5  
+> **Last updated:** 2026-09-27
+
 ## 1. Scope
 
 This document records the accepted Assessment domain baseline. It contains final domain conclusions and intentionally avoids framework/persistence implementation details.
@@ -38,6 +41,10 @@ Semantics:
 - `ABANDONED` — terminal state; the attempt is no longer active. It may be entered from any non-terminal active Session state: `IN_PROGRESS`, `AWAITING_CLARIFICATION`, or `CLARIFICATION_IN_PROGRESS`. `COMPLETED` and `ABANDONED` cannot transition to `ABANDONED`.
 
 `Resume` is **not** a lifecycle transition. Resume loads the existing persisted session and continues from its valid business state.
+
+`Restart / Start New` is also not a new lifecycle status. It is a cross-Session business command: one identified active Session transitions to `ABANDONED`, while a distinct replacement `AssessmentSession` begins in `IN_PROGRESS`. The old Session keeps its original DefinitionVersion binding and historical evidence. The replacement binds the same `AssessmentDefinition` but the unique current `AVAILABLE` `AssessmentDefinitionVersion`.
+
+A completed historical Session is not “restarted”. `COMPLETED` remains immutable/terminal; taking the Assessment again after completion creates a separate new Session through normal Start semantics when no active Session exists.
 
 The following are **not** top-level Session lifecycle states:
 
@@ -236,7 +243,18 @@ This invariant must be enforceable from durable system state and survive applica
 
 ### DOMAIN-INV-02 Start New Coordination
 
-Normal `StartAssessment` resumes an existing active Session. Explicit `Start New` is a separate business intent: it identifies the current active Session, atomically transitions that Session to `ABANDONED`, and creates a replacement Session for the same AssessmentDefinition. A retry against the already-abandoned old Session must not abandon the replacement Session.
+Normal `StartAssessment` resumes an existing active Session. Explicit `Start New` is a separate business intent that targets the exact active Session being replaced.
+
+The command must:
+
+- revalidate ownership and active state for that identified old Session under concurrency;
+- atomically transition the old Session to `ABANDONED`;
+- create exactly one replacement Session for the same `AssessmentDefinition`;
+- bind the replacement to the Definition's unique current `AVAILABLE` `AssessmentDefinitionVersion`;
+- leave the old Session bound to its original version and preserve its historical facts;
+- preserve `DOMAIN-INV-01` throughout the committed result.
+
+A retry against the already-abandoned old Session must not abandon or replace the successor Session. Concurrent Restart requests against the same old `sessionId` may produce at most one successful replacement.
 
 ### DOMAIN-INV-03 Definition / Version Consistency
 
@@ -317,4 +335,4 @@ Account deletion is a separate deferred capability and requires its own future d
 - Temporary multi-turn AI runtime-context implementation.
 - Detailed future account-deletion/anonymization policy.
 
-The following are now frozen: `ABANDONED` source states, one-AVAILABLE-version MVP rule, ClarificationPolicy provenance binding, sharing-consent ownership/granularity, and historical Assessment hard-delete semantics.
+The following are now frozen: `ABANDONED` source states, one-AVAILABLE-version MVP rule, explicit old-Session Restart targeting and retry semantics, replacement binding to the current AVAILABLE DefinitionVersion, ClarificationPolicy provenance binding, sharing-consent ownership/granularity, and historical Assessment hard-delete semantics.

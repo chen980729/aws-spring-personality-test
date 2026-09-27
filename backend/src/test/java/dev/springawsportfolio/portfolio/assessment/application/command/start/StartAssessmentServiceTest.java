@@ -1,6 +1,8 @@
 package dev.springawsportfolio.portfolio.assessment.application.command.start;
 
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.AssessmentSessionWorkflowQuery;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
@@ -68,6 +70,9 @@ class StartAssessmentServiceTest {
     private AssessmentSessionRepository
             sessionRepository;
 
+    private AssessmentSessionWorkflowQuery
+            workflowQuery;
+
     private StartAssessmentService service;
 
     private UserId actorUserId;
@@ -89,6 +94,20 @@ class StartAssessmentServiceTest {
                         AssessmentSessionRepository.class
                 );
 
+        workflowQuery =
+                mock(
+                        AssessmentSessionWorkflowQuery.class
+                );
+
+        when(
+                workflowQuery.findBySessionId(
+                        any()
+                )
+        )
+                .thenReturn(
+                        AssessmentSessionWorkflowSnapshot.empty()
+                );
+
         Clock clock =
                 Clock.fixed(
                         NOW,
@@ -100,6 +119,7 @@ class StartAssessmentServiceTest {
                         definitionRepository,
                         versionRepository,
                         sessionRepository,
+                        workflowQuery,
                         clock
                 );
 

@@ -1,10 +1,8 @@
 package dev.springawsportfolio.portfolio.assessment.application.session;
 
-import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
-import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.result.FinalAssessmentResult;
 import dev.springawsportfolio.portfolio.assessment.domain.result.InitialAssessmentResult;
@@ -12,9 +10,12 @@ import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSess
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionStatus;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public record AssessmentSessionResult(
         UUID id,
@@ -150,9 +151,7 @@ public record AssessmentSessionResult(
                 definition,
                 version,
                 session,
-                deriveCurrentClarifications(
-                        session
-                )
+                AssessmentSessionWorkflowSnapshot.empty()
         );
     }
 
@@ -160,7 +159,7 @@ public record AssessmentSessionResult(
             AssessmentDefinition definition,
             AssessmentDefinitionVersion version,
             AssessmentSession session,
-            List<DimensionClarification> clarifications
+            AssessmentSessionWorkflowSnapshot workflowSnapshot
     ) {
         Objects.requireNonNull(
                 definition,
@@ -178,8 +177,8 @@ public record AssessmentSessionResult(
         );
 
         Objects.requireNonNull(
-                clarifications,
-                "clarifications must not be null"
+                workflowSnapshot,
+                "workflowSnapshot must not be null"
         );
 
         List<QuestionAnswerResult> answers =
@@ -203,26 +202,23 @@ public record AssessmentSessionResult(
                         session.initialResult()
                 );
 
-        List<ClarificationStateResult>
-                clarificationResults =
-                clarifications
-                        .stream()
-                        .map(clarification ->
-                                new ClarificationStateResult(
-                                        clarification
-                                                .dimension()
-                                                .value(),
-                                        clarification.status(),
-                                        null,
-                                        null
-                                )
-                        )
-                        .toList();
+        List<ClarificationStateResult> clarificationResults =
+                createClarificationResults(
+                        version,
+                        workflowSnapshot
+                );
+
+        List<TieBreakStateResult> tieBreakResults =
+                createTieBreakResults(
+                        version,
+                        workflowSnapshot
+                );
 
         WorkflowResult workflow =
                 createWorkflow(
                         session,
-                        clarificationResults
+                        clarificationResults,
+                        tieBreakResults
                 );
 
         return new AssessmentSessionResult(
@@ -235,43 +231,13 @@ public record AssessmentSessionResult(
                 session.initialResult(),
                 evidence,
                 clarificationResults,
-                List.of(),
+                tieBreakResults,
                 session.finalResult(),
                 workflow,
                 session.createdAt(),
                 session.completedAt(),
                 session.abandonedAt()
         );
-    }
-
-    private static List<DimensionClarification>
-    deriveCurrentClarifications(
-            AssessmentSession session
-    ) {
-        if (
-                session.initialResult() == null
-                        || session.status()
-                        != AssessmentSessionStatus
-                        .AWAITING_CLARIFICATION
-        ) {
-            return List.of();
-        }
-
-        return session
-                .initialResult()
-                .ambiguousDimensions()
-                .stream()
-                .map(dimension ->
-                        DimensionClarification.pending(
-                                dev.springawsportfolio.portfolio
-                                        .assessment.domain.clarification
-                                        .DimensionClarificationId.newId(),
-                                session.id(),
-                                dimension,
-                                session.questionnaireSubmittedAt()
-                        )
-                )
-                .toList();
     }
 
     private static List<DimensionEvidenceResult>
@@ -300,27 +266,12 @@ public record AssessmentSessionResult(
                 .stream()
                 .map(result -> {
                     DimensionDefinition dimension =
-                            version
-                                    .specification()
-                                    .dimensions()
-                                    .stream()
-                                    .filter(candidate ->
-                                            candidate
-                                                    .code()
-                                                    .equals(
-                                                            result.dimension()
-                                                    )
-                                    )
-                                    .findFirst()
-                                    .orElseThrow(
-                                            () ->
-                                                    new IllegalStateException(
-                                                            "missing dimension definition: "
-                                                                    + result
-                                                                    .dimension()
-                                                                    .value()
-                                                    )
-                                    );
+                            findDimension(
+                                    version,
+                                    result
+                                            .dimension()
+                                            .value()
+                            );
 
                     double poleAPercentage =
                             50.0
@@ -344,10 +295,85 @@ public record AssessmentSessionResult(
                 .toList();
     }
 
+    private static List<ClarificationStateResult>
+    createClarificationResults(
+            AssessmentDefinitionVersion version,
+            AssessmentSessionWorkflowSnapshot workflowSnapshot
+    ) {
+        return workflowSnapshot
+                .clarifications()
+                .stream()
+                .sorted(
+                        Comparator.comparingInt(
+                                clarification ->
+                                        dimensionPosition(
+                                                version,
+                                                clarification
+                                                        .dimensionCode()
+                                        )
+                        )
+                )
+                .map(clarification ->
+                        new ClarificationStateResult(
+                                clarification.dimensionCode(),
+                                clarification.status(),
+                                clarification.resolution() == null
+                                        ? null
+                                        : new ClarificationResultData(
+                                                clarification.resolution(),
+                                                clarification.suggestedPole(),
+                                                clarification.confidence(),
+                                                clarification.reasoningSummary()
+                                        ),
+                                clarification.startedAt(),
+                                clarification.acceptedAt()
+                        )
+                )
+                .toList();
+    }
+
+    private static List<TieBreakStateResult>
+    createTieBreakResults(
+            AssessmentDefinitionVersion version,
+            AssessmentSessionWorkflowSnapshot workflowSnapshot
+    ) {
+        return workflowSnapshot
+                .tieBreaks()
+                .stream()
+                .sorted(
+                        Comparator.comparingInt(
+                                tieBreak ->
+                                        dimensionPosition(
+                                                version,
+                                                tieBreak.dimensionCode()
+                                        )
+                        )
+                )
+                .map(tieBreak ->
+                        new TieBreakStateResult(
+                                tieBreak.dimensionCode(),
+                                tieBreak.selectedPole(),
+                                tieBreak.decidedAt()
+                        )
+                )
+                .toList();
+    }
+
     private static WorkflowResult createWorkflow(
             AssessmentSession session,
-            List<ClarificationStateResult> clarifications
+            List<ClarificationStateResult> clarifications,
+            List<TieBreakStateResult> tieBreaks
     ) {
+        if (!session.isActive()) {
+            return new WorkflowResult(
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    session.status()
+                            == AssessmentSessionStatus.COMPLETED
+            );
+        }
+
         List<String> pendingDimensions =
                 clarifications
                         .stream()
@@ -373,13 +399,135 @@ public record AssessmentSessionResult(
                         )
                         .toList();
 
+        List<String> tieBreakRequiredDimensions =
+                createTieBreakRequiredDimensions(
+                        session,
+                        clarifications,
+                        tieBreaks
+                );
+
         return new WorkflowResult(
                 pendingDimensions,
                 retryableDimensions,
-                List.of(),
+                tieBreakRequiredDimensions,
                 session.status()
                         == AssessmentSessionStatus.COMPLETED
         );
+    }
+
+    private static List<String>
+    createTieBreakRequiredDimensions(
+            AssessmentSession session,
+            List<ClarificationStateResult> clarifications,
+            List<TieBreakStateResult> tieBreaks
+    ) {
+        if (session.initialResult() == null) {
+            return List.of();
+        }
+
+        Set<String> decidedDimensions =
+                tieBreaks
+                        .stream()
+                        .map(
+                                TieBreakStateResult::dimensionCode
+                        )
+                        .collect(
+                                Collectors.toSet()
+                        );
+
+        return session
+                .initialResult()
+                .dimensions()
+                .stream()
+                .filter(result ->
+                        result.ambiguous()
+                                && result.exactTie()
+                )
+                .map(result ->
+                        result
+                                .dimension()
+                                .value()
+                )
+                .filter(dimensionCode ->
+                        !decidedDimensions.contains(
+                                dimensionCode
+                        )
+                )
+                .filter(dimensionCode ->
+                        clarificationRequiresTieBreak(
+                                dimensionCode,
+                                clarifications
+                        )
+                )
+                .toList();
+    }
+
+    private static boolean clarificationRequiresTieBreak(
+            String dimensionCode,
+            List<ClarificationStateResult> clarifications
+    ) {
+        return clarifications
+                .stream()
+                .filter(clarification ->
+                        clarification
+                                .dimensionCode()
+                                .equals(
+                                        dimensionCode
+                                )
+                )
+                .findFirst()
+                .map(clarification ->
+                        clarification.status()
+                                == DimensionClarificationStatus.SKIPPED
+                                || (
+                                clarification.status()
+                                        == DimensionClarificationStatus.CLARIFIED
+                                        && clarification.result() != null
+                                        && clarification
+                                        .result()
+                                        .resolution()
+                                        == AssessmentSessionWorkflowSnapshot
+                                        .ClarificationResolution
+                                        .UNCLEAR
+                        )
+                )
+                .orElse(false);
+    }
+
+    private static int dimensionPosition(
+            AssessmentDefinitionVersion version,
+            String dimensionCode
+    ) {
+        return findDimension(
+                version,
+                dimensionCode
+        ).position();
+    }
+
+    private static DimensionDefinition findDimension(
+            AssessmentDefinitionVersion version,
+            String dimensionCode
+    ) {
+        return version
+                .specification()
+                .dimensions()
+                .stream()
+                .filter(candidate ->
+                        candidate
+                                .code()
+                                .value()
+                                .equals(
+                                        dimensionCode
+                                )
+                )
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "missing dimension definition: "
+                                                + dimensionCode
+                                )
+                );
     }
 
     public record QuestionAnswerResult(
@@ -407,8 +555,17 @@ public record AssessmentSessionResult(
     public record ClarificationStateResult(
             String dimensionCode,
             DimensionClarificationStatus status,
+            ClarificationResultData result,
             Instant startedAt,
             Instant acceptedAt
+    ) {
+    }
+
+    public record ClarificationResultData(
+            AssessmentSessionWorkflowSnapshot.ClarificationResolution resolution,
+            String suggestedPole,
+            String confidence,
+            String reasoningSummary
     ) {
     }
 

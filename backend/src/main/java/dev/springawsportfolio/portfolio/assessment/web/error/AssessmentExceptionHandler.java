@@ -3,7 +3,9 @@ package dev.springawsportfolio.portfolio.assessment.web.error;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentAlreadySubmittedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyAbandonedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyCompletedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidAssessmentHistoryPageException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidQuestionnaireResponseException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.QuestionnaireIncompleteException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -136,12 +138,108 @@ public class AssessmentExceptionHandler {
 
         problem.setDetail(
                 "The assessment session has already been abandoned "
-                        + "and can no longer be changed."
+                        + "and cannot be restarted again."
         );
 
         problem.setProperty(
                 "code",
                 "ASSESSMENT_SESSION_ALREADY_ABANDONED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            AssessmentSessionAlreadyCompletedException.class
+    )
+    ProblemDetail handleAssessmentSessionAlreadyCompleted() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.CONFLICT
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/assessment-session-already-completed"
+                )
+        );
+
+        problem.setTitle(
+                "Assessment session already completed"
+        );
+
+        problem.setDetail(
+                "The completed assessment session is immutable "
+                        + "and cannot be restarted."
+        );
+
+        problem.setProperty(
+                "code",
+                "ASSESSMENT_SESSION_ALREADY_COMPLETED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            InvalidAssessmentHistoryPageException.class
+    )
+    ProblemDetail handleInvalidAssessmentHistoryPage() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.BAD_REQUEST
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/assessment-history-pagination-invalid"
+                )
+        );
+
+        problem.setTitle(
+                "Assessment history pagination is invalid"
+        );
+
+        problem.setDetail(
+                "History page must be at least 1 and size must be "
+                        + "between 1 and 100."
+        );
+
+        problem.setProperty(
+                "code",
+                "VALIDATION_FAILED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            InvalidAssessmentHistoryStatusException.class
+    )
+    ProblemDetail handleInvalidAssessmentHistoryStatus() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.BAD_REQUEST
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/assessment-history-status-invalid"
+                )
+        );
+
+        problem.setTitle(
+                "Assessment history status is invalid"
+        );
+
+        problem.setDetail(
+                "Assessment history currently supports only "
+                        + "status=COMPLETED."
+        );
+
+        problem.setProperty(
+                "code",
+                "VALIDATION_FAILED"
         );
 
         return problem;

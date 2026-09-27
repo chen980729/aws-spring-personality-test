@@ -1,7 +1,9 @@
 package dev.springawsportfolio.portfolio.assessment.application.query.session;
 
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.AssessmentSessionWorkflowQuery;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
@@ -27,10 +29,14 @@ public class GetAssessmentSessionService {
     private final AssessmentDefinitionVersionRepository
             versionRepository;
 
+    private final AssessmentSessionWorkflowQuery
+            workflowQuery;
+
     public GetAssessmentSessionService(
             AssessmentSessionRepository sessionRepository,
             AssessmentDefinitionRepository definitionRepository,
-            AssessmentDefinitionVersionRepository versionRepository
+            AssessmentDefinitionVersionRepository versionRepository,
+            AssessmentSessionWorkflowQuery workflowQuery
     ) {
         this.sessionRepository =
                 sessionRepository;
@@ -40,6 +46,9 @@ public class GetAssessmentSessionService {
 
         this.versionRepository =
                 versionRepository;
+
+        this.workflowQuery =
+                workflowQuery;
     }
 
     @Transactional(readOnly = true)
@@ -111,10 +120,16 @@ public class GetAssessmentSessionService {
             );
         }
 
+        AssessmentSessionWorkflowSnapshot workflowSnapshot =
+                workflowQuery.findBySessionId(
+                        session.id()
+                );
+
         return AssessmentSessionResult.from(
                 definition,
                 version,
-                session
+                session,
+                workflowSnapshot
         );
     }
 }

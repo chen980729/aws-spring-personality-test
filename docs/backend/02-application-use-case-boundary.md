@@ -1,7 +1,7 @@
 # Backend Application Use Case Boundary
 
-> **Status:** Accepted MVP Detailed Design — Final Alignment Applied  
-> **Last updated:** 2026-09-20
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 5  
+> **Last updated:** 2026-09-27
 
 ## 1. Application-layer responsibility
 
@@ -75,7 +75,7 @@ It never silently abandons current progress.
 
 ### RestartAssessmentSession (Start New)
 
-Explicit **Start New** is a separate command from normal Start/Resume. The command identifies the current active `sessionId` being replaced.
+Explicit **Start New** is a separate command from normal Start/Resume. The command targets the exact active `sessionId` being replaced; it does not mean “restart whichever Session is active now”.
 
 Allowed source states:
 
@@ -85,20 +85,36 @@ AWAITING_CLARIFICATION
 CLARIFICATION_IN_PROGRESS
 ```
 
-One transaction:
+One Assessment Application transaction:
 
 ```text
-lock identified active Session
--> verify owner + still active
--> Session -> ABANDONED
--> create replacement Session for the same AssessmentDefinition
--> bind the unique AVAILABLE DefinitionVersion
+lock identified owned Session for update
+-> revalidate that this exact Session is still active
+-> resolve the same AssessmentDefinition
+-> resolve that Definition's unique current AVAILABLE DefinitionVersion
+-> old Session -> ABANDONED
+-> create replacement Session -> IN_PROGRESS
+-> persist replacement while preserving the one-active-session invariant
 -> commit
 ```
 
-`COMPLETED` and `ABANDONED` cannot be abandoned. If an LLM call for the old Session is still in flight, its later result is discarded when the post-call transaction reloads the now-abandoned Session.
+The replacement is a **new attempt** with a new `AssessmentSessionId`. It keeps the same `AssessmentDefinition`, but intentionally binds the unique current `AVAILABLE` `AssessmentDefinitionVersion`; it does not inherit the old Session's bound version merely because the old attempt used it. The abandoned Session retains its original version binding and historical facts.
 
-The command is retry-recoverable: retrying against the already-abandoned old `sessionId` must not abandon the newly created replacement Session. The client recovers by reading the current active Session.
+`COMPLETED` and `ABANDONED` are terminal and cannot be restarted through this command. A user who wants to take an Assessment again after a completed historical attempt uses normal `StartAssessment`; because no active Session exists, Start creates a new attempt.
+
+Concurrency/retry semantics are part of the use-case contract:
+
+```text
+two concurrent Restart requests against the same old sessionId
+-> at most one replacement is created
+-> the other request observes the old Session as ABANDONED and conflicts
+```
+
+If the first restart commits but its HTTP response is lost, retrying against the same already-abandoned old `sessionId` must not abandon the newly created replacement Session. The client recovers by reading the current active Session.
+
+If an LLM call for the old Session is still in flight, its later result is stale and is discarded when the post-call transaction reloads/revalidates the now-abandoned Session.
+
+Persistence ordering needed to satisfy the durable one-active-session constraint is an Infrastructure concern. The Application contract requires the old attempt and its replacement to be committed atomically; it does not expose JPA flush or PostgreSQL-specific mechanics.
 
 ### SaveQuestionnaireProgress
 
