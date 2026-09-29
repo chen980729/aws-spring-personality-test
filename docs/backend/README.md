@@ -1,9 +1,9 @@
 # Backend Documentation Index
 
 > **Status:** Active backend design + implementation record
-> **Last updated:** 2026-09-28
-> **Current implementation checkpoint:** Assessment Step 6 — History + Historical Detail complete
-> **Next implementation focus:** Step 7 — Clarification + Tie-break mutation workflow
+> **Last updated:** 2026-09-30
+> **Current implementation checkpoint:** Assessment Step 7 — Clarification workflow boundaries complete
+> **Next implementation focus:** Step 8 — LLM integration for runtime clarification
 
 This directory contains two kinds of documents:
 
@@ -28,9 +28,9 @@ Domain truth remains primarily in:
 6. `06-rest-api-contract.md` — `/api/v1` resource/action semantics, retry/recovery protocol, RFC 9457 error policy and privacy boundary.
 7. `07-implementation-handoff.md` — original design-to-implementation handoff, now annotated with the current implementation state.
 8. `08-authentication-security.md` — server-side Session/JDBC, cookie, CSRF, password and Spring Security boundary design.
-10. `10-backend-testing-strategy.md` — active testing strategy and coverage through Assessment Step 6.
+10. `10-backend-testing-strategy.md` — active testing strategy and coverage through Assessment Step 7.
 
-Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.3.0**).
+Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.4.0**).
 
 ## Implementation checkpoints
 
@@ -39,6 +39,7 @@ Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.3.0*
 12. `12-assessment-submission-scoring-checkpoint.md` — autosave, Submit, deterministic scoring, ambiguity and immediate completion.
 13. `13-assessment-restart-checkpoint.md` — Restart / Start New, locking, concurrency and recovery semantics.
 14. `14-assessment-history-detail-checkpoint.md` — completed History + Historical Detail and authoritative persisted workflow reads.
+15. `15-assessment-clarification-workflow-checkpoint.md` — Clarification Aggregate lifecycle, deterministic finalization, stale-result protection and deterministic HTTP boundary.
 
 ## High-level backend shape
 
@@ -71,7 +72,7 @@ Authentication & Security is implemented around:
 - Argon2id password hashing behind an Infrastructure adapter.
 - Spring Security establishes identity; Application/Domain owns business authorization.
 
-Assessment is implemented through Step 6:
+Assessment is implemented through Step 7:
 
 ```text
 Catalog
@@ -82,10 +83,17 @@ Catalog
 -> deterministic Scoring / Ambiguity
 -> immediate Finalization when possible
 -> Restart / Start New
--> History
--> Historical Detail
+-> History / Historical Detail
+-> Clarification Aggregate lifecycle
+-> Skip one / Skip remaining
+-> explicit exact-tie decision
+-> deterministic post-clarification Finalization
+-> durable external-execution boundary with stale-result protection
+-> deterministic Clarification/Tie-break HTTP endpoints
 ```
 
-Clarification rows are already persisted/read as authoritative workflow state, but the real Clarification/Tie-break mutation lifecycle begins in Step 7. `ADR-0016` supersedes the original in-memory Aggregate choice from `ADR-0007`: `DimensionClarification` is now a separate Assessment Aggregate coordinated with `AssessmentSession` using short Session locks, local transactions and database uniqueness constraints.
+`ADR-0016` supersedes the original in-memory Aggregate choice from `ADR-0007`: `DimensionClarification` is a separate Assessment Aggregate coordinated with `AssessmentSession` using short Session locks, local transactions, durable uniqueness constraints and an opaque active-execution correlation token while external work is in flight.
+
+The real LLM provider/runtime interaction is still deferred to Step 8. In particular, the public Start / Continue / Retry interaction endpoints are design-frozen but are not yet wired to a real provider. The deterministic Skip and Tie-break HTTP capabilities are implemented and tested.
 
 Further design changes should continue to be driven by explicit implementation feedback and recorded in the relevant design document and/or ADR.

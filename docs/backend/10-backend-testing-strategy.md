@@ -1,8 +1,8 @@
 # Backend Testing Strategy & Current Coverage
 
 > **Status:** Active implementation guidance
-> **Last reviewed:** 2026-09-28
-> **Current coverage checkpoint:** Assessment through History + Historical Detail (Step 6)
+> **Last reviewed:** 2026-09-30
+> **Current coverage checkpoint:** Assessment through deterministic Clarification/Tie-break HTTP boundary (Step 7)
 
 ## 1. Testing principle
 
@@ -381,7 +381,7 @@ For Assessment and Group implementation, follow these rules:
 6. **Add focused full-stack tests only for flows where cross-layer behavior is itself the risk.** Keep them few and meaningful.
 7. **Treat production configuration as testable behavior.** Cookie/security/AWS profile assumptions should eventually have configuration-level tests.
 
-## 11. Current Assessment coverage through Step 6
+## 11. Assessment coverage baseline through Step 6
 
 The Assessment implementation now follows the intended layered strategy.
 
@@ -492,27 +492,68 @@ completed History paging
 historical detail read-back
 ```
 
-## 12. Next testing focus: Clarification + Tie-break (Step 7)
+## 12. Step 7 Clarification / Tie-break coverage
 
-Step 6 closed the History/Historical Detail read-side goals above. Step 7 should focus on mutation-side workflow invariants rather than duplicating existing read tests.
+Step 7 now has automated coverage across Domain, Application, PostgreSQL and Web MVC boundaries.
+
+Verified behavior includes:
+
+```text
+DimensionClarification
+PENDING -> IN_PROGRESS
+IN_PROGRESS -> CLARIFIED (RESOLVED / UNCLEAR)
+IN_PROGRESS -> FAILED_RETRYABLE
+FAILED_RETRYABLE -> IN_PROGRESS retry
+PENDING / IN_PROGRESS / FAILED_RETRYABLE -> SKIPPED
+
+accepted ClarificationResult / AIProvenance persistence round-trip
+one logical Clarification per Session + Dimension
+one IN_PROGRESS Clarification per Session at the database boundary
+
+Skip one / Skip remaining
+non-zero questionnaire fallback
+exact-tie detection
+explicit persisted user tie-break
+USER_TIE_BREAK final decision source
+automatic deterministic finalization once every dimension is resolvable
+
+execution token persisted only while IN_PROGRESS
+retry creates a new execution token
+late completion with an old token is discarded
+late completion after Restart / abandonment is discarded
+
+HTTP + authentication + CSRF + 404 privacy boundary
+422 business-semantic errors for invalid Clarification / tie-break actions
+```
+
+The execution-boundary integration tests prove stale-result rejection and Restart recovery with real PostgreSQL. They do **not** yet constitute a dedicated two-thread/two-transaction stress test for every possible Clarification/finalization race.
+
+## 13. Next testing focus: Step 8 LLM Integration + concurrency hardening
+
+Step 8 should add focused tests around the provider boundary without re-testing the deterministic Domain rules already covered above.
 
 Priority areas:
 
 ```text
-PENDING -> IN_PROGRESS under Session lock
-one IN_PROGRESS Clarification per Session
-only initially ambiguous dimensions are eligible
-IN_PROGRESS -> CLARIFIED with accepted result/provenance
-IN_PROGRESS -> FAILED_RETRYABLE on technical AI failure
-FAILED_RETRYABLE -> IN_PROGRESS retry on the same logical Clarification Aggregate
-skip one / skip remaining
-late provider result discarded after Session abandonment or stale state change
-no DB transaction/lock held across the external LLM call
-exact-tie detection and explicit user tie-break
-automatic finalization once every ambiguous dimension is terminal
-concurrent start/finalization races against real PostgreSQL
+provider timeout / transport failure -> failRetryable
+malformed structured output -> failRetryable
+valid provider output -> accepted ClarificationResult
+actual provider/model/policy provenance captured by Backend, not trusted from model output
+no DB transaction / row lock held across provider call
+temporary runtime context loss does not damage durable Assessment state
+Start / Continue / Retry public HTTP interaction behavior
+privacy/safety filtering around clarification context
 ```
 
-Because ADR-0016 makes `DimensionClarification` a separate Aggregate, Application tests should explicitly verify Session + Clarification coordination, while PostgreSQL integration tests prove the partial unique index and Session-lock concurrency assumptions.
+Separately, a small set of explicit simultaneous-transaction tests remains valuable for:
+
+```text
+concurrent Start Clarification attempts
+Skip vs provider completion
+Retry vs late previous completion
+final tie-break vs another finalization-triggering command
+```
+
+Because ADR-0016 makes `DimensionClarification` a separate Aggregate, these tests should keep proving Session + Clarification coordination and PostgreSQL constraints rather than relying only on mocked Application tests.
 
 The Identity/Security test infrastructure remains reusable for authenticated Assessment and future Group endpoint testing.

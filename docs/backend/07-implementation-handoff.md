@@ -1,7 +1,7 @@
 # Backend Design Status & Implementation Handoff
 
-> **Status:** Historical design-to-implementation handoff; implementation has progressed through Assessment Step 6
-> **Last updated:** 2026-09-28
+> **Status:** Historical design-to-implementation handoff; implementation has progressed through Assessment Step 7
+> **Last updated:** 2026-09-30
 
 ## 1. What is frozen enough to implement
 
@@ -45,13 +45,13 @@ Assessment and Group Domain Models are the business source of truth.
 - RFC 9457 Problem Details + stable application `code`.
 - explicit client recovery for lost Submit/Restart responses.
 - owner-vs-shared Assessment privacy representations.
-- exact DTO/security schemas are published in `docs/api/openapi.yaml` (current contract v0.3.0).
+- exact DTO/security schemas are published in `docs/api/openapi.yaml` (current design contract v0.4.0).
 
 ## 2. Final review + intentionally deferred slice decisions
 
 ### Backend v1.0 status
 
-`docs/api/openapi.yaml` contains the exact DTO/security contract, including Session-bound questionnaire retrieval, clarification `UNCLEAR` semantics, Group display identity, and authentication/CSRF behavior. The design baseline remains accepted; the repository has since implemented Identity/Security and Assessment through Step 6.
+`docs/api/openapi.yaml` contains the design-first DTO/security contract, including Session-bound questionnaire retrieval, clarification `UNCLEAR` semantics, Group display identity, and authentication/CSRF behavior. The design baseline remains accepted; the repository has since implemented Identity/Security and Assessment through Step 7. Deterministic Skip/Tie-break routes are now implemented; provider-backed Start/Continue/Retry interaction remains Step 8 work.
 
 ### Deferred slice-specific decisions that need not block skeleton creation
 
@@ -69,13 +69,13 @@ Assessment and Group Domain Models are the business source of truth.
 
 ### Phase 2 — persistence foundation
 
-1. Flyway V1-V4 (current applied history).
+1. Flyway V1-V5 (current applied history).
 2. JPA entities.
 3. persistence mappers/adapters.
 4. constraint/repository integration tests.
 5. Assessment reference-data seed in V4.
 
-These foundation items are now implemented; future migrations continue from V5 without renumbering applied versions.
+These foundation items are now implemented; future migrations continue from V6 without renumbering applied versions.
 
 ### Phase 3 — Identity/Security foundation
 
@@ -99,7 +99,7 @@ List Assessment
 -> history
 ```
 
-Then clarification/tie-break behavior, including explicit retry from `FAILED_RETRYABLE`; the real provider adapter may follow after AI Integration Detailed Design.
+Clarification/tie-break behavior is now implemented through the deterministic HTTP boundary, including lifecycle persistence, Skip, exact-tie handling, deterministic finalization and stale external-result protection. The real provider adapter/runtime interaction is the next Assessment slice.
 
 ### Phase 5 — Group vertical slice
 
@@ -144,7 +144,7 @@ Authentication/Security design is accepted
 OpenAPI exact DTO contract is accepted
 ```
 
-At the current repository checkpoint, Authentication/Security and Assessment Steps 1-6 are implemented and tested. OpenAPI v0.3.0 is the active exact DTO contract. Step 7 Clarification/Tie-break mutation is the next backend implementation focus.
+At the current repository checkpoint, Authentication/Security and Assessment Steps 1-7 are implemented and tested. OpenAPI v0.4.0 is the active design-first DTO contract. Step 8 real LLM integration is the next Assessment implementation focus.
 
 ## 5. Implementation principle for Codex
 

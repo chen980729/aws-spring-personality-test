@@ -2,6 +2,7 @@ package dev.springawsportfolio.portfolio.assessment.application.session;
 
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
+import dev.springawsportfolio.portfolio.assessment.domain.tiebreak.DimensionTieBreak;
 
 import java.time.Instant;
 import java.util.List;
@@ -38,6 +39,93 @@ public record AssessmentSessionWorkflowSnapshot(
         return new AssessmentSessionWorkflowSnapshot(
                 List.of(),
                 List.of()
+        );
+    }
+
+
+    public static AssessmentSessionWorkflowSnapshot fromDomain(
+            List<DimensionClarification> clarifications,
+            List<DimensionTieBreak> tieBreaks
+    ) {
+        Objects.requireNonNull(
+                clarifications,
+                "clarifications must not be null"
+        );
+
+        Objects.requireNonNull(
+                tieBreaks,
+                "tieBreaks must not be null"
+        );
+
+        List<ClarificationSnapshot> clarificationSnapshots =
+                clarifications
+                        .stream()
+                        .map(clarification -> {
+                            Objects.requireNonNull(
+                                    clarification,
+                                    "clarifications must not contain null"
+                            );
+
+                            ClarificationResolution resolution =
+                                    clarification.result() == null
+                                            ? null
+                                            : ClarificationResolution.valueOf(
+                                                    clarification
+                                                            .result()
+                                                            .resolution()
+                                                            .name()
+                                            );
+
+                            return new ClarificationSnapshot(
+                                    clarification.dimension().value(),
+                                    clarification.status(),
+                                    resolution,
+                                    clarification.result() == null
+                                            || clarification
+                                            .result()
+                                            .suggestedPole() == null
+                                            ? null
+                                            : clarification
+                                            .result()
+                                            .suggestedPole()
+                                            .value(),
+                                    clarification.result() == null
+                                            ? null
+                                            : clarification
+                                            .result()
+                                            .confidence()
+                                            .name(),
+                                    clarification.result() == null
+                                            ? null
+                                            : clarification
+                                            .result()
+                                            .reasoningSummary(),
+                                    clarification.startedAt(),
+                                    clarification.acceptedAt()
+                            );
+                        })
+                        .toList();
+
+        List<TieBreakSnapshot> tieBreakSnapshots =
+                tieBreaks
+                        .stream()
+                        .map(tieBreak -> {
+                            Objects.requireNonNull(
+                                    tieBreak,
+                                    "tieBreaks must not contain null"
+                            );
+
+                            return new TieBreakSnapshot(
+                                    tieBreak.dimension().value(),
+                                    tieBreak.selectedPole().value(),
+                                    tieBreak.decidedAt()
+                            );
+                        })
+                        .toList();
+
+        return new AssessmentSessionWorkflowSnapshot(
+                clarificationSnapshots,
+                tieBreakSnapshots
         );
     }
 

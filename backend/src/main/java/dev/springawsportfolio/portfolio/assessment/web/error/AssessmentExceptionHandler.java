@@ -5,6 +5,9 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.Assessm
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyAbandonedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyCompletedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidDimensionTieBreakException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakNotRequiredException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidAssessmentHistoryPageException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidQuestionnaireResponseException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.QuestionnaireIncompleteException;
@@ -304,6 +307,102 @@ public class AssessmentExceptionHandler {
         problem.setProperty(
                 "code",
                 "INVALID_QUESTIONNAIRE_RESPONSE"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            ClarificationNotAllowedException.class
+    )
+    ProblemDetail handleClarificationNotAllowed() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.UNPROCESSABLE_CONTENT
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/clarification-not-allowed"
+                )
+        );
+
+        problem.setTitle(
+                "Clarification action is not allowed"
+        );
+
+        problem.setDetail(
+                "The requested clarification action is not valid "
+                        + "for the current assessment state or dimension."
+        );
+
+        problem.setProperty(
+                "code",
+                "CLARIFICATION_NOT_ALLOWED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            TieBreakNotRequiredException.class
+    )
+    ProblemDetail handleTieBreakNotRequired() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.UNPROCESSABLE_CONTENT
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/tie-break-not-required"
+                )
+        );
+
+        problem.setTitle(
+                "Tie-break is not required"
+        );
+
+        problem.setDetail(
+                "A tie-break is not semantically valid for this "
+                        + "assessment dimension in its current state."
+        );
+
+        problem.setProperty(
+                "code",
+                "TIE_BREAK_NOT_REQUIRED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            InvalidDimensionTieBreakException.class
+    )
+    ProblemDetail handleInvalidDimensionTieBreak() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.UNPROCESSABLE_CONTENT
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/invalid-dimension-tie-break"
+                )
+        );
+
+        problem.setTitle(
+                "Invalid dimension tie-break"
+        );
+
+        problem.setDetail(
+                "The selected pole is not valid for the target "
+                        + "dimension in the bound assessment version."
+        );
+
+        problem.setProperty(
+                "code",
+                "INVALID_DIMENSION_TIE_BREAK"
         );
 
         return problem;

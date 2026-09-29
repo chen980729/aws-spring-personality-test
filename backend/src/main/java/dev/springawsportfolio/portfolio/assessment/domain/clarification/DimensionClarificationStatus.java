@@ -10,5 +10,10 @@ public enum DimensionClarificationStatus {
 
     SKIPPED,
 
-    FAILED_RETRYABLE
+    FAILED_RETRYABLE;
+
+    public boolean isTerminal() {
+        return this == CLARIFIED
+                || this == SKIPPED;
+    }
 }

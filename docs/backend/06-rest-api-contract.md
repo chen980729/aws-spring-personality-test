@@ -1,7 +1,7 @@
 # REST API & HTTP Contract Design
 
-> **Status:** Accepted REST Semantics — implementation-aligned through Assessment Step 6
-> **Last updated:** 2026-09-28
+> **Status:** Accepted REST Semantics — deterministic Clarification/Tie-break HTTP aligned through Assessment Step 7
+> **Last updated:** 2026-09-30
 > **Security transport:** server-side Session + Spring Session JDBC + Secure/HttpOnly cookie + CSRF
 
 ## 1. API style
@@ -147,15 +147,25 @@ first Submit commits
 
 ### Clarification
 
-Start/continue endpoints return runtime assistant output as needed, but durable history remains the accepted structured clarification result rather than a full transcript.
+The deterministic HTTP capabilities implemented in Step 7 are:
 
-Technical AI failures return a temporary-service failure and leave Domain state `FAILED_RETRYABLE`; they are never represented as business `UNCLEAR`.
+```text
+POST .../clarifications/{dimensionCode}/skip
+POST .../clarifications/skip-remaining
+PUT  .../tie-breaks/{dimensionCode}
+```
 
-`POST .../clarifications/{dimensionCode}/retry` explicitly retries the current `FAILED_RETRYABLE` clarification. It reuses the same logical `Session + Dimension` clarification lifecycle and returns to active processing only after normal ownership/state/eligibility revalidation.
+They return the authoritative current `AssessmentSessionResponse` after re-evaluating deterministic finalization readiness.
+
+The design also reserves Start / Continue / Retry interaction routes. Those runtime assistant-output endpoints remain deferred until Step 8 wires the external LLM boundary; they must not be exposed as a fake half-implemented interaction surface merely because the Application execution boundary already exists internally.
+
+When provider integration is enabled, technical AI failures become `FAILED_RETRYABLE`; they are never represented as the business result `UNCLEAR`. Retry reuses the same logical `Session + Dimension` lifecycle after ownership/state/eligibility revalidation and creates a new internal execution correlation token.
 
 ### Tie-break
 
-`PUT .../tie-breaks/{dimensionCode}` sends only the selected pole. Backend validates dimension and pole against the bound DefinitionVersion.
+`PUT .../tie-breaks/{dimensionCode}` sends only the selected pole. Backend validates that the bound dimension is an unresolved exact questionnaire tie and that the pole belongs to the bound `DimensionDefinition`.
+
+The same already-persisted tie-break value is retry/recovery friendly. A different value may not rewrite an accepted historical decision.
 
 ### Finalization
 
@@ -347,6 +357,7 @@ CLARIFICATION_NOT_ALLOWED
 CLARIFICATION_NOT_RETRYABLE
 CLARIFICATION_ALREADY_IN_PROGRESS
 TIE_BREAK_NOT_REQUIRED
+INVALID_DIMENSION_TIE_BREAK
 AI_CLARIFICATION_TEMPORARILY_UNAVAILABLE
 ```
 
@@ -391,7 +402,9 @@ docs/api/openapi.yaml
 OpenAPI Specification: 3.1.2
 ```
 
-The machine-readable contract is synchronized through Assessment Step 6 and published as OpenAPI **v0.3.0**. The Step 5 Restart contract is included, and the Step 6 History item matches the implemented response exactly:
+The design-first machine-readable contract is published as OpenAPI **v0.4.0**. The Step 7 update aligns deterministic Clarification/Tie-break HTTP behavior, including the `422` business-semantic response for `skip-remaining`. Runtime Start / Continue / Retry clarification routes remain design-frozen for Step 8 provider integration rather than being represented as already-implemented runtime AI behavior.
+
+The Step 5 Restart and Step 6 History contracts remain unchanged; the History item matches the implemented response exactly:
 
 ```text
 AssessmentHistoryItem
@@ -402,7 +415,7 @@ AssessmentHistoryItem
   - completedAt
 ```
 
-The v0.3.0 bump is deliberate because the previously accepted History schema used different field names and an extra `assessmentName`; changing that published design contract silently would make implementation/documentation drift harder to detect.
+The earlier v0.3.0 bump captured the implemented History schema correction. The v0.4.0 bump records the Step 7 deterministic Clarification/Tie-break alignment rather than silently changing the published design contract.
 
 It freezes:
 

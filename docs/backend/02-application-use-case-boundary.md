@@ -1,7 +1,7 @@
 # Backend Application Use Case Boundary
 
-> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 6
-> **Last updated:** 2026-09-28
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 7
+> **Last updated:** 2026-09-30
 
 ## 1. Application-layer responsibility
 
@@ -167,14 +167,18 @@ Use:
 ```text
 short DB transaction A
 -> validate / enter IN_PROGRESS
+-> generate + persist a new opaque active execution token
+-> return an internal execution ticket carrying that token
 -> commit
 
 external LLM call
 (no DB transaction / row lock)
 
 short DB transaction B
--> reload / revalidate
--> accept result or failure
+-> reload / revalidate Session + Clarification
+-> require the ticket token to match the current active execution token
+-> accept result/failure only for the current execution
+-> discard stale completion when Session/state/token changed
 -> possibly finalize
 -> commit
 ```

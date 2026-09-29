@@ -1,7 +1,7 @@
 # Flyway Schema & JPA Persistence Mapping
 
-> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 6
-> **Last updated:** 2026-09-28
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 7
+> **Last updated:** 2026-09-30
 
 ## 1. Migration layout
 
@@ -12,11 +12,12 @@ V1__create_identity_tables.sql
 V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
 V4__seed_sixteen_personality_v1.sql
+V5__add_clarification_execution_token.sql
 ```
 
-`V3` creates the Assessment tables together with the Assessment partial-unique/query indexes required by the initial schema. `V4` seeds immutable application-owned Sixteen Personality reference data. `V2` contains the PostgreSQL schema required by the project's pinned Spring Session JDBC version and is owned by Flyway rather than runtime auto-initialization.
+`V3` creates the Assessment tables together with the Assessment partial-unique/query indexes required by the initial schema. `V4` seeds immutable application-owned Sixteen Personality reference data. `V5` adds `active_execution_token` to `assessment_dimension_clarifications` for stale external-result protection and adds the status/token consistency check. `V2` contains the PostgreSQL schema required by the project's pinned Spring Session JDBC version and is owned by Flyway rather than runtime auto-initialization.
 
-Group schema has not been migrated yet. Future migrations begin at `V5` (or later) and should add Group tables/indexes without rewriting or renumbering V1-V4. New indexes for already-deployed tables also receive a new forward-only migration rather than editing an applied migration.
+Group schema has not been migrated yet. Future migrations begin at `V6` (or later) and should add Group tables/indexes without rewriting or renumbering V1-V5. New indexes for already-deployed tables also receive a new forward-only migration rather than editing an applied migration.
 
 ## 2. Naming convention
 
@@ -144,6 +145,7 @@ result_summary
 ai_provider
 ai_model_identifier
 clarification_policy_revision
+active_execution_token
 started_at
 accepted_at
 updated_at
@@ -156,6 +158,8 @@ Constraints:
 - result outcome is `RESOLVED/UNCLEAR` when present.
 - `CLARIFIED` requires accepted result/provenance fields.
 - non-CLARIFIED states do not retain accepted result/provenance fields.
+- `IN_PROGRESS` requires `active_execution_token`; every other status requires it to be NULL.
+- retry replaces the active execution token for the same logical Clarification; accepted/failure/skip transitions clear it.
 
 Dimension/pole semantics are intentionally not hardcoded in SQL.
 

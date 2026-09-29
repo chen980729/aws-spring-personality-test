@@ -314,6 +314,82 @@ public final class AssessmentSession {
         return AssessmentSubmissionOutcome.completedSubmission();
     }
 
+    public void beginClarification() {
+        if (
+                status
+                        != AssessmentSessionStatus.AWAITING_CLARIFICATION
+        ) {
+            throw new IllegalStateException(
+                    "only an AWAITING_CLARIFICATION session "
+                            + "can begin clarification"
+            );
+        }
+
+        status =
+                AssessmentSessionStatus.CLARIFICATION_IN_PROGRESS;
+    }
+
+    public void returnToAwaitingClarification() {
+        if (
+                status
+                        != AssessmentSessionStatus.CLARIFICATION_IN_PROGRESS
+        ) {
+            throw new IllegalStateException(
+                    "only a CLARIFICATION_IN_PROGRESS session "
+                            + "can return to awaiting clarification"
+            );
+        }
+
+        status =
+                AssessmentSessionStatus.AWAITING_CLARIFICATION;
+    }
+
+    public void completeAfterClarification(
+            FinalAssessmentResult finalResult,
+            Instant completedAt
+    ) {
+        Objects.requireNonNull(
+                finalResult,
+                "finalResult must not be null"
+        );
+
+        Objects.requireNonNull(
+                completedAt,
+                "completedAt must not be null"
+        );
+
+        if (
+                status
+                        != AssessmentSessionStatus.AWAITING_CLARIFICATION
+                        && status
+                        != AssessmentSessionStatus.CLARIFICATION_IN_PROGRESS
+        ) {
+            throw new IllegalStateException(
+                    "only an active post-submission clarification session "
+                            + "can be completed after clarification"
+            );
+        }
+
+        if (
+                completedAt.isBefore(
+                        questionnaireSubmittedAt
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "completedAt must not be before questionnaireSubmittedAt"
+            );
+        }
+
+        this.finalResult =
+                finalResult;
+
+        status =
+                AssessmentSessionStatus.COMPLETED;
+
+        this.completedAt =
+                completedAt;
+    }
+
     public void abandon(
             Instant abandonedAt
     ) {

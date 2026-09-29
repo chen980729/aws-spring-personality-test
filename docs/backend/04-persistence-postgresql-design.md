@@ -1,7 +1,7 @@
 # Persistence / PostgreSQL Detailed Design
 
-> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 6
-> **Last updated:** 2026-09-28
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 7
+> **Last updated:** 2026-09-30
 
 ## 1. Persistence stack
 
@@ -141,6 +141,20 @@ Accepted clarification business data persists:
 - provider/model identifier.
 - clarification policy revision.
 
+Execution coordination additionally persists an opaque `active_execution_token` only while the row is `IN_PROGRESS`. It is not user-facing AI history and does not model all provider attempts; it exists solely so a late completion from an older execution cannot be accepted after retry or another state transition.
+
+Persistence enforces:
+
+```text
+status = IN_PROGRESS
+-> active_execution_token IS NOT NULL
+
+status != IN_PROGRESS
+-> active_execution_token IS NULL
+```
+
+A retry creates a new active token for the same logical `DimensionClarification`. Accept, technical failure and Skip clear it.
+
 Full multi-turn AI conversation is not persisted in MVP.
 
 A partial unique index permits at most one `IN_PROGRESS` clarification per Session.
@@ -244,7 +258,7 @@ Assessment draft autosave mainly relies on optimistic locking.
 
 Clarification, skip, tie-break and finalization phases use short AssessmentSession root locks so separate Clarification Aggregate mutations cannot independently conclude that another unresolved dimension still exists and thereby miss finalization.
 
-Locks are never held across LLM network calls.
+Locks are never held across LLM network calls. The active clarification execution is correlated with an opaque persisted token. Transaction B must re-lock/reload the Session and Clarification and match that token before accepting an external completion; an older token is stale even if the Clarification has since returned to `IN_PROGRESS` after a retry.
 
 ## 18. Share vs Assessment-delete race
 

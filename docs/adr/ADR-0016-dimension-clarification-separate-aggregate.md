@@ -64,6 +64,27 @@ Cross-Aggregate workflow invariants are protected by a combination of:
 - partial unique index allowing at most one `IN_PROGRESS` Clarification per Session.
 - post-LLM reload/revalidation so late results cannot mutate an abandoned or otherwise stale Session.
 
+### Implementation refinement — active execution token (2026-09-30)
+
+Step 7 implementation exposed one additional stale-result race: after execution A fails and the same Clarification is retried as execution B, the row may again be `IN_PROGRESS` when a late result from A arrives. Session/status revalidation alone cannot distinguish A from B.
+
+The implemented refinement is therefore:
+
+```text
+enter/re-enter IN_PROGRESS
+-> generate a new opaque active execution token
+
+external work
+-> carries the internal execution ticket/token
+
+completion transaction
+-> reload Session + Clarification
+-> require token == current active token
+-> otherwise discard as stale
+```
+
+The token is cleared on accepted result, retryable technical failure, or Skip. It is not a `ClarificationAttempt[]` audit log and is not exposed as public API/provenance. This refines the consistency mechanism without changing the Aggregate boundary decided by this ADR.
+
 ## Consequences
 
 ### Positive

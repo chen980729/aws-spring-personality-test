@@ -60,7 +60,8 @@ The final MVP includes both the core assessment vertical slice and the group/sha
 7. Backend performs deterministic scoring and ambiguity evaluation.
 8. If no dimension is ambiguous, the backend finalizes the assessment.
 9. If one or more dimensions are ambiguous, the user can use AI-assisted clarification, skip the current dimension, or decline all remaining AI clarification.
-10. After every ambiguous dimension is clarified or skipped, the backend creates the final result and completes the session.
+10. If an ambiguous dimension was an exact questionnaire tie and clarification finishes as `UNCLEAR` or is `SKIPPED`, the system must require an explicit user tie-break for that dimension; it must not silently choose a pole.
+11. After every ambiguous dimension is `CLARIFIED` or `SKIPPED`, and every exact-tie dimension that still lacks a final preference has an explicit persisted user tie-break, the backend creates the final result and completes the session.
 
 ### 4.4 AI-Assisted Clarification
 
@@ -77,6 +78,7 @@ MVP requirements:
 - The full AI conversation transcript is not persisted in MVP.
 - Only an accepted `ClarificationResult`, required AI provenance, and an optional necessary summary become durable assessment history.
 - Technical AI failure enters `FAILED_RETRYABLE`; the user may explicitly retry that same clarification lifecycle or skip it.
+- AI clarification does not own exact-tie resolution. If an exact questionnaire tie remains unresolved because clarification is `UNCLEAR` or `SKIPPED`, the user must explicitly select one valid pole; that tie-break decision is persisted as a business fact.
 - If the temporary conversation context is lost before an accepted result is persisted, the user does not resume from the exact message turn. The affected clarification can restart from its clarification-ready/retryable state.
 - If the parent AssessmentSession is abandoned while an external AI call is in flight, any late result is discarded after reloading/revalidating the Session.
 
@@ -128,7 +130,8 @@ Joining a group must not automatically expose:
 - Only ambiguous dimensions are eligible for clarification.
 - One logical clarification lifecycle exists per `Session + Dimension`.
 - At most one clarification lifecycle may be actively `IN_PROGRESS` in a Session at a time for MVP.
-- All ambiguous dimensions must be `CLARIFIED` or `SKIPPED` before completion.
+- All ambiguous dimensions must be `CLARIFIED` or `SKIPPED` before completion. This is necessary but not always sufficient: if an exact-tie dimension still has no final preference after clarification/skip, an explicit persisted user tie-break is also required.
+- A user tie-break is allowed only when the bound dimension is an exact questionnaire tie that remains unresolved after clarification/skip; the selected pole must be valid for that bound `DimensionDefinition`, and the resulting final decision source is `USER_TIE_BREAK`.
 - Completed assessment content is immutable, but the owner may delete the historical record.
 
 ## 6. Privacy and Data-Minimization Principles
@@ -165,7 +168,7 @@ The project is considered MVP-complete when:
 - The application runs end to end.
 - Core authentication works.
 - Sixteen Personality has a documented executable specification and deterministic scoring.
-- Ambiguity and optional AI clarification work with defined failure/recovery behavior.
+- Ambiguity, explicit exact-tie resolution, and optional AI clarification work with defined failure/recovery behavior.
 - Assessment history can be viewed and individual historical assessments can be deleted.
 - Group membership and explicit result sharing work.
 - Backend business invariants are tested.

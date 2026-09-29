@@ -1,6 +1,6 @@
 # Assessment Domain Model
 
-> **Status:** Accepted Assessment Domain Baseline — implementation-aligned through Step 6
+> **Status:** Accepted Assessment Domain Baseline — implementation-aligned through Step 7
 > **Last updated:** 2026-09-28
 
 ## 1. Scope
@@ -18,6 +18,7 @@ This document records the accepted Assessment domain baseline. It contains final
 - **DimensionClarification** — one logical clarification lifecycle for one ambiguous dimension.
 - **ClarificationResult** — accepted immutable clarification conclusion.
 - **AIProvenance** — effective successful AI execution provenance for the accepted clarification result.
+- **DimensionTieBreak** — persisted explicit user decision selecting one valid pole for an exact-tie dimension that remains unresolved after clarification/skip.
 - **FinalAssessmentResult** — immutable final assessment outcome.
 
 ## 3. AssessmentSession Lifecycle
@@ -137,6 +138,7 @@ The project is not Event Sourcing. A Domain Event does not imply a requirement t
 - `InitialDimensionResult`
 - `ClarificationResult`
 - `AIProvenance`
+- `DimensionTieBreak`
 - `FinalAssessmentResult`
 - `FinalDimensionConclusion`
 
@@ -169,6 +171,7 @@ DimensionClarification (Entity / Aggregate Root)
 ├── AssessmentSessionId (reference)
 ├── DimensionCode
 ├── lifecycle status
+├── activeExecutionToken (opaque VO, only while IN_PROGRESS)
 ├── ClarificationResult (VO, when accepted)
 └── AIProvenance (VO, when accepted)
 ```
@@ -226,16 +229,22 @@ At most one `DimensionClarification` may be `IN_PROGRESS` for one `AssessmentSes
 ### AS-INV-08 Clarification State Consistency
 
 - `CLARIFIED` requires a valid accepted `ClarificationResult` (`RESOLVED` with a pole, or `UNCLEAR` with no pole).
+- `IN_PROGRESS` requires exactly one current opaque execution token; every non-`IN_PROGRESS` state has no active token.
+- Retry keeps the same logical Clarification Aggregate but replaces the active execution token. Accept, technical failure and Skip clear it.
 - `SKIPPED` must not imply an AI judgment was produced.
-- Local state and accepted outcome must not contradict each other.
+- Local state, active execution identity and accepted outcome must not contradict each other.
 
 ### AS-INV-09 Completion Readiness
 
-All ambiguous dimensions must have corresponding Clarification Aggregates in terminal workflow states `CLARIFIED` or `SKIPPED` before completion. If there were no ambiguous dimensions, this condition is naturally satisfied. Finalization evaluates this cross-Aggregate fact under the locked Session transaction.
+All ambiguous dimensions must have corresponding Clarification Aggregates in terminal workflow states `CLARIFIED` or `SKIPPED` before completion. This condition is necessary but not always sufficient.
+
+If an ambiguous dimension was an exact questionnaire tie (`questionnairePreference == null`) and its accepted clarification result is `UNCLEAR`, or that clarification is `SKIPPED`, the dimension still has no final preference. In that case an explicit persisted `DimensionTieBreak` is required before completion. A resolved clarification that selects a valid pole already supplies the final preference and does not require a tie-break.
+
+Finalization may proceed only when every dimension can produce exactly one `FinalDimensionConclusion`: either directly from non-ambiguous questionnaire evidence, from an accepted clarification/fallback path, or from a valid explicit user tie-break where required. Finalization evaluates these cross-Aggregate facts under the locked Session transaction.
 
 ### AS-INV-10 Completion Consistency
 
-A legal completion transition produces exactly one `FinalAssessmentResult` and enters `COMPLETED`. Completed assessment business content cannot be edited in place.
+A legal completion transition produces exactly one `FinalAssessmentResult` and enters `COMPLETED`. When a final dimension conclusion comes from an explicit exact-tie decision, its decision source is `USER_TIE_BREAK`; the tie-break fact remains persisted separately from the derived final result. Completed assessment business content cannot be edited in place.
 
 Deletion of the entire historical assessment record is a separate owner capability and does not contradict immutability.
 
@@ -284,7 +293,9 @@ For one `AssessmentDefinition`, at most one `AssessmentDefinitionVersion` may be
 
 ### DOMAIN-INV-07 Session / Clarification Coordination
 
-Clarification mutations that can affect Session status or finalization must coordinate the `AssessmentSession` and target `DimensionClarification` Aggregate within one short consistency boundary, using the Session as the concurrency/revalidation anchor. No consistency lock is held across an external LLM call; the result may be accepted only after both Aggregates are reloaded/revalidated so stale results cannot mutate an abandoned or changed Session. Concrete row-lock/constraint mechanics live in Backend Detailed Design.
+Clarification mutations that can affect Session status or finalization must coordinate the `AssessmentSession` and target `DimensionClarification` Aggregate within one short consistency boundary, using the Session as the concurrency/revalidation anchor. No consistency lock is held across an external LLM call.
+
+Starting/retrying external work creates a new opaque active execution token on the Clarification. A later completion may be accepted only after both Aggregates are reloaded/revalidated **and** its execution token still matches the Clarification's current active token. This prevents a late result from an earlier failed execution from being accepted after the same Clarification has already re-entered `IN_PROGRESS` on retry. Concrete row-lock/constraint mechanics live in Backend Detailed Design.
 
 ## 10. Versioning and Governance Rules
 

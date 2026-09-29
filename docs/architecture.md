@@ -81,6 +81,7 @@ Owns:
 - Deterministic scoring and ambiguity evaluation.
 - `InitialAssessmentResult`.
 - `DimensionClarification` business lifecycle as a separate Assessment Aggregate coordinated with `AssessmentSession` (ADR-0016).
+- Explicit exact-tie user decisions (`DimensionTieBreak`) as persisted Assessment-owned business facts.
 - `FinalAssessmentResult`.
 - Assessment history as a query over persisted sessions.
 - Historical assessment deletion as an owner capability.
@@ -171,6 +172,7 @@ Persist conceptually:
 - Immutable `InitialAssessmentResult` once created.
 - `DimensionClarification` state and accepted outcome.
 - Required `AIProvenance` for accepted AI-assisted results.
+- Explicit user tie-break facts for exact-tie dimensions when clarification/skip leaves no final preference.
 - Immutable `FinalAssessmentResult` for completed sessions.
 - Relevant timestamps/lifecycle facts required by history/recovery.
 
@@ -221,6 +223,8 @@ MVP does not require persistence of:
 AI conversation content is **not authoritative Assessment history** in MVP.
 
 MVP clarification execution is sequential within one `AssessmentSession`: at most one `DimensionClarification` may be `IN_PROGRESS` at a time. Other ambiguous dimensions remain unresolved until the active clarification finishes, is skipped, fails into a retryable state, or otherwise leaves `IN_PROGRESS`. Parallel clarification conversations in the same Session are out of scope.
+
+Each active external execution also has an opaque correlation token persisted only while that Clarification is `IN_PROGRESS`. Retry creates a new token for the same logical Clarification. External completion is accepted only when the returned/internal ticket still matches the current token after Session + Clarification revalidation; older completions are discarded as stale. The token is workflow coordination metadata, not AI conversation history or user-facing provenance.
 
 An active clarification may require temporary/ephemeral runtime conversation context. The implementation may later use memory, cache, temporary persistence, or another mechanism; this architecture baseline intentionally does not choose one.
 
@@ -295,6 +299,7 @@ Commands:
 - Retry Current Clarification.
 - Skip Current Dimension Clarification.
 - **Skip Remaining Clarifications / Decline AI Clarification.**
+- Submit Dimension Tie-break when an exact-tie dimension remains unresolved.
 - Delete Historical Assessment.
 
 Queries:
@@ -310,7 +315,7 @@ Queries:
 
 Internal operations such as scoring, ambiguity detection, state mutation, and finalization are not directly controlled by frontend APIs.
 
-`Skip Remaining Clarifications` expresses one user intent: all unresolved ambiguous dimensions become skipped according to domain rules, then finalization may produce `FinalAssessmentResult` and complete the session.
+`Skip Remaining Clarifications` expresses one user intent: all unresolved ambiguous dimensions become skipped according to domain rules. Finalization may then produce `FinalAssessmentResult` only if every dimension has a final preference. If an exact questionnaire tie remains unresolved after `UNCLEAR` or `SKIPPED`, the backend requires an explicit `Submit Dimension Tie-break` command before completion. The tie-break selects one valid pole from the bound `DimensionDefinition`, is persisted as a business fact, and contributes a `FinalDimensionConclusion` with source `USER_TIE_BREAK`.
 
 ### 10.3 Group capabilities
 
@@ -414,7 +419,7 @@ The following are no longer open: `ABANDONED` source states, Group sharing-conse
 
 ## 16. Detailed Design Ownership
 
-This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (currently contract v0.3.0).
+This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (currently design contract v0.4.0).
 
 Still deferred to specialist design:
 

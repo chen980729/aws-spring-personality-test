@@ -84,7 +84,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** design remains accepted and implementation is aligned through **Assessment Step 6**. OpenAPI v0.3.0 is synchronized with the implemented History contract. Step 7 Clarification/Tie-break mutation is next.
+**Current status:** design remains accepted and implementation is aligned through **Assessment Step 7**. OpenAPI v0.4.0 reflects the deterministic Clarification/Tie-break HTTP alignment; real provider-backed clarification interaction remains Step 8.
 
 ### Domain/Application
 
@@ -116,7 +116,7 @@ Accepted persistence artifacts are `docs/backend/04-persistence-postgresql-desig
 
 - [x] HTTP resource/use-case mapping.
 - [x] Routes and methods.
-- [x] Exact DTO schema / OpenAPI v0.3.0 synchronized through Assessment Step 6.
+- [x] Design-first DTO schema / OpenAPI v0.4.0 aligned through the deterministic Step 7 HTTP boundary.
 - [x] Status/error mapping.
 - [x] Business authentication/authorization boundary.
 - [x] Authentication transport/security mechanics (server-side Session + JDBC + cookie + CSRF).
@@ -140,11 +140,12 @@ Accepted Spring/backend architecture artifacts are `docs/backend/01-*` through `
 ## 7. AI Clarification Detailed Design
 
 - [ ] Prompt/policy design aligned with non-clinical positioning.
-- [ ] Structured output contract used by Assessment.
+- [x] Domain structured-output contract (`ClarificationResult` + `AIProvenance`) used by Assessment finalization.
+- [ ] Provider-specific structured-output parsing/validation.
 - [ ] Temporary multi-turn runtime context design.
 - [x] Sequential clarification flow: at most one `DimensionClarification` in `IN_PROGRESS` per Session.
 - [ ] Decide memory/cache/temporary persistence approach without turning transcript into authoritative history.
-- [ ] Failure/timeout/retry behavior.
+- [x] Durable failure/retry/stale-result boundary (`FAILED_RETRYABLE` + execution correlation token); provider timeout policy wiring remains Step 8.
 - [x] Provenance ownership/required fields for accepted result; provider-specific capture implementation remains later.
 - [x] ClarificationPolicy provenance binding: expected/default revision in DefinitionVersion + actual accepted-run provenance.
 - [ ] Safety/privacy review.
@@ -167,7 +168,7 @@ Frontend must express user intent; it must not become the source of truth for ba
 
 ## 9. Backend Implementation
 
-Current backend checkpoint: **Assessment Step 6 complete**.
+Current backend checkpoint: **Assessment Step 7 complete**.
 
 - [x] Java 21 + Spring Boot implementation foundation.
 - [x] PostgreSQL persistence foundation with Flyway + JPA/Hibernate.
@@ -176,13 +177,14 @@ Current backend checkpoint: **Assessment Step 6 complete**.
 - [x] deterministic Submit, scoring, ambiguity evaluation and immediate finalization.
 - [x] Restart / Start New with targeted locking and retry/recovery semantics.
 - [x] completed Assessment History + Historical Detail read side.
-- [ ] Clarification + Tie-break mutation workflow (Step 7).
-- [ ] real AI integration adapter / runtime context (Step 8 or implementation slice following Step 7 boundaries).
+- [x] Clarification + Tie-break mutation workflow (Step 7).
+- [ ] real AI integration adapter / runtime context (Step 8).
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
-- [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-6 coverage.
+- [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-7 coverage.
 - [x] Restart concurrency/retry/recovery tests for implemented critical invariants.
-- [ ] Clarification/finalization concurrency tests.
+- [x] Clarification stale-result/retry/restart recovery and PostgreSQL one-`IN_PROGRESS` constraint coverage.
+- [ ] Dedicated simultaneous-transaction Clarification/finalization race tests.
 - [ ] Group/sharing/deletion concurrency tests.
 
 ## 10. Containerization and Local Environment

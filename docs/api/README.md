@@ -1,8 +1,8 @@
 # API Contract
 
-> **Status:** OpenAPI v0.3.0 — active accepted contract
-> **Last updated:** 2026-09-28
-> **Implementation alignment:** Identity/Security + Assessment through Step 6
+> **Status:** OpenAPI v0.4.0 — active accepted design contract
+> **Last updated:** 2026-09-30
+> **Implementation alignment:** Identity/Security + deterministic Assessment HTTP behavior through Step 7
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -25,6 +25,17 @@ The contract intentionally exposes public questionnaire rendering data but does 
 OpenAPI version `3.1.2` is used for the project contract. Although OpenAPI 3.2 exists, the current SpringDoc/Swagger-Core ecosystem used by Spring applications has not fully completed 3.2 support; 3.1.x is therefore the pragmatic implementation target for this MVP.
 
 ## Contract version history
+
+### v0.4.0 — 2026-09-30
+
+Aligns the design-first contract with accepted Step 7 deterministic Clarification/Tie-break HTTP behavior:
+
+- `skip` and `skip-remaining` return the authoritative `AssessmentSessionResponse`.
+- `skip-remaining` explicitly documents the implemented `422 Unprocessable Content` business-semantic response.
+- the tie-break route remains a `PUT` of the selected pole only and returns the updated Session.
+- Start / Continue / Retry clarification interaction routes remain design-frozen for Step 8 and are not evidence that real provider-backed runtime interaction is already implemented.
+
+No Group endpoint is implemented by this version bump; those paths remain part of the accepted design baseline.
 
 ### v0.3.0 — 2026-09-28
 

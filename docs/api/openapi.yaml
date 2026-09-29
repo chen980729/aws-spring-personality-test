@@ -1,7 +1,7 @@
 openapi: 3.1.2
 info:
   title: Spring AWS Portfolio API
-  version: 0.3.0
+  version: 0.4.0
   summary: MVP HTTP contract for the Spring AWS Portfolio project.
   description: |
     Design-first API contract for the first-party React + Spring Boot application.
@@ -626,6 +626,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -1819,6 +1821,7 @@ components:
         selectedPole:
           type: string
           minLength: 1
+          pattern: '.*\S.*'
 
     AssessmentHistoryItem:
       type: object
