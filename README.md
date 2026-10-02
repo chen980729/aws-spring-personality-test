@@ -8,8 +8,9 @@ The application is designed to let users complete versioned personality assessme
 
 The project is intentionally developed as an end-to-end engineering exercise rather than a feature-only demo: **domain modeling → API design → persistence → security → testing → frontend → containerization → AWS → CI/CD → Infrastructure as Code**.
 
-> **Current implementation:** Backend Assessment **Step 6 complete — History + Historical Detail**<br>
-> **Next backend focus:** Step 7 — Clarification + Tie-break mutation workflow
+> **Current backend:** Assessment **Step 7 complete — deterministic Clarification + Tie-break workflow**<br>
+> **Current frontend:** **F0 complete — Integration Baseline + Architecture**<br>
+> **Next active focus:** Frontend **F1 — React + TypeScript Foundation**; provider-backed Backend Step 8 remains pending.
 
 ---
 
@@ -42,7 +43,7 @@ The system is designed as a **modular monolith** for the MVP. Business modules r
 
 ```mermaid
 flowchart TD
-    Browser["React + TypeScript<br/>Frontend - planned"]
+    Browser["React + TypeScript<br/>Frontend - F0 design complete"]
 
     subgraph Backend[Java 21 + Spring Boot Modular Monolith]
         Identity[Identity]
@@ -71,7 +72,7 @@ Register / Login / Session / CSRF
                 ↓
         Assessment Catalog
                 ↓
-          Start / Resume
+      Start / Resume / Restart
                 ↓
    Session-bound Questionnaire
                 ↓
@@ -86,11 +87,19 @@ Register / Login / Session / CSRF
 No ambiguity              Ambiguous
    │                          │
    ↓                          ↓
-Complete              Clarification / Tie-break
-implemented                 next step
-   │
-   ↓
+Complete           Clarification lifecycle boundary
+                              ↓
+                     Skip current / remaining
+                              ↓
+                     Exact tie if unresolved?
+                              ↓
+                       User Tie-break
+                              ↓
+                           Complete
+                ↓
 History → Historical Detail
+
+Provider-backed AI conversation remains Backend Step 8.
 ```
 
 For the detailed architecture baseline, see [`docs/architecture.md`](docs/architecture.md).
@@ -163,10 +172,10 @@ See [`ADR-0016`](docs/adr/ADR-0016-dimension-clarification-separate-aggregate.md
 | Security | Spring Security, Spring Session JDBC, CSRF | ✅ Implemented |
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
-| API | REST, OpenAPI 3.1 | ✅ Implemented through Assessment Step 6 |
+| API | REST, OpenAPI 3.1 | ✅ Implemented through Assessment Step 7 |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers | ✅ Implemented |
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
-| Frontend | React + TypeScript | ⏳ Planned |
+| Frontend | React + TypeScript | 🚧 F0 architecture complete; F1 implementation next |
 | AI integration | External LLM behind an adapter boundary | ⏳ Planned |
 | Containerization | Docker application image | ⏳ Planned |
 | Cloud | AWS | ⏳ Planned |
@@ -189,11 +198,11 @@ See [`ADR-0016`](docs/adr/ADR-0016-dimension-clarification-separate-aggregate.md
 | Deterministic scoring + ambiguity | ✅ Complete |
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
-| Clarification + Tie-break mutation | 🚧 Next |
+| Clarification + Tie-break mutation | ✅ Complete |
 | External AI adapter / runtime context | ⏳ Planned |
 | Historical assessment deletion | ⏳ Planned |
 | Group / Membership / Sharing implementation | ⏳ Planned |
-| React frontend | ⏳ Planned |
+| React frontend | 🚧 F0 architecture complete; F1 next |
 | Docker application image | ⏳ Planned |
 | AWS deployment | ⏳ Planned |
 | GitHub Actions CI/CD | ⏳ Planned |
@@ -227,12 +236,15 @@ The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
 - deterministic scoring;
 - ambiguity detection;
 - immediate finalization when clarification is unnecessary;
+- persisted Clarification lifecycle and stale external-result protection;
+- Skip Current / Skip Remaining deterministic clarification mutations;
+- explicit exact-tie user decision and deterministic post-clarification finalization;
 - completed Assessment History;
 - historical Assessment detail;
 - PostgreSQL-backed read projections;
 - retry / concurrency / recovery coverage for implemented critical paths.
 
-Not yet implemented in the executable backend are the real Clarification/Tie-break mutation flow, external LLM calls, historical deletion orchestration, Group/Sharing, Frontend, and cloud deployment.
+Not yet implemented in the executable backend are provider-backed LLM interaction, historical deletion orchestration and Group/Sharing. Frontend implementation begins at F1; cloud deployment also remains pending.
 
 ---
 
@@ -250,7 +262,8 @@ docs/
 ├── api/
 │   └── openapi.yaml          Machine-readable HTTP contract
 ├── adr/                      Architecture Decision Records
-└── backend/                  Detailed backend design and implementation checkpoints
+├── backend/                  Detailed backend design and implementation checkpoints
+└── frontend/                 Frontend F0 architecture/integration baseline
 ```
 
 Recommended starting points:
@@ -261,7 +274,8 @@ Recommended starting points:
 - [`docs/domain/group-spec-aligned.md`](docs/domain/group-spec-aligned.md) — Group, membership and sharing rules;
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — current OpenAPI contract;
 - [`docs/adr/`](docs/adr/) — major design decisions and trade-offs;
-- [`docs/backend/14-assessment-history-detail-checkpoint.md`](docs/backend/14-assessment-history-detail-checkpoint.md) — latest accepted backend checkpoint.
+- [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — latest accepted backend checkpoint;
+- [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend F0 design checkpoint and implementation handoff.
 
 ---
 
@@ -350,9 +364,10 @@ V1__create_identity_tables.sql
 V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
 V4__seed_sixteen_personality_v1.sql
+V5__add_clarification_execution_token.sql
 ```
 
-Applied migrations are treated as immutable history and are not renumbered to match older design documents. Future database work begins at `V5` or later.
+Applied migrations are treated as immutable history and are not renumbered to match older design documents. Future database work begins at `V6` or later.
 
 ---
 
@@ -369,7 +384,7 @@ spring-aws-portfolio/
 └── README.md
 ```
 
-The React frontend and deployable Terraform infrastructure will be added as their implementation phases begin.
+The root `frontend/` implementation directory will be added in F1. Its accepted F0 architecture/integration baseline is already recorded under `docs/frontend/`. Deployable Terraform infrastructure remains a later implementation phase.
 
 ---
 

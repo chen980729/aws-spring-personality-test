@@ -345,6 +345,21 @@ Queries:
 
 MVP invitation can be satisfied by the admin sharing the group code; email invitation is not required.
 
+### 10.4 Frontend application boundary
+
+The first-party React frontend follows the same backend-authoritative principle rather than maintaining a duplicate client workflow model. Accepted F0 rules are:
+
+- routes identify stable resources/navigation intent; `/assessment-sessions/{sessionId}` is the canonical Assessment Session route;
+- Questionnaire, Clarification, Tie-break and Result are views of that Session, not independent workflow routes;
+- `AssessmentSessionResponse` and its workflow projection drive presentation; frontend logic may choose display precedence but does not decide whether transitions are valid;
+- server state is cached in memory (TanStack Query); unsaved form/questionnaire draft state remains local; Session identifiers and assessment data are not copied into browser persistence;
+- Session cookies are browser-managed and opaque to React; unsafe requests use the explicit CSRF protocol from ADR-0014;
+- the browser uses relative `/api/...` calls and development should preserve a same-origin view through a frontend dev proxy rather than hard-coding backend origins;
+- state-changing requests do not use generic automatic retries; recovery follows backend Problem Details codes and authoritative refetch semantics;
+- the design-first OpenAPI target may contain not-yet-executable capabilities, so frontend runtime integration must track implemented Controllers/DTOs/Security until the surfaces converge.
+
+Detailed frontend decisions live under `docs/frontend/`. Before provider-backed Step 8 UI is implemented, re-evaluate whether the workflow projection should expose the active clarification dimension explicitly instead of requiring inference from clarification state.
+
 ## 11. Application-Layer Orchestration
 
 The Application layer coordinates multi-module use cases without taking ownership of module-specific rules.
@@ -419,7 +434,7 @@ The following are no longer open: `ABANDONED` source states, Group sharing-conse
 
 ## 16. Detailed Design Ownership
 
-This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (currently design contract v0.4.0).
+This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (currently design contract v0.4.0). Accepted frontend architecture/integration decisions live under `docs/frontend/`.
 
 Still deferred to specialist design:
 

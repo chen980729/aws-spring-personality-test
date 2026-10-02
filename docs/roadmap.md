@@ -154,7 +154,9 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-- [ ] React + TypeScript project architecture.
+**Current status:** Frontend **F0 complete — Integration Baseline + Architecture**. Routing/page boundaries, executable API baseline, server-state ownership, Session/CSRF HTTP behavior, project structure and testing boundaries are accepted. Next: **F1 — React + TypeScript Foundation**.
+
+- [x] React + TypeScript project architecture baseline (F0).
 - [ ] Authentication experience.
 - [ ] Assessment catalog/entry.
 - [ ] Questionnaire/resume/autosave.
@@ -164,7 +166,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 - [ ] Loading/error/retry UX.
 - [ ] Frontend tests.
 
-Frontend must express user intent; it must not become the source of truth for backend lifecycle or authorization rules.
+Accepted F0 artifacts live under `docs/frontend/`. Frontend must express user intent; it must not become the source of truth for backend lifecycle or authorization rules.
 
 ## 9. Backend Implementation
 
@@ -190,7 +192,7 @@ Current backend checkpoint: **Assessment Step 7 complete**.
 ## 10. Containerization and Local Environment
 
 - [ ] Dockerfile(s).
-- [ ] Local PostgreSQL environment.
+- [x] Local PostgreSQL environment.
 - [ ] Reproducible local startup.
 - [ ] Environment/configuration strategy.
 

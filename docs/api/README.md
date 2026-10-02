@@ -24,6 +24,12 @@ The contract intentionally exposes public questionnaire rendering data but does 
 
 OpenAPI version `3.1.2` is used for the project contract. Although OpenAPI 3.2 exists, the current SpringDoc/Swagger-Core ecosystem used by Spring applications has not fully completed 3.2 support; 3.1.x is therefore the pragmatic implementation target for this MVP.
 
+## Frontend executable-contract rule
+
+The OpenAPI document is the accepted **design-first MVP target**, not a claim that every path is executable in the current Spring runtime. In particular, Group, historical deletion and provider-backed clarification interaction can remain design-frozen before their Controllers are implemented.
+
+Frontend F0 therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. The frontend must not generate the entire OpenAPI document and assume all generated operations are currently callable. Full-client generation can be reconsidered once the target contract and executable surface converge.
+
 ## Contract version history
 
 ### v0.4.0 — 2026-09-30

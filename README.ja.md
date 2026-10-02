@@ -8,8 +8,9 @@ React + TypeScript / Java + Spring Boot / PostgreSQL / AWS を中心に、**非�
 
 このプロジェクトでは、単に機能を作ることではなく、**Domain Modeling → API Design → Persistence → Security → Testing → Frontend → Containerization → AWS → CI/CD → Infrastructure as Code** までを一貫して設計・実装・説明できることを目標としています。
 
-> **現在の実装状況:** Backend Assessment **Step 6 完了 — History + Historical Detail**<br>
-> **次の Backend 実装:** Step 7 — Clarification + Tie-break mutation workflow
+> **現在の Backend:** Assessment **Step 7 完了 — deterministic Clarification + Tie-break workflow**<br>
+> **現在の Frontend:** **F0 完了 — Integration Baseline + Architecture**<br>
+> **次の主な作業:** Frontend **F1 — React + TypeScript Foundation**。provider-backed Backend Step 8 は引き続き未実装です。
 
 ---
 
@@ -46,7 +47,7 @@ Identity / Assessment / Group / AI Integration を business module として分�
 
 ```mermaid
 flowchart TD
-    Browser["React + TypeScript<br/>Frontend - planned"]
+    Browser["React + TypeScript<br/>Frontend - F0 design complete"]
 
     subgraph Backend[Java 21 + Spring Boot Modular Monolith]
         Identity[Identity]
@@ -75,7 +76,7 @@ Register / Login / Session / CSRF
                 ↓
         Assessment Catalog
                 ↓
-          Start / Resume
+      Start / Resume / Restart
                 ↓
    Session-bound Questionnaire
                 ↓
@@ -90,11 +91,19 @@ Register / Login / Session / CSRF
 No ambiguity              Ambiguous
    │                          │
    ↓                          ↓
-Complete              Clarification / Tie-break
-implemented                 next step
-   │
-   ↓
+Complete           Clarification lifecycle boundary
+                              ↓
+                     Skip current / remaining
+                              ↓
+                     Exact tie if unresolved?
+                              ↓
+                       User Tie-break
+                              ↓
+                           Complete
+                ↓
 History → Historical Detail
+
+Provider-backed AI conversation は Backend Step 8 で実装予定です。
 ```
 
 詳細な Architecture baseline は [`docs/architecture.md`](docs/architecture.md) にまとめています。
@@ -183,10 +192,10 @@ Browser からの state-changing request に対する CSRF protection も無効�
 | Security | Spring Security, Spring Session JDBC, CSRF | ✅ Implemented |
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
-| API | REST, OpenAPI 3.1 | ✅ Assessment Step 6 まで実装 |
+| API | REST, OpenAPI 3.1 | ✅ Assessment Step 7 まで実装 |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers | ✅ Implemented |
 | Local environment | Docker Compose | ✅ PostgreSQL 環境を実装 |
-| Frontend | React + TypeScript | ⏳ Planned |
+| Frontend | React + TypeScript | 🚧 F0 architecture 完了・F1 実装が次 |
 | AI integration | External LLM behind an adapter boundary | ⏳ Planned |
 | Containerization | Docker application image | ⏳ Planned |
 | Cloud | AWS | ⏳ Planned |
@@ -209,11 +218,11 @@ Browser からの state-changing request に対する CSRF protection も無効�
 | Deterministic scoring + ambiguity | ✅ Complete |
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
-| Clarification + Tie-break mutation | 🚧 Next |
+| Clarification + Tie-break mutation | ✅ Complete |
 | External AI adapter / runtime context | ⏳ Planned |
 | Historical assessment deletion | ⏳ Planned |
 | Group / Membership / Sharing implementation | ⏳ Planned |
-| React frontend | ⏳ Planned |
+| React frontend | 🚧 F0 architecture 完了・F1 が次 |
 | Docker application image | ⏳ Planned |
 | AWS deployment | ⏳ Planned |
 | GitHub Actions CI/CD | ⏳ Planned |
@@ -247,12 +256,15 @@ Browser からの state-changing request に対する CSRF protection も無効�
 - deterministic scoring
 - ambiguity detection
 - clarification 不要時の immediate finalization
+- persisted Clarification lifecycle / stale external-result protection
+- Skip Current / Skip Remaining deterministic clarification mutation
+- explicit exact-tie user decision / deterministic post-clarification finalization
 - completed Assessment History
 - historical Assessment detail
 - PostgreSQL-backed read projection
 - critical path に対する retry / concurrency / recovery test
 
-現時点では、Clarification / Tie-break mutation、external LLM call、historical deletion orchestration、Group / Sharing、Frontend、Cloud deployment は未実装です。
+現時点で executable backend に未実装なのは、provider-backed LLM interaction、historical deletion orchestration、Group / Sharing です。Frontend 実装は F1 から開始し、Cloud deployment も引き続き未実装です。
 
 ---
 
@@ -270,7 +282,8 @@ docs/
 ├── api/
 │   └── openapi.yaml          Machine-readable HTTP contract
 ├── adr/                      Architecture Decision Records
-└── backend/                  Detailed backend design and implementation checkpoints
+├── backend/                  Detailed backend design and implementation checkpoints
+└── frontend/                 Frontend F0 architecture / integration baseline
 ```
 
 主なドキュメント:
@@ -281,7 +294,8 @@ docs/
 - [`docs/domain/group-spec-aligned.md`](docs/domain/group-spec-aligned.md) — Group / Membership / Sharing rule
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — Current OpenAPI contract
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records
-- [`docs/backend/14-assessment-history-detail-checkpoint.md`](docs/backend/14-assessment-history-detail-checkpoint.md) — Latest accepted backend checkpoint
+- [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — Latest accepted backend checkpoint
+- [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend F0 design checkpoint / implementation handoff
 
 ---
 
@@ -370,9 +384,10 @@ V1__create_identity_tables.sql
 V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
 V4__seed_sixteen_personality_v1.sql
+V5__add_clarification_execution_token.sql
 ```
 
-適用済み migration は immutable history として扱い、過去の design document に合わせるために renumber しません。今後の migration は `V5` 以降から追加します。
+適用済み migration は immutable history として扱い、過去の design document に合わせるために renumber しません。今後の migration は `V6` 以降から追加します。
 
 ---
 
@@ -390,7 +405,7 @@ spring-aws-portfolio/
 └── README.ja.md              Japanese / portfolio README
 ```
 
-React frontend と deployable Terraform infrastructure は、それぞれの implementation phase で追加予定です。
+root の `frontend/` 実装ディレクトリは F1 で追加します。F0 の architecture / integration baseline はすでに `docs/frontend/` に記録済みです。Deployable Terraform infrastructure は後続 phase で追加します。
 
 ---
 

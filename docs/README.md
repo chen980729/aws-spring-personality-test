@@ -4,7 +4,7 @@ This directory contains the Architecture/Domain baselines, implementation-facing
 
 ## Current status
 
-The backend implementation is aligned through **Assessment Step 7 — Clarification + Tie-break workflow boundaries**. Identity/Security, the deterministic Assessment core/read side, Clarification lifecycle persistence, Skip/Tie-break finalization, stale external-result protection, and deterministic Clarification/Tie-break HTTP endpoints are implemented. Real LLM interaction (Step 8), historical deletion orchestration, Group, Frontend, Cloud and CI/CD work remain.
+The backend implementation is aligned through **Assessment Step 7 — Clarification + Tie-break workflow boundaries**. Identity/Security, the deterministic Assessment core/read side, Clarification lifecycle persistence, Skip/Tie-break finalization, stale external-result protection, and deterministic Clarification/Tie-break HTTP endpoints are implemented. Frontend **F0 — Integration Baseline + Architecture** is also accepted. Real LLM interaction (Step 8), frontend implementation (F1+), historical deletion orchestration, Group, Cloud and CI/CD work remain.
 
 Use these documents as the main entry points:
 
@@ -14,6 +14,7 @@ Use these documents as the main entry points:
 - `domain/group-spec-aligned.md` — accepted Group lifecycle, memberships, join requests, admin authority, and sharing consent.
 - `sixteen-personality-spec-aligned.md` — executable Sixteen Personality Assessment specification.
 - `backend/README.md` — backend design + implementation-checkpoint index.
+- `frontend/README.md` — accepted Frontend F0 architecture/integration baseline and implementation handoff.
 - `api/openapi.yaml` — OpenAPI **v0.4.0** HTTP contract.
 - `roadmap.md` — current implementation progress and remaining workstreams.
 - `adr/` — Architecture Decision Records, including superseded decisions where implementation feedback changed the design.
@@ -26,6 +27,14 @@ Detailed backend/database/API/AWS design should refine this baseline rather than
 - `backend/08-authentication-security.md` — accepted MVP Authentication & Security design.
 - `api/openapi.yaml` — OpenAPI v0.4.0 design-first HTTP DTO/security contract.
 - `api/README.md` — API contract ownership and version rationale.
+
+## Frontend F0 baseline
+
+- `frontend/README.md` — F0 checkpoint/index.
+- `frontend/01-frontend-architecture.md` — routing/page boundaries, state ownership, feature/project structure, and canonical Assessment Session route.
+- `frontend/02-api-integration.md` — executable API baseline, target-vs-runtime contract rule, query/mutation ownership and recovery behavior.
+- `frontend/03-auth-session-csrf.md` — Session/CSRF browser protocol and same-origin development topology.
+- `frontend/04-testing-strategy.md` — Vitest/RTL/MSW/Playwright responsibility split and E2E boundary.
 
 ## Latest backend checkpoints
 
