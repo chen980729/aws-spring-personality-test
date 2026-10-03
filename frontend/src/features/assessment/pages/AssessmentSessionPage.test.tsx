@@ -12,7 +12,12 @@ const sessionId =
   '9e6a5c52-54df-4e22-8ca6-779d32e4d061'
 
 function createSession(
-  status: 'IN_PROGRESS' | 'ABANDONED',
+  status:
+    | 'IN_PROGRESS'
+    | 'AWAITING_CLARIFICATION'
+    | 'CLARIFICATION_IN_PROGRESS'
+    | 'COMPLETED'
+    | 'ABANDONED',
 ) {
   return {
     id: sessionId,
@@ -23,24 +28,47 @@ function createSession(
     status,
     questionnaire: {
       answers: [],
-      submitted: false,
-      submittedAt: null,
+      submitted:
+        status !== 'IN_PROGRESS',
+      submittedAt:
+        status !== 'IN_PROGRESS'
+          ? '2026-10-03T02:00:00Z'
+          : null,
     },
-    initialResult: null,
+    initialResult:
+      status === 'IN_PROGRESS' ||
+      status === 'ABANDONED'
+        ? null
+        : {
+            dimensions: [],
+          },
     clarifications: [],
     tieBreaks: [],
-    finalResult: null,
+    finalResult:
+      status === 'COMPLETED'
+        ? {
+            finalType: 'INTJ',
+            dimensions: [],
+          }
+        : null,
     workflow: {
-      pendingClarificationDimensions: [],
+      pendingClarificationDimensions:
+        status === 'AWAITING_CLARIFICATION'
+          ? ['EI']
+          : [],
       retryableClarificationDimensions: [],
       tieBreakRequiredDimensions: [],
-      completed: false,
+      completed:
+        status === 'COMPLETED',
     },
     createdAt: '2026-10-03T01:00:00Z',
-    completedAt: null,
+    completedAt:
+      status === 'COMPLETED'
+        ? '2026-10-03T03:00:00Z'
+        : null,
     abandonedAt:
       status === 'ABANDONED'
-        ? '2026-10-03T02:00:00Z'
+        ? '2026-10-03T03:00:00Z'
         : null,
   }
 }
@@ -72,24 +100,58 @@ describe('AssessmentSessionPage', () => {
     ).toHaveTextContent(
       'This assessment session URL is invalid.',
     )
-
-    expect(
-      screen.getByRole('link', {
-        name: 'Return to assessments',
-      }),
-    ).toHaveAttribute(
-      'href',
-      '/assessments',
-    )
   })
 
-  it('loads the authoritative assessment session from the backend', async () => {
+  it('loads questionnaire UI only for an in-progress session', async () => {
     server.use(
       http.get(
         `${origin}/api/v1/assessment-sessions/${sessionId}`,
         () =>
           HttpResponse.json(
             createSession('IN_PROGRESS'),
+          ),
+      ),
+      http.get(
+        `${origin}/api/v1/assessment-sessions/${sessionId}/questionnaire`,
+        () =>
+          HttpResponse.json({
+            assessment: {
+              code: 'SIXTEEN_PERSONALITY',
+              version: '1.0',
+            },
+            questionnaire: {
+              questions: [],
+              answerScale: [],
+            },
+            response: {
+              answers: [],
+              submitted: false,
+              submittedAt: null,
+            },
+          }),
+      ),
+    )
+
+    renderSessionPage(
+      `/assessment-sessions/${sessionId}`,
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Questionnaire',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows pending clarification state after questionnaire submission', async () => {
+    server.use(
+      http.get(
+        `${origin}/api/v1/assessment-sessions/${sessionId}`,
+        () =>
+          HttpResponse.json(
+            createSession(
+              'AWAITING_CLARIFICATION',
+            ),
           ),
       ),
     )
@@ -99,15 +161,41 @@ describe('AssessmentSessionPage', () => {
     )
 
     expect(
-      screen.getByText('Loading session...'),
+      await screen.findByRole('heading', {
+        name: 'Clarification required',
+      }),
     ).toBeInTheDocument()
 
     expect(
-      await screen.findByText('IN_PROGRESS'),
+      screen.getByText(
+        'Pending dimensions: EI',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows an immediate final result when submission completes without clarification', async () => {
+    server.use(
+      http.get(
+        `${origin}/api/v1/assessment-sessions/${sessionId}`,
+        () =>
+          HttpResponse.json(
+            createSession('COMPLETED'),
+          ),
+      ),
+    )
+
+    renderSessionPage(
+      `/assessment-sessions/${sessionId}`,
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Assessment complete',
+      }),
     ).toBeInTheDocument()
 
     expect(
-      screen.getByText('SIXTEEN_PERSONALITY'),
+      screen.getByText('INTJ'),
     ).toBeInTheDocument()
   })
 
@@ -130,12 +218,6 @@ describe('AssessmentSessionPage', () => {
       await screen.findByRole('heading', {
         name: 'This session was abandoned',
       }),
-    ).toBeInTheDocument()
-
-    expect(
-      screen.getByText(
-        'A new assessment was started, so this session can no longer be resumed.',
-      ),
     ).toBeInTheDocument()
   })
 

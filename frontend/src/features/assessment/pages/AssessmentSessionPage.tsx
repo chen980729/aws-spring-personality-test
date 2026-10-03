@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router'
 
 import { useAssessmentSessionQuery } from '../api/assessmentQueries'
 import type { AssessmentSession } from '../api/assessmentTypes'
+import { QuestionnaireStage } from '../questionnaire/QuestionnaireStage'
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -114,10 +115,66 @@ function AssessmentSessionContent({
         </div>
       </dl>
 
-      <p>
-        Questionnaire execution will be added in the next
-        frontend milestone.
-      </p>
+      {session.status === 'IN_PROGRESS' && (
+        <QuestionnaireStage
+          sessionId={session.id}
+        />
+      )}
+
+      {session.status ===
+        'AWAITING_CLARIFICATION' && (
+        <section>
+          <h2>Clarification required</h2>
+
+          <p>
+            Your questionnaire has been submitted. Some
+            dimensions need additional clarification before
+            a final result can be produced.
+          </p>
+
+          {session.workflow
+            .pendingClarificationDimensions
+            .length > 0 && (
+            <p>
+              Pending dimensions:{' '}
+              {session.workflow
+                .pendingClarificationDimensions
+                .join(', ')}
+            </p>
+          )}
+        </section>
+      )}
+
+      {session.status ===
+        'CLARIFICATION_IN_PROGRESS' && (
+        <section>
+          <h2>Clarification in progress</h2>
+
+          <p>
+            Questionnaire submission is complete. Continue
+            with the clarification workflow.
+          </p>
+        </section>
+      )}
+
+      {session.status === 'COMPLETED' && (
+        <section>
+          <h2>Assessment complete</h2>
+
+          {session.finalResult ? (
+            <p>
+              Final type:{' '}
+              <strong>
+                {session.finalResult.finalType}
+              </strong>
+            </p>
+          ) : (
+            <p>
+              The assessment is complete.
+            </p>
+          )}
+        </section>
+      )}
     </main>
   )
 }

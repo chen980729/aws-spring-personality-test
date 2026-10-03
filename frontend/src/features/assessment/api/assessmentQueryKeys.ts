@@ -23,4 +23,11 @@ export const assessmentQueryKeys = {
       'assessment-session',
       sessionId,
     ] as const,
+
+  questionnaire: (sessionId: string) =>
+    [
+      'assessment-session',
+      sessionId,
+      'questionnaire',
+    ] as const,
 }

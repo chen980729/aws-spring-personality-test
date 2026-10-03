@@ -43,6 +43,16 @@ export interface RestartAssessmentResponse {
   session: AssessmentSession
 }
 
+export interface SessionQuestionnaire {
+  assessment: BoundAssessment
+  questionnaire: PublicQuestionnaire
+  response: QuestionnaireState
+}
+
+export interface QuestionnaireSnapshotRequest {
+  answers: QuestionAnswer[]
+}
+
 export type AssessmentSessionStatus =
   | 'IN_PROGRESS'
   | 'AWAITING_CLARIFICATION'
