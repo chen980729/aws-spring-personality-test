@@ -1,0 +1,26 @@
+.ui-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.ui-card--default {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-card--subtle {
+  background: var(--color-surface-subtle);
+  box-shadow: none;
+}
+
+.ui-card--padding-sm {
+  padding: var(--space-4);
+}
+
+.ui-card--padding-md {
+  padding: var(--space-6);
+}
+
+.ui-card--padding-lg {
+  padding: var(--space-8);
+}

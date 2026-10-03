@@ -1,0 +1,60 @@
+.ui-form-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ui-form-field__label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  width: fit-content;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.ui-form-field__label--required::after {
+  color: var(--color-danger);
+  content: '*';
+}
+
+.ui-form-field__control input,
+.ui-form-field__control textarea,
+.ui-form-field__control select {
+  min-height: 2.75rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.ui-form-field__control textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.ui-form-field__control input::placeholder,
+.ui-form-field__control textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.ui-form-field--error .ui-form-field__control input,
+.ui-form-field--error .ui-form-field__control textarea,
+.ui-form-field--error .ui-form-field__control select {
+  border-color: #f04438;
+}
+
+.ui-form-field--error .ui-form-field__control input:focus,
+.ui-form-field--error .ui-form-field__control textarea:focus,
+.ui-form-field--error .ui-form-field__control select:focus {
+  box-shadow: 0 0 0 3px rgb(240 68 56 / 0.14);
+}
+
+.ui-form-field__message {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.ui-form-field__message--error {
+  color: var(--color-danger);
+}

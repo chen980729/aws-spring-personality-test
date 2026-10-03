@@ -9,9 +9,16 @@ import {
 } from 'react-hook-form'
 
 import { isApiError } from '../../../shared/api/apiError'
+import {
+  Button,
+  Card,
+  FormField,
+} from '../../../shared/ui'
 import { useLoginMutation } from '../api/authQueries'
 import type { LoginRequest } from '../api/authTypes'
 import { sanitizeReturnTo } from '../navigation/returnTo'
+
+import './AuthPage.css'
 
 function applyLoginError(
   error: unknown,
@@ -108,80 +115,91 @@ export function LoginPage() {
       : `/register?returnTo=${encodeURIComponent(returnTo)}`
 
   return (
-    <main>
-      <h1>Login</h1>
-
-      {searchParams.get('registered') === '1' && (
-        <p role="status">
-          Account created. Sign in to continue.
-        </p>
-      )}
-
-      <form onSubmit={onSubmit} noValidate>
-        <div>
-          <label htmlFor="login-email">
-            Email
-          </label>
-          <input
-            id="login-email"
-            type="email"
-            autoComplete="email"
-            {...register('email', {
-              required: 'Email is required.',
-            })}
-          />
-          {errors.email?.message && (
-            <p role="alert">
-              {errors.email.message}
-            </p>
-          )}
+    <main className="auth-page">
+      <Card className="auth-card" padding="lg">
+        <div className="auth-card__heading">
+          <span className="auth-card__icon" aria-hidden="true">
+            P
+          </span>
+          <p className="auth-card__eyebrow">Welcome back</p>
+          <h1>Login</h1>
+          <p>Sign in to continue your personality journey.</p>
         </div>
 
-        <div>
-          <label htmlFor="login-password">
-            Password
-          </label>
-          <input
-            id="login-password"
-            type="password"
-            autoComplete="current-password"
-            {...register('password', {
-              required: 'Password is required.',
-              maxLength: {
-                value: 128,
-                message:
-                  'Password must be 128 characters or fewer.',
-              },
-            })}
-          />
-          {errors.password?.message && (
-            <p role="alert">
-              {errors.password.message}
-            </p>
-          )}
-        </div>
-
-        {errors.root?.server?.message && (
-          <p role="alert">
-            {errors.root.server.message}
+        {searchParams.get('registered') === '1' && (
+          <p className="auth-message auth-message--success" role="status">
+            Account created. Sign in to continue.
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-        >
-          {submitting
-            ? 'Signing in...'
-            : 'Sign in'}
-        </button>
-      </form>
+        <form className="auth-form" onSubmit={onSubmit} noValidate>
+          <FormField
+            htmlFor="login-email"
+            label="Email"
+            error={errors.email?.message}
+            required
+          >
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              aria-invalid={Boolean(errors.email)}
+              {...register('email', {
+                required: 'Email is required.',
+              })}
+            />
+          </FormField>
 
-      <p>
-        Need an account?{' '}
-        <Link to={registerPath}>
-          Create one
-        </Link>
+          <FormField
+            htmlFor="login-password"
+            label="Password"
+            error={errors.password?.message}
+            required
+          >
+            <input
+              id="login-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              aria-invalid={Boolean(errors.password)}
+              {...register('password', {
+                required: 'Password is required.',
+                maxLength: {
+                  value: 128,
+                  message:
+                    'Password must be 128 characters or fewer.',
+                },
+              })}
+            />
+          </FormField>
+
+          {errors.root?.server?.message && (
+            <p className="auth-message auth-message--error" role="alert">
+              {errors.root.server.message}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            fullWidth
+            isLoading={submitting}
+            loadingLabel="Signing in..."
+          >
+            Sign in
+          </Button>
+        </form>
+
+        <p className="auth-card__switch">
+          Need an account?{' '}
+          <Link to={registerPath}>
+            Create one
+          </Link>
+        </p>
+      </Card>
+
+      <p className="auth-page__note">
+        Your assessment history stays connected to your account.
       </p>
     </main>
   )
