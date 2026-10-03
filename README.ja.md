@@ -9,8 +9,20 @@ React + TypeScript / Java + Spring Boot / PostgreSQL / AWS を中心に、**非�
 このプロジェクトでは、単に機能を作ることではなく、**Domain Modeling → API Design → Persistence → Security → Testing → Frontend → Containerization → AWS → CI/CD → Infrastructure as Code** までを一貫して設計・実装・説明できることを目標としています。
 
 > **現在の Backend:** Assessment **Step 7 完了 — deterministic Clarification + Tie-break workflow**<br>
-> **現在の Frontend:** **F1-F6 完了 — Authentication + deterministic Assessment flow を Result / History まで実装**<br>
+> **現在の Frontend:** **F1-F6 完了 — Authentication + deterministic Assessment flow を Result / History まで実装し、Portfolio 向け UI redesign も完了**<br>
 > **次の主な作業:** **AWS deployment / Containerization / Terraform / GitHub Actions CI/CD**。provider-backed LLM interaction、Group / Sharing、cross-domain historical deletion は意図的に後続へ defer しています。
+
+---
+
+## UI Preview
+
+GitHub 上で Repository を見るだけでも製品の見た目を把握できるよう、現在の Frontend presentation layer をまとめた visual overview を掲載しています。Public entry、authenticated dashboard、Assessment workflow、History、Result presentation までの主要な画面構成と Design System を確認できます。実際の表示内容は Backend data によって生成されます。
+
+<p align="center">
+  <img src="./docs/assets/readme/ui-overview.png" alt="Landing、Authentication、Assessment dashboard、Questionnaire、History、Personality Result を含む Spring AWS Portfolio の UI overview" width="100%">
+</p>
+
+**現在の visual scope:** Landing / Authentication · authenticated app shell · Assessment Catalog / History · Questionnaire progress · Clarification / Tie-break workflow · Final Result
 
 ---
 

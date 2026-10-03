@@ -1,13 +1,13 @@
 # Frontend Architecture Baseline
 
 > **Original checkpoint:** Frontend F0
-> **Status:** Accepted baseline; validated by implementation through Frontend F6
+> **Status:** Accepted baseline; validated by implementation through Frontend F6 and the post-F6 UI optimization checkpoint
 > **Original date:** 2026-09-30
-> **Implementation review:** 2026-10-03
+> **Implementation review:** 2026-10-04
 
 ## 1. Purpose
 
-This document records the frontend architecture that was frozen before React implementation began. The implemented F1-F6 browser flow has validated the main boundaries below; implementation-specific outcomes are recorded in [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md).
+This document records the frontend architecture that was frozen before React implementation began. The implemented F1-F6 browser flow has validated the main behavioral boundaries below. A later presentation-layer refactor also validated that the UI can evolve independently without changing the backend-authoritative workflow, route model, or API integration rules. Implementation-specific outcomes are recorded in [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md).
 
 The primary goals are:
 
@@ -229,6 +229,46 @@ shared/
 
 `shared/api` owns HTTP/CSRF/Problem Details infrastructure. `shared/ui` and `shared/lib` should grow only when real reuse appears; they are not dumping grounds for business helpers.
 
+The post-F6 UI refinement validated a small set of domain-independent primitives in `shared/ui`:
+
+```text
+Button
+Card
+FormField
+PageHeader
+```
+
+These primitives expose presentation semantics only. They must not import Authentication, Assessment, Group, or other feature/domain concerns.
+
+### 4.4 Presentation layer and styling boundary
+
+The frontend uses a lightweight custom presentation layer rather than a general-purpose component framework for the current MVP. The boundary is intentionally small:
+
+```text
+app/styles/global.css
+    semantic design tokens + global element baseline
+
+app/styles/layouts.css
+    public/authenticated application shell
+
+shared/ui/*
+    cross-feature presentation primitives
+
+features/*
+    feature/page composition and feature-specific visual states
+```
+
+Accepted rules:
+
+- semantic CSS tokens define shared colors, spacing, radius, shadows, layout widths and focus treatment instead of scattering literal values across feature pages;
+- `PublicLayout` and `AuthenticatedLayout` own application framing/navigation, while route pages own their content composition;
+- feature CSS may style feature-specific workflow states but must not move business lifecycle decisions into the presentation layer;
+- shared UI primitives remain domain-independent and are introduced only where reuse is demonstrated;
+- responsive behavior, loading/error/empty states, focus treatment and reduced-motion support belong to presentation concerns and must not change API or workflow semantics;
+- purely visual decoration should not change accessible names or labels relied on by users and tests.
+
+A larger UI framework can be reconsidered if future Group/administrative surfaces materially increase component-system complexity. For the current portfolio MVP, the custom layer keeps dependency and abstraction cost proportional to the product scope.
+
 ## 5. State ownership
 
 Frontend state is classified by meaning rather than by one global store:
@@ -279,6 +319,7 @@ The F0 architecture has now been exercised by the real frontend:
 - Restart navigates to a replacement Session resource with a new ID;
 - History uses `/history?page=N`, while transient History-origin navigation is kept in Router state rather than added to the Session URL;
 - Result presentation uses a frontend read model to explain backend decision provenance without recomputing Domain results;
+- the post-F6 UI refactor introduced semantic design tokens, public/authenticated App Shells, reusable `shared/ui` primitives, responsive layouts and consistent loading/error/empty/404 presentation without changing route, API, state-ownership or workflow contracts;
 - no empty Group feature, deletion client or live LLM interaction client exists before the corresponding executable backend boundary.
 
 Historical Assessment deletion remains deferred until Group sharing exists because it is a cross-module orchestration, not an isolated frontend action.

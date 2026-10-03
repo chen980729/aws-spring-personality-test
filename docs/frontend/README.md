@@ -1,7 +1,7 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F6 complete — deterministic Assessment read/write flow + Result/History integration
-> **Last updated:** 2026-10-03
+> **Current checkpoint:** Frontend F6 + post-F6 UI optimization complete — deterministic Assessment flow, Result/History integration, and portfolio-ready presentation layer
+> **Last updated:** 2026-10-04
 > **Project next focus:** AWS deployment, containerization, Terraform and CI/CD
 > **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
 
@@ -11,11 +11,11 @@ The frontend is not treated as a second source of business truth. It expresses u
 
 ## Documents
 
-- [`01-frontend-architecture.md`](01-frontend-architecture.md) — route/page boundaries, feature ownership, project structure and Assessment workflow rendering model.
+- [`01-frontend-architecture.md`](01-frontend-architecture.md) — route/page boundaries, feature ownership, project structure, Assessment workflow rendering model and presentation-layer boundary.
 - [`02-api-integration.md`](02-api-integration.md) — executable API baseline, target-vs-runtime contract distinction, server-state ownership, mutation/recovery rules and Problem Details usage.
 - [`03-auth-session-csrf.md`](03-auth-session-csrf.md) — browser Session/CSRF protocol, same-origin development topology, login/logout rotation behavior and authentication recovery.
-- [`04-testing-strategy.md`](04-testing-strategy.md) — Vitest/RTL/MSW/Playwright responsibilities and cross-stack browser testing boundaries.
-- [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md) — implemented React stack and accepted F1-F6 behavior, integration findings, remaining boundaries and cloud handoff.
+- [`04-testing-strategy.md`](04-testing-strategy.md) — Vitest/RTL/MSW/Playwright responsibilities, cross-stack browser testing boundaries and presentation-regression lessons.
+- [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md) — implemented React stack, accepted F1-F6 behavior, post-F6 UI optimization checkpoint, integration findings, remaining boundaries and cloud handoff.
 
 ## Current implementation summary
 
@@ -52,6 +52,18 @@ Vitest + React Testing Library + MSW
 ```
 
 Server state remains in TanStack Query, unsaved questionnaire edits remain local React state, and Session/CSRF protocol state stays inside the shared HTTP boundary.
+
+The completed presentation layer now uses:
+
+```text
+semantic CSS design tokens
+PublicLayout + AuthenticatedLayout App Shells
+shared/ui: Button / Card / FormField / PageHeader
+feature-specific page/workflow composition
+responsive + loading/error/empty/404 polish
+```
+
+This UI layer is intentionally lightweight and custom for the current MVP; no general-purpose component framework is required at the present scope. The visual refactor did not change feature API contracts or backend-authoritative workflow rules.
 
 ## Current boundaries
 

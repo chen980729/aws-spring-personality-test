@@ -60,10 +60,14 @@ The focused Group Domain Review is complete and recorded in `docs/domain/group-s
 
 The review is complete; future changes should be driven by implementation findings or new requirements rather than repeating the full Assessment modeling exercise.
 
-## 5. UI / UX Detailed Design
+## 5. UI / UX Detailed Design and Presentation Refinement
 
-User-visible behavior for the currently executable Identity + deterministic Assessment slice is now implemented and validated in the browser.
+User-visible behavior for the currently executable Identity + deterministic Assessment slice is implemented, visually refined, and validated through the existing frontend regression suite plus browser checks.
 
+- [x] Semantic design tokens and global visual foundation.
+- [x] Public + authenticated App Shells.
+- [x] Small reusable `shared/ui` primitive set without introducing a general-purpose UI framework.
+- [x] Landing + Register/Login presentation.
 - [x] Assessment catalog/entry.
 - [x] Resume vs Start New.
 - [x] Questionnaire interaction.
@@ -76,6 +80,7 @@ User-visible behavior for the currently executable Identity + deterministic Asse
 - [x] Exact-tie user decision UX.
 - [x] Result UX with decision provenance.
 - [x] Completed History UX with pagination and canonical detail navigation.
+- [x] Responsive layout, focus/hover treatment, loading/error/empty states, reduced-motion support and styled 404 presentation for the implemented surface.
 - [ ] Delete historical assessment UX; deferred until Group sharing exists because deletion is cross-domain orchestration.
 - [ ] Group/join/admin/sharing UX; wait for executable Group backend capability.
 
@@ -155,7 +160,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-**Current status:** Frontend **F1-F6 complete for the executable Authentication + deterministic Assessment slice**. The browser application now covers Session/CSRF authentication, Assessment entry, questionnaire/autosave/submit, deterministic clarification Skip/Tie-break, Result, completed History and canonical navigation. Frontend feature work is intentionally paused before deletion/Group/real-LLM work while the project moves to AWS/CI/CD.
+**Current status:** Frontend **F1-F6 plus the post-F6 UI optimization checkpoint are complete for the executable Authentication + deterministic Assessment slice**. The browser application covers Session/CSRF authentication, Assessment entry, questionnaire/autosave/submit, deterministic clarification Skip/Tie-break, Result, completed History and canonical navigation, with a consistent responsive presentation layer. Frontend feature/UI work is intentionally paused before deletion/Group/real-LLM work while the project moves to AWS/CI/CD.
 
 - [x] F0 — React + TypeScript architecture/integration baseline.
 - [x] F1 — React + TypeScript/Vite foundation and test infrastructure.
@@ -164,6 +169,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 - [x] F4 — Questionnaire rendering, local draft ownership, debounced autosave, Submit and recovery.
 - [x] F5 — deterministic Clarification read/Skip/Skip Remaining + exact Tie-break/finalization.
 - [x] F6 — Result read model + completed History + canonical detail/navigation integration.
+- [x] Post-F6 UI optimization — design tokens, App Shells, reusable UI primitives, public/auth/dashboard/workflow redesign, responsive/error/empty/404 polish.
 - [x] Loading/error/retry UX for implemented Identity + deterministic Assessment flows.
 - [x] Vitest / React Testing Library / MSW coverage plus repeated real-browser integration verification.
 - [ ] Dedicated Playwright E2E automation; defer until a repeatable CI/full-stack environment exists.
@@ -220,7 +226,7 @@ Historical deletion remains in Core MVP, but implementing it before Group sharin
 
 ## 11. AWS / Infrastructure as Code
 
-**Current active focus:** resume AWS deployment work after the deterministic full-stack Assessment slice reached Frontend F6.
+**Current active focus:** resume AWS deployment work after the deterministic full-stack Assessment slice reached Frontend F6 and completed its current-scope UI optimization.
 
 - [ ] AWS target architecture detailed design.
 - [ ] Networking/security boundaries.

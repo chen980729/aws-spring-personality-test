@@ -1,9 +1,9 @@
 # Frontend Testing Strategy
 
 > **Original checkpoint:** Frontend F0
-> **Status:** Accepted; Vitest/RTL/MSW strategy implemented through Frontend F6
+> **Status:** Accepted; Vitest/RTL/MSW strategy implemented through Frontend F6 and exercised through the UI optimization checkpoint
 > **Original date:** 2026-09-30
-> **Implementation review:** 2026-10-03
+> **Implementation review:** 2026-10-04
 
 ## 1. Goal
 
@@ -14,7 +14,8 @@ The frontend must primarily prove:
 - a backend-authoritative state is rendered correctly;
 - a user action sends the expected HTTP intent;
 - loading/error/recovery behavior is correct;
-- browser-only Session/CSRF/navigation/persistence integration actually works.
+- browser-only Session/CSRF/navigation/persistence integration actually works;
+- presentation refactors preserve accessible interaction contracts instead of only preserving visual appearance.
 
 It should not re-prove backend Domain invariants in JavaScript.
 
@@ -173,9 +174,10 @@ ESLint
 
 Implemented regression coverage now includes CSRF recovery, auth/session restoration, Restart response handling, invalid Session IDs, serialized questionnaire autosave, Submit/autosave coordination, `ASSESSMENT_ALREADY_SUBMITTED` recovery, React StrictMode effect replay, Clarification/Tie-break workflow resolution, Result provenance, History pagination and History -> canonical Session -> Result navigation.
 
-The implementation produced two testing lessons worth keeping explicit:
+The implementation produced three testing lessons worth keeping explicit:
 
 1. **Passing Vitest does not replace `npm run build` or `npm run lint`.** Vitest's transform path can execute tests even when TypeScript project compilation or React Hooks lint rules would reject the implementation.
 2. **MSW can faithfully reproduce a wrong frontend assumption.** The Restart wrapper mismatch passed frontend tests because the mock and TypeScript assertion agreed with each other; real-browser integration against Spring Boot exposed the contract mismatch.
+3. **Accessible queries are useful presentation-regression contracts.** During the UI refactor, placing a visual required marker inside the `<label>` DOM changed the label text observed by Testing Library and broke six auth tests before any business behavior ran. The fix kept the required marker visual through CSS while restoring stable accessible label text. The tests were preserved rather than weakened to match accidental markup.
 
 The project has repeatedly performed manual full-stack browser verification against Vite + Spring Boot + PostgreSQL. Dedicated Playwright E2E remains deferred until the Cloud/CI pipeline provides a stable repeatable full-stack environment. When added, it should remain small and boundary-focused rather than duplicate the existing Java and MSW suites.

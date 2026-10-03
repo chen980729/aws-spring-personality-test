@@ -9,8 +9,20 @@ The application is designed to let users complete versioned personality assessme
 The project is intentionally developed as an end-to-end engineering exercise rather than a feature-only demo: **domain modeling → API design → persistence → security → testing → frontend → containerization → AWS → CI/CD → Infrastructure as Code**.
 
 > **Current backend:** Assessment **Step 7 complete — deterministic Clarification + Tie-break workflow**<br>
-> **Current frontend:** **F1-F6 complete for Authentication + the deterministic Assessment flow through Result/History**<br>
+> **Current frontend:** **F1-F6 complete for Authentication + the deterministic Assessment flow through Result/History, with the portfolio UI redesign complete**<br>
 > **Next active focus:** **AWS deployment / containerization / Terraform / GitHub Actions CI/CD**. Provider-backed LLM interaction, Group/Sharing, and cross-domain historical deletion remain deferred.
+
+---
+
+## UI Preview
+
+The repository includes a visual overview of the current frontend presentation layer so the product can be understood directly from GitHub without starting the application locally. The preview covers the public entry experience, authenticated dashboard, assessment workflow, history, and result presentation. Runtime content is populated from backend data.
+
+<p align="center">
+  <img src="./docs/assets/readme/ui-overview.png" alt="Spring AWS Portfolio UI overview showing the landing page, authentication, assessment dashboard, questionnaire, history, and personality result screens" width="100%">
+</p>
+
+**Current visual scope:** Landing & authentication · authenticated app shell · assessment catalog & history · questionnaire progress · clarification / tie-break workflow · final result
 
 ---
 

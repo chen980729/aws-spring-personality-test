@@ -1,8 +1,8 @@
 # Frontend F1-F6 Implementation Checkpoint
 
 > **Status:** Accepted
-> **Date:** 2026-10-03
-> **Scope:** executable Authentication + deterministic Assessment browser flow through Result/History
+> **Date:** 2026-10-04
+> **Scope:** executable Authentication + deterministic Assessment browser flow through Result/History, plus post-F6 presentation-layer optimization
 > **Next project workstream:** AWS deployment / containerization / Terraform / CI/CD
 
 ## 1. Checkpoint result
@@ -56,7 +56,7 @@ Accepted structure:
 src/
 ├── app/        application composition, providers, routes/layouts
 ├── features/   auth + assessment business-facing UI
-├── shared/     HTTP/CSRF/error infrastructure
+├── shared/     HTTP/CSRF/error infrastructure + reusable presentation primitives
 └── test/       shared test setup/render/MSW server
 ```
 
@@ -152,7 +152,38 @@ Implemented:
 
 The frontend Result layer explains backend decision provenance; it never recomputes the personality result from questionnaire evidence.
 
-## 8. State and navigation boundaries after implementation
+## 8. Post-F6 UI optimization checkpoint
+
+After the functional F1-F6 slice stabilized, the presentation layer was refined as a separate milestone rather than mixing visual redesign with business-flow implementation.
+
+Implemented presentation changes:
+
+- semantic design tokens for color, spacing, radius, shadow, layout width and focus treatment;
+- dedicated `PublicLayout` and `AuthenticatedLayout` App Shell presentation;
+- domain-independent `Button`, `Card`, `FormField` and `PageHeader` primitives under `shared/ui`;
+- redesigned Landing, Login and Register surfaces;
+- dashboard-style Assessment Catalog and completed History presentation;
+- unified visual workflow for Detail -> Questionnaire -> Clarification -> Tie-break -> Result;
+- responsive behavior for narrow/mobile layouts;
+- consistent loading, error and empty states plus a styled 404 surface;
+- hover/focus polish and `prefers-reduced-motion` handling.
+
+The refactor deliberately did **not** change:
+
+```text
+API contracts
+TanStack Query ownership
+Assessment workflow resolver semantics
+route identity/navigation rules
+Authentication/CSRF protocol behavior
+backend-authoritative business decisions
+```
+
+No external UI component framework was introduced. For the current product surface, a small custom design layer provides enough reuse while avoiding a larger dependency/abstraction surface. This choice can be revisited if later Group/administrative features materially expand UI-system complexity.
+
+One regression during this milestone reinforced the accessibility/testing boundary: a required-field `*` rendered as DOM text inside `<label>` changed the accessible label text and caused six Login/Register tests using `getByLabelText` to fail. The marker was moved to CSS presentation, preserving both the visual cue and the semantic label contract.
+
+## 9. State and navigation boundaries after implementation
 
 The F0 ownership model remains valid:
 
@@ -166,7 +197,7 @@ The F0 ownership model remains valid:
 
 No assessment or authentication state is persisted to `localStorage`.
 
-## 9. Testing checkpoint
+## 10. Testing checkpoint
 
 Implemented automated frontend layers:
 
@@ -194,7 +225,7 @@ Risk-focused coverage includes:
 
 The same flows were repeatedly exercised manually against the real Browser -> Vite -> Spring Security/Application -> PostgreSQL stack during implementation. Dedicated Playwright E2E automation remains deferred and can be added when CI/CD creates a stable repeatable full-stack environment.
 
-## 10. Deferred frontend boundaries
+## 11. Deferred frontend boundaries
 
 ### Provider-backed clarification
 
@@ -208,9 +239,9 @@ No empty frontend Group feature is created before executable Group backend capab
 
 Deletion remains part of Core MVP but is intentionally deferred. It is not a standalone Assessment command in implementation terms: deleting a completed Session must first end every ACTIVE `GroupAssessmentShare` that references it with reason `ASSESSMENT_DELETED`, then hard-delete the Assessment Session in the same cross-module use case. Implementing deletion before Group sharing exists would either invent a fake dependency or force later rework.
 
-## 11. Handoff to Cloud / Delivery work
+## 12. Handoff to Cloud / Delivery work
 
-Frontend feature development is intentionally paused at this checkpoint. The next active project workstream is to make the already runnable vertical slice deployable and repeatable through:
+Frontend feature development and the current-scope UI optimization are intentionally paused at this checkpoint. The next active project workstream is to make the already runnable vertical slice deployable and repeatable through:
 
 ```text
 Docker application packaging

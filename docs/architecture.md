@@ -366,6 +366,8 @@ The implemented frontend also keeps Result interpretation on the presentation si
 
 Completed History uses `/history?page=N` as URL navigation state. Historical detail reuses the canonical `/assessment-sessions/{sessionId}` route; transient “return to History page N” context is Router state rather than resource identity encoded into the Session URL.
 
+The post-F6 presentation refactor preserves this application boundary. Shared design tokens, public/authenticated App Shells and a small domain-independent `shared/ui` primitive set improve visual consistency without becoming a second feature architecture. Layout/page styling, responsive behavior, loading/error/empty states and reduced-motion handling remain presentation concerns; they must not alter business transitions, API meaning, route identity or server-state ownership. A larger third-party UI framework is intentionally not required for the current MVP scope and can be reconsidered only if later UI complexity justifies the additional dependency/abstraction cost.
+
 ## 11. Application-Layer Orchestration
 
 The Application layer coordinates multi-module use cases without taking ownership of module-specific rules.
