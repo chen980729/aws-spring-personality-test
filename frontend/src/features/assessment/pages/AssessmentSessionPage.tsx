@@ -2,7 +2,13 @@ import { Link, useParams } from 'react-router'
 
 import { useAssessmentSessionQuery } from '../api/assessmentQueries'
 import type { AssessmentSession } from '../api/assessmentTypes'
+import { ClarificationStage } from '../clarification/ClarificationStage'
 import { QuestionnaireStage } from '../questionnaire/QuestionnaireStage'
+import { TieBreakStage } from '../tiebreak/TieBreakStage'
+import {
+  resolveAssessmentWorkflow,
+  type AssessmentWorkflowView,
+} from '../workflow/assessmentWorkflowResolver'
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -13,17 +19,13 @@ function isValidSessionId(
   return uuidPattern.test(sessionId)
 }
 
-interface AbandonedSessionViewProps {
-  session: AssessmentSession
-}
-
 function AbandonedSessionView({
   session,
-}: AbandonedSessionViewProps) {
+}: {
+  session: AssessmentSession
+}) {
   return (
-    <main>
-      <h1>Assessment Session</h1>
-
+    <section>
       <h2>This session was abandoned</h2>
 
       <p>
@@ -40,8 +42,122 @@ function AbandonedSessionView({
           Return to assessment
         </Link>
       </p>
-    </main>
+    </section>
   )
+}
+
+function CompletedSessionView({
+  session,
+}: {
+  session: AssessmentSession
+}) {
+  return (
+    <section>
+      <h2>Assessment complete</h2>
+
+      {session.finalResult ? (
+        <p>
+          Final type:{' '}
+          <strong>
+            {session.finalResult.finalType}
+          </strong>
+        </p>
+      ) : (
+        <p>
+          The assessment is complete.
+        </p>
+      )}
+    </section>
+  )
+}
+
+function RecoveryView({
+  reason,
+}: {
+  reason:
+    Extract<
+      AssessmentWorkflowView,
+      { kind: 'recovery' }
+    >['reason']
+}) {
+  return (
+    <section>
+      <h2>Assessment state needs recovery</h2>
+
+      <p role="alert">
+        The current assessment response does not describe
+        a consistent workflow view. Refresh the page before
+        continuing.
+      </p>
+
+      <p>
+        Recovery reason: {reason}
+      </p>
+    </section>
+  )
+}
+
+function AssessmentWorkflowContent({
+  session,
+}: {
+  session: AssessmentSession
+}) {
+  const workflowView =
+    resolveAssessmentWorkflow(session)
+
+  switch (workflowView.kind) {
+    case 'questionnaire':
+      return (
+        <QuestionnaireStage
+          sessionId={session.id}
+        />
+      )
+
+    case 'clarification':
+      return (
+        <ClarificationStage
+          session={session}
+          dimensionCode={
+            workflowView.dimensionCode
+          }
+          mode={workflowView.mode}
+        />
+      )
+
+    case 'tie-break':
+      return (
+        <TieBreakStage
+          key={
+            workflowView.dimensionCode
+          }
+          session={session}
+          dimensionCode={
+            workflowView.dimensionCode
+          }
+        />
+      )
+
+    case 'completed':
+      return (
+        <CompletedSessionView
+          session={session}
+        />
+      )
+
+    case 'abandoned':
+      return (
+        <AbandonedSessionView
+          session={session}
+        />
+      )
+
+    case 'recovery':
+      return (
+        <RecoveryView
+          reason={workflowView.reason}
+        />
+      )
+  }
 }
 
 interface AssessmentSessionContentProps {
@@ -76,14 +192,6 @@ function AssessmentSessionContent({
 
   const session = sessionQuery.data
 
-  if (session.status === 'ABANDONED') {
-    return (
-      <AbandonedSessionView
-        session={session}
-      />
-    )
-  }
-
   return (
     <main>
       <p>
@@ -115,66 +223,9 @@ function AssessmentSessionContent({
         </div>
       </dl>
 
-      {session.status === 'IN_PROGRESS' && (
-        <QuestionnaireStage
-          sessionId={session.id}
-        />
-      )}
-
-      {session.status ===
-        'AWAITING_CLARIFICATION' && (
-        <section>
-          <h2>Clarification required</h2>
-
-          <p>
-            Your questionnaire has been submitted. Some
-            dimensions need additional clarification before
-            a final result can be produced.
-          </p>
-
-          {session.workflow
-            .pendingClarificationDimensions
-            .length > 0 && (
-            <p>
-              Pending dimensions:{' '}
-              {session.workflow
-                .pendingClarificationDimensions
-                .join(', ')}
-            </p>
-          )}
-        </section>
-      )}
-
-      {session.status ===
-        'CLARIFICATION_IN_PROGRESS' && (
-        <section>
-          <h2>Clarification in progress</h2>
-
-          <p>
-            Questionnaire submission is complete. Continue
-            with the clarification workflow.
-          </p>
-        </section>
-      )}
-
-      {session.status === 'COMPLETED' && (
-        <section>
-          <h2>Assessment complete</h2>
-
-          {session.finalResult ? (
-            <p>
-              Final type:{' '}
-              <strong>
-                {session.finalResult.finalType}
-              </strong>
-            </p>
-          ) : (
-            <p>
-              The assessment is complete.
-            </p>
-          )}
-        </section>
-      )}
+      <AssessmentWorkflowContent
+        session={session}
+      />
     </main>
   )
 }

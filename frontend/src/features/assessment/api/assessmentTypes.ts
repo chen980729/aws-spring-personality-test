@@ -53,6 +53,10 @@ export interface QuestionnaireSnapshotRequest {
   answers: QuestionAnswer[]
 }
 
+export interface TieBreakRequest {
+  selectedPole: string
+}
+
 export type AssessmentSessionStatus =
   | 'IN_PROGRESS'
   | 'AWAITING_CLARIFICATION'
@@ -110,19 +114,42 @@ export interface QuestionnaireEvidence {
   poleBPercentage: number
 }
 
+export type ClarificationStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'CLARIFIED'
+  | 'SKIPPED'
+  | 'FAILED_RETRYABLE'
+
+export type ClarificationConfidence =
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+
+export type ClarificationResult =
+  | ResolvedClarificationResult
+  | UnclearClarificationResult
+
+export interface ResolvedClarificationResult {
+  resolution: 'RESOLVED'
+  suggestedPole: string
+  confidence: ClarificationConfidence
+  reasoningSummary: string
+}
+
+export interface UnclearClarificationResult {
+  resolution: 'UNCLEAR'
+  suggestedPole: null
+  confidence: ClarificationConfidence
+  reasoningSummary: string
+}
+
 export interface ClarificationState {
   dimensionCode: string
-  status: string
+  status: ClarificationStatus
   result: ClarificationResult | null
   startedAt: string | null
   acceptedAt: string | null
-}
-
-export interface ClarificationResult {
-  resolution: string
-  suggestedPole: string | null
-  confidence: string
-  reasoningSummary: string
 }
 
 export interface TieBreakState {

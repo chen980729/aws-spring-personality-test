@@ -12,6 +12,7 @@ import type {
   RestartAssessmentResponse,
   SessionQuestionnaire,
   StartAssessmentResponse,
+  TieBreakRequest,
 } from './assessmentTypes'
 
 export function getAssessmentCatalog(): Promise<AssessmentCatalog> {
@@ -95,14 +96,39 @@ export async function submitQuestionnaire(
       isApiError(error) &&
       error.code === 'ASSESSMENT_ALREADY_SUBMITTED'
     ) {
-      // The first submit may have committed while its HTTP
-      // response was lost. Recover authoritative state rather
-      // than running submission/scoring a second time.
       return getAssessmentSession(sessionId)
     }
 
     throw error
   }
+}
+
+export function skipClarification(
+  sessionId: string,
+  dimensionCode: string,
+): Promise<AssessmentSession> {
+  return postJson<AssessmentSession>(
+    `/api/v1/assessment-sessions/${encodeURIComponent(sessionId)}/clarifications/${encodeURIComponent(dimensionCode)}/skip`,
+  )
+}
+
+export function skipRemainingClarifications(
+  sessionId: string,
+): Promise<AssessmentSession> {
+  return postJson<AssessmentSession>(
+    `/api/v1/assessment-sessions/${encodeURIComponent(sessionId)}/clarifications/skip-remaining`,
+  )
+}
+
+export function submitDimensionTieBreak(
+  sessionId: string,
+  dimensionCode: string,
+  request: TieBreakRequest,
+): Promise<AssessmentSession> {
+  return putJson<AssessmentSession>(
+    `/api/v1/assessment-sessions/${encodeURIComponent(sessionId)}/tie-breaks/${encodeURIComponent(dimensionCode)}`,
+    request,
+  )
 }
 
 export function restartAssessmentSession(

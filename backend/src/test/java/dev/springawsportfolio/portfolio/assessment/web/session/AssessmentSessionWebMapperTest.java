@@ -4,6 +4,10 @@ import dev.springawsportfolio.portfolio.assessment.application.session.Assessmen
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.PoleCode;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalAssessmentResult;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalDecisionSource;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalDimensionConclusion;
 import dev.springawsportfolio.portfolio.assessment.domain.result.InitialAssessmentResult;
 import dev.springawsportfolio.portfolio.assessment.domain.result.InitialDimensionResult;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionStatus;
@@ -198,4 +202,122 @@ class AssessmentSessionWebMapperTest {
                         .decidedAt()
         );
     }
+
+    @Test
+    void mapsCompletedExactTieResolvedByUserTieBreak() {
+        Instant submittedAt =
+                Instant.parse(
+                        "2026-10-03T10:00:00Z"
+                );
+
+        Instant decidedAt =
+                Instant.parse(
+                        "2026-10-03T10:05:00Z"
+                );
+
+        Instant completedAt =
+                Instant.parse(
+                        "2026-10-03T10:05:01Z"
+                );
+
+        InitialAssessmentResult initialResult =
+                new InitialAssessmentResult(
+                        List.of(
+                                new InitialDimensionResult(
+                                        new DimensionCode("XY"),
+                                        0,
+                                        null,
+                                        true
+                                )
+                        )
+                );
+
+        FinalAssessmentResult finalResult =
+                new FinalAssessmentResult(
+                        "X",
+                        List.of(
+                                new FinalDimensionConclusion(
+                                        new DimensionCode("XY"),
+                                        new PoleCode("X"),
+                                        FinalDecisionSource
+                                                .USER_TIE_BREAK
+                                )
+                        )
+                );
+
+        AssessmentSessionResult session =
+                new AssessmentSessionResult(
+                        UUID.randomUUID(),
+                        "TEST_ASSESSMENT",
+                        "1.0",
+                        AssessmentSessionStatus.COMPLETED,
+                        List.of(),
+                        submittedAt,
+                        initialResult,
+                        List.of(
+                                new AssessmentSessionResult
+                                        .DimensionEvidenceResult(
+                                        "XY",
+                                        "X",
+                                        50.0,
+                                        "Y",
+                                        50.0
+                                )
+                        ),
+                        List.of(),
+                        List.of(
+                                new AssessmentSessionResult
+                                        .TieBreakStateResult(
+                                        "XY",
+                                        "X",
+                                        decidedAt
+                                )
+                        ),
+                        finalResult,
+                        new AssessmentSessionResult
+                                .WorkflowResult(
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                true
+                        ),
+                        Instant.parse(
+                                "2026-10-03T09:00:00Z"
+                        ),
+                        completedAt,
+                        null
+                );
+
+        AssessmentSessionResponse response =
+                mapper.toSessionResponse(
+                        session
+                );
+
+        AssessmentSessionResponse
+                .FinalDimensionConclusionResponse dimension =
+                response
+                        .finalResult()
+                        .dimensions()
+                        .getFirst();
+
+        assertNull(
+                dimension.questionnairePreference()
+        );
+
+        assertEquals(
+                "X",
+                dimension.finalPreference()
+        );
+
+        assertEquals(
+                "USER_TIE_BREAK",
+                dimension.source()
+        );
+
+        assertEquals(
+                false,
+                dimension.overrodeBaseline()
+        );
+    }
+
 }

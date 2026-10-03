@@ -1,4 +1,5 @@
 import {
+  QueryClient,
   useMutation,
   useQuery,
   useQueryClient,
@@ -12,7 +13,10 @@ import {
   getSessionQuestionnaire,
   restartAssessmentSession,
   saveQuestionnaireProgress,
+  skipClarification,
+  skipRemainingClarifications,
   startAssessmentSession,
+  submitDimensionTieBreak,
   submitQuestionnaire,
 } from './assessmentApi'
 import { assessmentQueryKeys } from './assessmentQueryKeys'
@@ -33,6 +37,25 @@ function isActiveSession(
     session.status === 'IN_PROGRESS' ||
     session.status === 'AWAITING_CLARIFICATION' ||
     session.status === 'CLARIFICATION_IN_PROGRESS'
+  )
+}
+
+function cacheAuthoritativeSession(
+  queryClient: QueryClient,
+  session: AssessmentSession,
+) {
+  queryClient.setQueryData(
+    assessmentQueryKeys.session(session.id),
+    session,
+  )
+
+  queryClient.setQueryData(
+    assessmentQueryKeys.activeSession(
+      session.assessment.code,
+    ),
+    isActiveSession(session)
+      ? session
+      : null,
   )
 }
 
@@ -109,8 +132,8 @@ export function useSaveQuestionnaireProgressMutation(
       ),
 
     onSuccess: (session) => {
-      queryClient.setQueryData(
-        assessmentQueryKeys.session(sessionId),
+      cacheAuthoritativeSession(
+        queryClient,
         session,
       )
 
@@ -125,13 +148,6 @@ export function useSaveQuestionnaireProgressMutation(
                 response: session.questionnaire,
               }
             : current,
-      )
-
-      queryClient.setQueryData(
-        assessmentQueryKeys.activeSession(
-          session.assessment.code,
-        ),
-        session,
       )
     },
   })
@@ -152,8 +168,8 @@ export function useSubmitQuestionnaireMutation(
       ),
 
     onSuccess: (session) => {
-      queryClient.setQueryData(
-        assessmentQueryKeys.session(sessionId),
+      cacheAuthoritativeSession(
+        queryClient,
         session,
       )
 
@@ -169,14 +185,69 @@ export function useSubmitQuestionnaireMutation(
               }
             : current,
       )
+    },
+  })
+}
 
-      queryClient.setQueryData(
-        assessmentQueryKeys.activeSession(
-          session.assessment.code,
-        ),
-        isActiveSession(session)
-          ? session
-          : null,
+export function useSkipClarificationMutation(
+  sessionId: string,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (dimensionCode: string) =>
+      skipClarification(
+        sessionId,
+        dimensionCode,
+      ),
+
+    onSuccess: (session) => {
+      cacheAuthoritativeSession(
+        queryClient,
+        session,
+      )
+    },
+  })
+}
+
+export function useSkipRemainingClarificationsMutation(
+  sessionId: string,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () =>
+      skipRemainingClarifications(sessionId),
+
+    onSuccess: (session) => {
+      cacheAuthoritativeSession(
+        queryClient,
+        session,
+      )
+    },
+  })
+}
+
+export function useSubmitDimensionTieBreakMutation(
+  sessionId: string,
+  dimensionCode: string,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (selectedPole: string) =>
+      submitDimensionTieBreak(
+        sessionId,
+        dimensionCode,
+        {
+          selectedPole,
+        },
+      ),
+
+    onSuccess: (session) => {
+      cacheAuthoritativeSession(
+        queryClient,
+        session,
       )
     },
   })
@@ -192,15 +263,8 @@ export function useStartAssessmentSessionMutation(
       startAssessmentSession(assessmentCode),
 
     onSuccess: ({ session }) => {
-      queryClient.setQueryData(
-        assessmentQueryKeys.session(session.id),
-        session,
-      )
-
-      queryClient.setQueryData(
-        assessmentQueryKeys.activeSession(
-          assessmentCode,
-        ),
+      cacheAuthoritativeSession(
+        queryClient,
         session,
       )
     },
@@ -221,8 +285,8 @@ export function useRestartAssessmentSessionMutation(
       abandonedSessionId,
       session,
     }) => {
-      queryClient.setQueryData(
-        assessmentQueryKeys.session(session.id),
+      cacheAuthoritativeSession(
+        queryClient,
         session,
       )
 

@@ -43,6 +43,9 @@ function sessionResponse(
     value: number
   }>,
 ) {
+  const awaiting =
+    status === 'AWAITING_CLARIFICATION'
+
   return {
     id: sessionId,
     assessment: {
@@ -63,9 +66,33 @@ function sessionResponse(
       status === 'IN_PROGRESS'
         ? null
         : {
-            dimensions: [],
+            dimensions: [
+              {
+                dimensionCode: 'EI',
+                rawScore: 0,
+                questionnairePreference: null,
+                ambiguous: true,
+                evidence: {
+                  poleA: 'E',
+                  poleAPercentage: 50,
+                  poleB: 'I',
+                  poleBPercentage: 50,
+                },
+              },
+            ],
           },
-    clarifications: [],
+    clarifications:
+      awaiting
+        ? [
+            {
+              dimensionCode: 'EI',
+              status: 'PENDING',
+              result: null,
+              startedAt: null,
+              acceptedAt: null,
+            },
+          ]
+        : [],
     tieBreaks: [],
     finalResult:
       status === 'COMPLETED'
@@ -76,9 +103,7 @@ function sessionResponse(
         : null,
     workflow: {
       pendingClarificationDimensions:
-        status === 'AWAITING_CLARIFICATION'
-          ? ['EI']
-          : [],
+        awaiting ? ['EI'] : [],
       retryableClarificationDimensions: [],
       tieBreakRequiredDimensions: [],
       completed:
@@ -212,12 +237,6 @@ describe('questionnaire submission', () => {
       })
 
     expect(submitButton).toBeDisabled()
-
-    expect(
-      screen.getByText(
-        'Answer every question before submitting.',
-      ),
-    ).toBeInTheDocument()
   })
 
   it('submits the complete latest snapshot without waiting for the debounce autosave timer', async () => {

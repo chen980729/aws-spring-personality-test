@@ -306,16 +306,14 @@ public final class AssessmentSessionWebMapper {
                                                 conclusion.dimension()
                                         )
                         )
+                        .findFirst()
                         .map(initial ->
                                 initial
                                         .questionnairePreference()
-                                        == null
-                                        ? null
-                                        : initial
-                                        .questionnairePreference()
-                                        .value()
                         )
-                        .findFirst()
+                        .map(preference ->
+                                preference.value()
+                        )
                         .orElse(null);
 
         boolean overrodeBaseline =

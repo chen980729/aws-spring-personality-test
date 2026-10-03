@@ -19,6 +19,13 @@ function createSession(
     | 'COMPLETED'
     | 'ABANDONED',
 ) {
+  const awaiting =
+    status === 'AWAITING_CLARIFICATION'
+
+  const clarificationInProgress =
+    status ===
+    'CLARIFICATION_IN_PROGRESS'
+
   return {
     id: sessionId,
     assessment: {
@@ -40,9 +47,44 @@ function createSession(
       status === 'ABANDONED'
         ? null
         : {
-            dimensions: [],
+            dimensions: [
+              {
+                dimensionCode: 'EI',
+                rawScore: 0,
+                questionnairePreference: null,
+                ambiguous: true,
+                evidence: {
+                  poleA: 'E',
+                  poleAPercentage: 50,
+                  poleB: 'I',
+                  poleBPercentage: 50,
+                },
+              },
+            ],
           },
-    clarifications: [],
+    clarifications:
+      awaiting
+        ? [
+            {
+              dimensionCode: 'EI',
+              status: 'PENDING',
+              result: null,
+              startedAt: null,
+              acceptedAt: null,
+            },
+          ]
+        : clarificationInProgress
+          ? [
+              {
+                dimensionCode: 'EI',
+                status: 'IN_PROGRESS',
+                result: null,
+                startedAt:
+                  '2026-10-03T02:10:00Z',
+                acceptedAt: null,
+              },
+            ]
+          : [],
     tieBreaks: [],
     finalResult:
       status === 'COMPLETED'
@@ -53,9 +95,7 @@ function createSession(
         : null,
     workflow: {
       pendingClarificationDimensions:
-        status === 'AWAITING_CLARIFICATION'
-          ? ['EI']
-          : [],
+        awaiting ? ['EI'] : [],
       retryableClarificationDimensions: [],
       tieBreakRequiredDimensions: [],
       completed:
@@ -70,7 +110,7 @@ function createSession(
       status === 'ABANDONED'
         ? '2026-10-03T03:00:00Z'
         : null,
-  }
+  } as const
 }
 
 function renderSessionPage(
@@ -143,7 +183,7 @@ describe('AssessmentSessionPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows pending clarification state after questionnaire submission', async () => {
+  it('shows the first pending clarification from the authoritative read model', async () => {
     server.use(
       http.get(
         `${origin}/api/v1/assessment-sessions/${sessionId}`,
@@ -171,9 +211,43 @@ describe('AssessmentSessionPage', () => {
         'Pending dimensions: EI',
       ),
     ).toBeInTheDocument()
+
+    expect(
+      screen.getByText(
+        'E: 50.0% · I: 50.0%',
+      ),
+    ).toBeInTheDocument()
   })
 
-  it('shows an immediate final result when submission completes without clarification', async () => {
+  it('derives the active clarification dimension for CLARIFICATION_IN_PROGRESS', async () => {
+    server.use(
+      http.get(
+        `${origin}/api/v1/assessment-sessions/${sessionId}`,
+        () =>
+          HttpResponse.json(
+            createSession(
+              'CLARIFICATION_IN_PROGRESS',
+            ),
+          ),
+      ),
+    )
+
+    renderSessionPage(
+      `/assessment-sessions/${sessionId}`,
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Clarification in progress',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText('EI'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows an immediate final result when the session is completed', async () => {
     server.use(
       http.get(
         `${origin}/api/v1/assessment-sessions/${sessionId}`,

@@ -232,8 +232,30 @@ describe('QuestionnaireStage in React StrictMode', () => {
                 '2026-10-03T06:00:00Z',
             },
             initialResult: {
-              dimensions: [],
+              dimensions: [
+                {
+                  dimensionCode: 'EI',
+                  rawScore: 0,
+                  questionnairePreference: null,
+                  ambiguous: true,
+                  evidence: {
+                    poleA: 'E',
+                    poleAPercentage: 50,
+                    poleB: 'I',
+                    poleBPercentage: 50,
+                  },
+                },
+              ],
             },
+            clarifications: [
+              {
+                dimensionCode: 'EI',
+                status: 'PENDING',
+                result: null,
+                startedAt: null,
+                acceptedAt: null,
+              },
+            ],
             workflow: {
               pendingClarificationDimensions: [
                 'EI',
