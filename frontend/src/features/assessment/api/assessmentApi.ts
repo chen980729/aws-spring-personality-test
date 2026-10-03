@@ -7,6 +7,7 @@ import {
 import type {
   AssessmentCatalog,
   AssessmentDetails,
+  AssessmentHistoryResponse,
   AssessmentSession,
   QuestionnaireSnapshotRequest,
   RestartAssessmentResponse,
@@ -53,6 +54,23 @@ export function startAssessmentSession(
 ): Promise<StartAssessmentResponse> {
   return postJson<StartAssessmentResponse>(
     `/api/v1/assessments/${encodeURIComponent(assessmentCode)}/sessions`,
+  )
+}
+
+
+export function getAssessmentHistory(
+  page: number,
+  size: number,
+): Promise<AssessmentHistoryResponse> {
+  const searchParams =
+    new URLSearchParams({
+      status: 'COMPLETED',
+      page: String(page),
+      size: String(size),
+    })
+
+  return getJson<AssessmentHistoryResponse>(
+    `/api/v1/assessment-sessions?${searchParams.toString()}`,
   )
 }
 

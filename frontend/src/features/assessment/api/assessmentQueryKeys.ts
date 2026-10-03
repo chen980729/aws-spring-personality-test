@@ -30,4 +30,17 @@ export const assessmentQueryKeys = {
       sessionId,
       'questionnaire',
     ] as const,
+
+  historyRoot: () =>
+    ['assessment-history'] as const,
+
+  history: (
+    page: number,
+    size: number,
+  ) =>
+    [
+      'assessment-history',
+      page,
+      size,
+    ] as const,
 }

@@ -9,6 +9,7 @@ import {
   getActiveAssessmentSession,
   getAssessmentCatalog,
   getAssessmentDetails,
+  getAssessmentHistory,
   getAssessmentSession,
   getSessionQuestionnaire,
   restartAssessmentSession,
@@ -57,6 +58,13 @@ function cacheAuthoritativeSession(
       ? session
       : null,
   )
+
+  if (session.status === 'COMPLETED') {
+    void queryClient.invalidateQueries({
+      queryKey:
+        assessmentQueryKeys.historyRoot(),
+    })
+  }
 }
 
 export function useAssessmentCatalogQuery() {
@@ -92,6 +100,26 @@ export function useActiveAssessmentSessionQuery(
         assessmentCode,
       ),
     staleTime: activeSessionStaleTime,
+  })
+}
+
+
+export function useAssessmentHistoryQuery(
+  page: number,
+  size: number,
+) {
+  return useQuery({
+    queryKey:
+      assessmentQueryKeys.history(
+        page,
+        size,
+      ),
+    queryFn: () =>
+      getAssessmentHistory(
+        page,
+        size,
+      ),
+    staleTime: 30 * 1000,
   })
 }
 

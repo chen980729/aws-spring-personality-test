@@ -158,6 +158,13 @@ export interface TieBreakState {
   decidedAt: string
 }
 
+export type FinalDecisionSource =
+  | 'QUESTIONNAIRE'
+  | 'QUESTIONNAIRE_CONFIRMED_BY_CLARIFICATION'
+  | 'AI_CLARIFICATION'
+  | 'QUESTIONNAIRE_FALLBACK'
+  | 'USER_TIE_BREAK'
+
 export interface FinalAssessmentResult {
   finalType: string
   dimensions: FinalDimensionConclusion[]
@@ -167,7 +174,7 @@ export interface FinalDimensionConclusion {
   dimensionCode: string
   questionnairePreference: string | null
   finalPreference: string
-  source: string
+  source: FinalDecisionSource
   overrodeBaseline: boolean
 }
 
@@ -177,3 +184,20 @@ export interface AssessmentWorkflow {
   tieBreakRequiredDimensions: string[]
   completed: boolean
 }
+
+export interface AssessmentHistoryResponse {
+  items: AssessmentHistoryItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface AssessmentHistoryItem {
+  sessionId: string
+  assessmentCode: string
+  assessmentVersion: string
+  finalType: string
+  completedAt: string
+}
+

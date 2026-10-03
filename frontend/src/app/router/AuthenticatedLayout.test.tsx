@@ -58,6 +58,40 @@ describe('AuthenticatedLayout', () => {
     expect(
       await screen.findByText('Protected history'),
     ).toBeInTheDocument()
+
+
+    expect(
+      screen.getByRole('navigation', {
+        name: 'Primary navigation',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('link', {
+        name: 'Assessments',
+      }),
+    ).toHaveAttribute(
+      'href',
+      '/assessments',
+    )
+
+    expect(
+      screen.getByRole('link', {
+        name: 'History',
+      }),
+    ).toHaveAttribute(
+      'href',
+      '/history',
+    )
+
+    expect(
+      screen.getByRole('link', {
+        name: 'History',
+      }),
+    ).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
   })
 
   it('redirects an anonymous session to login and preserves the requested URL', async () => {

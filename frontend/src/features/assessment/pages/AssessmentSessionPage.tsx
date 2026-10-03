@@ -1,9 +1,15 @@
-import { Link, useParams } from 'react-router'
+import {
+  Link,
+  useLocation,
+  useParams,
+} from 'react-router'
 
 import { useAssessmentSessionQuery } from '../api/assessmentQueries'
 import type { AssessmentSession } from '../api/assessmentTypes'
 import { ClarificationStage } from '../clarification/ClarificationStage'
+import { readHistoryReturnTo } from '../history/assessmentHistoryNavigation'
 import { QuestionnaireStage } from '../questionnaire/QuestionnaireStage'
+import { AssessmentResultStage } from '../result/AssessmentResultStage'
 import { TieBreakStage } from '../tiebreak/TieBreakStage'
 import {
   resolveAssessmentWorkflow,
@@ -42,31 +48,6 @@ function AbandonedSessionView({
           Return to assessment
         </Link>
       </p>
-    </section>
-  )
-}
-
-function CompletedSessionView({
-  session,
-}: {
-  session: AssessmentSession
-}) {
-  return (
-    <section>
-      <h2>Assessment complete</h2>
-
-      {session.finalResult ? (
-        <p>
-          Final type:{' '}
-          <strong>
-            {session.finalResult.finalType}
-          </strong>
-        </p>
-      ) : (
-        <p>
-          The assessment is complete.
-        </p>
-      )}
     </section>
   )
 }
@@ -139,7 +120,7 @@ function AssessmentWorkflowContent({
 
     case 'completed':
       return (
-        <CompletedSessionView
+        <AssessmentResultStage
           session={session}
         />
       )
@@ -167,6 +148,8 @@ interface AssessmentSessionContentProps {
 function AssessmentSessionContent({
   sessionId,
 }: AssessmentSessionContentProps) {
+  const location = useLocation()
+
   const sessionQuery =
     useAssessmentSessionQuery(sessionId)
 
@@ -195,13 +178,27 @@ function AssessmentSessionContent({
   return (
     <main>
       <p>
-        <Link
-          to={`/assessments/${encodeURIComponent(
-            session.assessment.code,
-          )}`}
-        >
-          ← Back to assessment
-        </Link>
+        {readHistoryReturnTo(
+          location.state,
+        ) ? (
+          <Link
+            to={
+              readHistoryReturnTo(
+                location.state,
+              )!
+            }
+          >
+            ← Back to history
+          </Link>
+        ) : (
+          <Link
+            to={`/assessments/${encodeURIComponent(
+              session.assessment.code,
+            )}`}
+          >
+            ← Back to assessment
+          </Link>
+        )}
       </p>
 
       <h1>Assessment Session</h1>

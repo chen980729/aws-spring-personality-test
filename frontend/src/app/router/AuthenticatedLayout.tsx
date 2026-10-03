@@ -1,5 +1,6 @@
 import {
   Navigate,
+  NavLink,
   Outlet,
   useLocation,
 } from 'react-router'
@@ -45,6 +46,17 @@ export function AuthenticatedLayout() {
         <p>
           Signed in as {currentUserQuery.data.displayName}
         </p>
+
+        <nav aria-label="Primary navigation">
+          <NavLink to="/assessments">
+            Assessments
+          </NavLink>
+
+          <NavLink to="/history">
+            History
+          </NavLink>
+        </nav>
+
         <LogoutButton />
       </header>
 
