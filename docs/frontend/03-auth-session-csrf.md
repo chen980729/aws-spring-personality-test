@@ -1,8 +1,9 @@
 # Frontend Authentication, Session and CSRF Boundary
 
-> **Checkpoint:** Frontend F0
-> **Status:** Accepted
-> **Date:** 2026-09-30
+> **Original checkpoint:** Frontend F0
+> **Status:** Accepted and implemented through Frontend F2; reused by later Assessment flows
+> **Original date:** 2026-09-30
+> **Implementation review:** 2026-10-03
 > **Related ADR:** [`ADR-0014`](../adr/ADR-0014-server-side-session-authentication.md)
 
 ## 1. Authentication model
@@ -232,3 +233,17 @@ When authentication is required for a protected route, Login may preserve the or
 ```
 
 The value must be sanitized as an internal application path. External URLs are rejected/fallback to a safe default such as `/assessments` to avoid an open-redirect vulnerability.
+
+
+## 11. Implementation verification
+
+The F2 implementation now exercises this boundary through real feature code:
+
+- `CsrfTokenManager` keeps protocol state in memory and shares an in-flight refresh;
+- the shared HTTP client attaches CSRF to unsafe requests and retries `CSRF_VALIDATION_FAILED` exactly once;
+- authentication-required events synchronize unexpected Session expiry with the TanStack Query current-user cache;
+- `AuthenticatedLayout` protects Assessment/History routes;
+- Login/Register preserve only sanitized internal `returnTo` paths;
+- Logout treats an already-expired Session as a converged anonymous outcome and invalidates cached CSRF state.
+
+Browser integration also exposed a backend principal-name edge case: Spring Session persists `Authentication#getName()` in its indexed principal column. `AuthenticatedUserPrincipal` now implements Spring Security `AuthenticatedPrincipal` and returns the immutable `userId` string as its name rather than relying on a record `toString()`. This keeps the standard Spring Session schema valid and makes principal identity stable regardless of email length.

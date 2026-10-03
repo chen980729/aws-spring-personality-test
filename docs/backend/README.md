@@ -1,9 +1,10 @@
 # Backend Documentation Index
 
 > **Status:** Active backend design + implementation record
-> **Last updated:** 2026-09-30
-> **Current implementation checkpoint:** Assessment Step 7 — Clarification workflow boundaries complete
-> **Next implementation focus:** Step 8 — LLM integration for runtime clarification
+> **Last updated:** 2026-10-03
+> **Current implementation checkpoint:** Assessment Step 7 — deterministic Clarification/Tie-break workflow boundaries complete
+> **Current project focus:** AWS deployment / containerization / Terraform / CI/CD
+> **Deferred backend feature work:** Group/Sharing; historical deletion after Group sharing; provider-backed Step 8 LLM runtime after the Cloud/CI-CD line
 
 This directory contains two kinds of documents:
 
@@ -94,6 +95,10 @@ Catalog
 
 `ADR-0016` supersedes the original in-memory Aggregate choice from `ADR-0007`: `DimensionClarification` is a separate Assessment Aggregate coordinated with `AssessmentSession` using short Session locks, local transactions, durable uniqueness constraints and an opaque active-execution correlation token while external work is in flight.
 
-The real LLM provider/runtime interaction is still deferred to Step 8. In particular, the public Start / Continue / Retry interaction endpoints are design-frozen but are not yet wired to a real provider. The deterministic Skip and Tie-break HTTP capabilities are implemented and tested.
+The real LLM provider/runtime interaction is still deferred to Step 8. In particular, the public Start / Continue / Retry interaction endpoints are design-frozen but are not yet wired to a real provider. The deterministic Skip and Tie-break HTTP capabilities are implemented, tested and consumed by the frontend.
+
+Historical Assessment deletion also remains intentionally unimplemented. Its contract is designed, but the real use case must coordinate with Group sharing before hard deletion; it should not be implemented as an Assessment-only shortcut before the Group sharing boundary exists.
+
+The project is currently shifting from feature implementation to Cloud/Delivery. Backend work in the next phase should therefore include production/deployment configuration and CI verification without prematurely reopening the deferred LLM/Group/deletion feature boundaries.
 
 Further design changes should continue to be driven by explicit implementation feedback and recorded in the relevant design document and/or ADR.

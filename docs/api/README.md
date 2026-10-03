@@ -1,8 +1,8 @@
 # API Contract
 
 > **Status:** OpenAPI v0.4.0 — active accepted design contract
-> **Last updated:** 2026-09-30
-> **Implementation alignment:** Identity/Security + deterministic Assessment HTTP behavior through Step 7
+> **Last updated:** 2026-10-03
+> **Implementation alignment:** Identity/Security + deterministic Assessment HTTP behavior through Step 7; consumed by the React frontend through F6
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -28,7 +28,7 @@ OpenAPI version `3.1.2` is used for the project contract. Although OpenAPI 3.2 e
 
 The OpenAPI document is the accepted **design-first MVP target**, not a claim that every path is executable in the current Spring runtime. In particular, Group, historical deletion and provider-backed clarification interaction can remain design-frozen before their Controllers are implemented.
 
-Frontend F0 therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. The frontend must not generate the entire OpenAPI document and assume all generated operations are currently callable. Full-client generation can be reconsidered once the target contract and executable surface converge.
+The React frontend therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. This rule has now been exercised through F6: the frontend calls only implemented Identity/Assessment endpoints and deliberately does not instantiate runtime dependencies on Group, historical deletion or provider-backed clarification paths merely because they exist in the design-first target. Full-client generation can be reconsidered once the target contract and executable surface converge.
 
 ## Contract version history
 

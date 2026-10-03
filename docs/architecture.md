@@ -345,9 +345,11 @@ Queries:
 
 MVP invitation can be satisfied by the admin sharing the group code; email invitation is not required.
 
+Historical Assessment deletion is intentionally **not executable yet** even though its Domain/API semantics are designed. The use case is cross-module: it must end every ACTIVE `GroupAssessmentShare` that references the completed Session with reason `ASSESSMENT_DELETED` before hard-deleting the Assessment-owned historical data. Therefore implementation remains deferred until the Group sharing boundary exists; implementing a standalone Assessment delete first would create a fake dependency or later rework.
+
 ### 10.4 Frontend application boundary
 
-The first-party React frontend follows the same backend-authoritative principle rather than maintaining a duplicate client workflow model. Accepted F0 rules are:
+The first-party React frontend follows the same backend-authoritative principle rather than maintaining a duplicate client workflow model. The original F0 rules have now been implemented and validated through Frontend F6 for the executable Authentication + deterministic Assessment slice:
 
 - routes identify stable resources/navigation intent; `/assessment-sessions/{sessionId}` is the canonical Assessment Session route;
 - Questionnaire, Clarification, Tie-break and Result are views of that Session, not independent workflow routes;
@@ -358,7 +360,11 @@ The first-party React frontend follows the same backend-authoritative principle 
 - state-changing requests do not use generic automatic retries; recovery follows backend Problem Details codes and authoritative refetch semantics;
 - the design-first OpenAPI target may contain not-yet-executable capabilities, so frontend runtime integration must track implemented Controllers/DTOs/Security until the surfaces converge.
 
-Detailed frontend decisions live under `docs/frontend/`. Before provider-backed Step 8 UI is implemented, re-evaluate whether the workflow projection should expose the active clarification dimension explicitly instead of requiring inference from clarification state.
+Detailed frontend decisions and the current implementation checkpoint live under `docs/frontend/`. The implemented workflow resolver currently infers the single active clarification from `clarifications[].status == IN_PROGRESS`; before provider-backed Step 8 UI is implemented, re-evaluate whether the public workflow projection should expose the active clarification dimension explicitly.
+
+The implemented frontend also keeps Result interpretation on the presentation side without recomputing Domain conclusions: it combines backend initial evidence and final decision provenance into a read model, while `FinalAssessmentResult` remains authoritative.
+
+Completed History uses `/history?page=N` as URL navigation state. Historical detail reuses the canonical `/assessment-sessions/{sessionId}` route; transient “return to History page N” context is Router state rather than resource identity encoded into the Session URL.
 
 ## 11. Application-Layer Orchestration
 
@@ -419,7 +425,7 @@ This architecture baseline does not prescribe generic `Idempotency-Key` infrastr
 
 The final MVP must be deployable to AWS, containerized with Docker, automated with GitHub Actions, and represented with Terraform where appropriate.
 
-Exact AWS service topology, networking, secrets management details, deployment strategy, and observability stack belong to AWS/CI-CD Detailed Design.
+With the deterministic full-stack Assessment slice now implemented through Frontend F6, Cloud/Delivery is the current active project workstream. Exact AWS service topology, networking, secrets management details, deployment strategy, production cookie/configuration behavior and observability stack belong to AWS/CI-CD Detailed Design.
 
 ## 15. Remaining Open Questions
 

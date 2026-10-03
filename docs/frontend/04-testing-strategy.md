@@ -1,8 +1,9 @@
 # Frontend Testing Strategy
 
-> **Checkpoint:** Frontend F0
-> **Status:** Accepted
-> **Date:** 2026-09-30
+> **Original checkpoint:** Frontend F0
+> **Status:** Accepted; Vitest/RTL/MSW strategy implemented through Frontend F6
+> **Original date:** 2026-09-30
+> **Implementation review:** 2026-10-03
 
 ## 1. Goal
 
@@ -157,3 +158,24 @@ e2e/
 - Do not repeat every backend Domain invariant in TypeScript.
 
 Coverage should be risk-driven. Highest priority goes to authentication state, CSRF recovery, workflow presentation, autosave concurrency, irreversible-command recovery and Problem Details branching.
+
+
+## 9. Current implementation status
+
+The automated frontend suite currently uses the first two frontend layers from this strategy:
+
+```text
+Vitest pure-unit tests
+React Testing Library + MSW component/integration tests
+TypeScript production build
+ESLint
+```
+
+Implemented regression coverage now includes CSRF recovery, auth/session restoration, Restart response handling, invalid Session IDs, serialized questionnaire autosave, Submit/autosave coordination, `ASSESSMENT_ALREADY_SUBMITTED` recovery, React StrictMode effect replay, Clarification/Tie-break workflow resolution, Result provenance, History pagination and History -> canonical Session -> Result navigation.
+
+The implementation produced two testing lessons worth keeping explicit:
+
+1. **Passing Vitest does not replace `npm run build` or `npm run lint`.** Vitest's transform path can execute tests even when TypeScript project compilation or React Hooks lint rules would reject the implementation.
+2. **MSW can faithfully reproduce a wrong frontend assumption.** The Restart wrapper mismatch passed frontend tests because the mock and TypeScript assertion agreed with each other; real-browser integration against Spring Boot exposed the contract mismatch.
+
+The project has repeatedly performed manual full-stack browser verification against Vite + Spring Boot + PostgreSQL. Dedicated Playwright E2E remains deferred until the Cloud/CI pipeline provides a stable repeatable full-stack environment. When added, it should remain small and boundary-focused rather than duplicate the existing Java and MSW suites.

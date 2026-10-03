@@ -9,8 +9,8 @@ The application is designed to let users complete versioned personality assessme
 The project is intentionally developed as an end-to-end engineering exercise rather than a feature-only demo: **domain modeling → API design → persistence → security → testing → frontend → containerization → AWS → CI/CD → Infrastructure as Code**.
 
 > **Current backend:** Assessment **Step 7 complete — deterministic Clarification + Tie-break workflow**<br>
-> **Current frontend:** **F0 complete — Integration Baseline + Architecture**<br>
-> **Next active focus:** Frontend **F1 — React + TypeScript Foundation**; provider-backed Backend Step 8 remains pending.
+> **Current frontend:** **F1-F6 complete for Authentication + the deterministic Assessment flow through Result/History**<br>
+> **Next active focus:** **AWS deployment / containerization / Terraform / GitHub Actions CI/CD**. Provider-backed LLM interaction, Group/Sharing, and cross-domain historical deletion remain deferred.
 
 ---
 
@@ -43,7 +43,7 @@ The system is designed as a **modular monolith** for the MVP. Business modules r
 
 ```mermaid
 flowchart TD
-    Browser["React + TypeScript<br/>Frontend - F0 design complete"]
+    Browser["React + TypeScript<br/>Frontend - Auth + Assessment F1-F6 implemented"]
 
     subgraph Backend[Java 21 + Spring Boot Modular Monolith]
         Identity[Identity]
@@ -54,7 +54,7 @@ flowchart TD
 
     DB[(PostgreSQL)]
     Provider["External LLM Provider<br/>planned"]
-    AWS["AWS Deployment<br/>planned"]
+    AWS["AWS Deployment<br/>next active focus"]
 
     Browser -->|REST / JSON| Backend
     Identity --> DB
@@ -101,6 +101,8 @@ History → Historical Detail
 
 Provider-backed AI conversation remains Backend Step 8.
 ```
+
+The React frontend currently consumes this deterministic flow end-to-end through the browser, including Session/CSRF authentication, questionnaire autosave/submission, deterministic Skip/Tie-break interaction, Result provenance and completed History navigation.
 
 For the detailed architecture baseline, see [`docs/architecture.md`](docs/architecture.md).
 
@@ -162,6 +164,14 @@ Implementation feedback led to `DimensionClarification` becoming a separate Asse
 
 See [`ADR-0016`](docs/adr/ADR-0016-dimension-clarification-separate-aggregate.md).
 
+### 9. Backend-authoritative React workflow
+
+The frontend keeps stable resource URLs and renders Questionnaire, Clarification, Tie-break and Result as views of the authoritative `AssessmentSessionResponse`. TanStack Query owns server state, unsaved questionnaire edits remain local, and mutations update authoritative Session cache rather than manually advancing a duplicate client state machine.
+
+Real-browser integration also exposed issues that mocked frontend tests alone could not prove, including a Restart response-shape mismatch, React StrictMode autosave lifecycle behavior, and an exact-tie backend response-mapping failure after successful finalization.
+
+See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md).
+
 ---
 
 ## Tech Stack
@@ -173,14 +183,14 @@ See [`ADR-0016`](docs/adr/ADR-0016-dimension-clarification-separate-aggregate.md
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
 | API | REST, OpenAPI 3.1 | ✅ Implemented through Assessment Step 7 |
-| Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers | ✅ Implemented |
+| Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ Implemented for current Backend + Frontend scope |
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
-| Frontend | React + TypeScript | 🚧 F0 architecture complete; F1 implementation next |
-| AI integration | External LLM behind an adapter boundary | ⏳ Planned |
-| Containerization | Docker application image | ⏳ Planned |
-| Cloud | AWS | ⏳ Planned |
-| CI/CD | GitHub Actions | ⏳ Planned |
-| Infrastructure as Code | Terraform | ⏳ Planned |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow through F6 |
+| AI integration | External LLM behind an adapter boundary | ⏸ Deferred until after Cloud/CI-CD |
+| Containerization | Docker application image | 🚧 Next active focus |
+| Cloud | AWS | 🚧 Next active focus |
+| CI/CD | GitHub Actions | 🚧 Next active focus |
+| Infrastructure as Code | Terraform | 🚧 Next active focus |
 
 ---
 
@@ -199,14 +209,14 @@ See [`ADR-0016`](docs/adr/ADR-0016-dimension-clarification-separate-aggregate.md
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
 | Clarification + Tie-break mutation | ✅ Complete |
-| External AI adapter / runtime context | ⏳ Planned |
-| Historical assessment deletion | ⏳ Planned |
-| Group / Membership / Sharing implementation | ⏳ Planned |
-| React frontend | 🚧 F0 architecture complete; F1 next |
-| Docker application image | ⏳ Planned |
-| AWS deployment | ⏳ Planned |
-| GitHub Actions CI/CD | ⏳ Planned |
-| Terraform infrastructure | ⏳ Planned |
+| External AI adapter / runtime context | ⏸ Deferred until after Cloud/CI-CD |
+| Historical assessment deletion | ⏸ Deferred until Group sharing backend exists |
+| Group / Membership / Sharing implementation | ⏳ Planned after current Cloud/CI-CD work |
+| React frontend | ✅ F1-F6 complete for current executable Auth + deterministic Assessment scope |
+| Docker application image | 🚧 Next active focus |
+| AWS deployment | 🚧 Next active focus |
+| GitHub Actions CI/CD | 🚧 Next active focus |
+| Terraform infrastructure | 🚧 Next active focus |
 
 The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
 
@@ -244,7 +254,25 @@ The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
 - PostgreSQL-backed read projections;
 - retry / concurrency / recovery coverage for implemented critical paths.
 
-Not yet implemented in the executable backend are provider-backed LLM interaction, historical deletion orchestration and Group/Sharing. Frontend implementation begins at F1; cloud deployment also remains pending.
+Not yet implemented in the executable backend are provider-backed LLM interaction, historical deletion orchestration and Group/Sharing. Historical deletion is intentionally blocked on the Group sharing boundary because active shares must be ended before hard deletion.
+
+### Frontend
+
+- React + TypeScript + Vite application shell;
+- Register / Login / current-user Session restoration / protected routes / Logout;
+- in-memory CSRF management with stale-token refresh-and-retry;
+- Assessment Catalog / Detail / Start / Resume / Start New;
+- canonical `/assessment-sessions/:sessionId` workflow route;
+- Session-bound questionnaire rendering and persisted-answer restoration;
+- debounced serialized full-snapshot autosave with save/error/retry state;
+- final Submit coordinated with in-flight autosave and already-submitted recovery;
+- deterministic Clarification read model, Skip Current and Skip Remaining;
+- exact-tie Tie-break interaction and deterministic finalization;
+- Result read model with per-dimension decision provenance;
+- completed Assessment History, URL pagination and canonical Session detail navigation;
+- Vitest / React Testing Library / MSW coverage plus repeated real-browser integration verification.
+
+Still deferred in the frontend are real provider-backed clarification interaction, Group/Sharing UI and historical deletion UI. The project is now intentionally pausing frontend feature development while the AWS/CI-CD line is implemented.
 
 ---
 
@@ -263,7 +291,7 @@ docs/
 │   └── openapi.yaml          Machine-readable HTTP contract
 ├── adr/                      Architecture Decision Records
 ├── backend/                  Detailed backend design and implementation checkpoints
-└── frontend/                 Frontend F0 architecture/integration baseline
+└── frontend/                 Frontend architecture + F1-F6 implementation checkpoint
 ```
 
 Recommended starting points:
@@ -275,27 +303,40 @@ Recommended starting points:
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — current OpenAPI contract;
 - [`docs/adr/`](docs/adr/) — major design decisions and trade-offs;
 - [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — latest accepted backend checkpoint;
-- [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend F0 design checkpoint and implementation handoff.
+- [`docs/frontend/README.md`](docs/frontend/README.md) — frontend architecture/implementation index.
+- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — current F1-F6 implementation checkpoint and Cloud handoff.
 
 ---
 
 ## Testing Strategy
 
-The backend uses different test levels for different responsibilities:
+The project uses different test levels for different responsibilities:
 
-- **Domain tests** — business rules and state transitions without Spring or database dependencies;
-- **Application tests** — use-case orchestration and boundary behavior;
-- **Web MVC tests** — HTTP/security/controller contracts;
+- **Backend Domain tests** — business rules and state transitions without Spring or database dependencies;
+- **Backend Application/Web MVC tests** — use-case orchestration, HTTP/security and Controller contracts;
 - **PostgreSQL integration tests** — JPA mappings, Flyway schema, constraints, JSONB and query behavior;
 - **Concurrency tests** — locking, uniqueness and retry/recovery behavior on critical workflows;
-- **Architecture tests** — package/module dependency guardrails.
+- **Architecture tests** — package/module dependency guardrails;
+- **Frontend unit/integration tests** — Vitest + React Testing Library + MSW for browser behavior at the HTTP boundary;
+- **Real-browser verification** — manual Browser -> Vite -> Spring Boot -> PostgreSQL checks for the implemented vertical slice.
 
-Run the backend test suite with:
+Run the backend suite with:
 
 ```bash
 cd backend
 ./mvnw test
 ```
+
+Run the frontend quality gates with:
+
+```bash
+cd frontend
+npm run test
+npm run build
+npm run lint
+```
+
+Dedicated Playwright E2E automation remains deferred until CI/CD provides a stable repeatable full-stack environment.
 
 ---
 
@@ -304,8 +345,9 @@ cd backend
 ### Prerequisites
 
 - JDK 21;
+- Node.js 24 LTS;
 - Docker + Docker Compose;
-- Internet access on the first Maven Wrapper run.
+- Internet access on the first Maven Wrapper / npm dependency install.
 
 ### 1. Start PostgreSQL
 
@@ -340,11 +382,40 @@ Expected response:
 {"status":"UP"}
 ```
 
-### 3. Run tests
+### 3. Run the frontend
+
+In a second terminal:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Vite proxies relative `/api` and `/actuator` requests to the backend on port `8080`.
+
+### 4. Run tests / build checks
+
+Backend:
 
 ```bash
 cd backend
 ./mvnw test
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run test
+npm run build
+npm run lint
 ```
 
 ---
@@ -376,15 +447,16 @@ Applied migrations are treated as immutable history and are not renumbered to ma
 ```text
 spring-aws-portfolio/
 ├── backend/                  Java 21 + Spring Boot application
+├── frontend/                 React + TypeScript + Vite application
 ├── docs/                     Requirements, architecture, ADRs and checkpoints
 ├── infra/
-│   └── terraform/            Terraform workspace placeholder for the AWS phase
+│   └── terraform/            Terraform workspace for the current AWS phase
 ├── compose.yaml              Local PostgreSQL environment
 ├── .env.example              Local configuration example
 └── README.md
 ```
 
-The root `frontend/` implementation directory will be added in F1. Its accepted F0 architecture/integration baseline is already recorded under `docs/frontend/`. Deployable Terraform infrastructure remains a later implementation phase.
+The deterministic full-stack Assessment slice is runnable locally. The current delivery phase is turning that local application into a reproducible containerized AWS deployment with Terraform and GitHub Actions.
 
 ---
 
@@ -412,6 +484,6 @@ This repository is a personal learning and career-transition portfolio project. 
 - why the project uses server-side sessions instead of JWT for the MVP;
 - how deterministic logic is separated from AI-assisted behavior;
 - how testing strategy changes with the type of risk being verified;
-- and, in later phases, how the application is containerized, deployed to AWS, automated with GitHub Actions, and provisioned with Terraform.
+- how the already-runnable application is containerized, deployed to AWS, automated with GitHub Actions, and provisioned with Terraform.
 
 The final target is a runnable full-stack application with documented architecture, automated tests, CI/CD, AWS deployment, and reproducible infrastructure.

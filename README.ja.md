@@ -9,8 +9,8 @@ React + TypeScript / Java + Spring Boot / PostgreSQL / AWS を中心に、**非�
 このプロジェクトでは、単に機能を作ることではなく、**Domain Modeling → API Design → Persistence → Security → Testing → Frontend → Containerization → AWS → CI/CD → Infrastructure as Code** までを一貫して設計・実装・説明できることを目標としています。
 
 > **現在の Backend:** Assessment **Step 7 完了 — deterministic Clarification + Tie-break workflow**<br>
-> **現在の Frontend:** **F0 完了 — Integration Baseline + Architecture**<br>
-> **次の主な作業:** Frontend **F1 — React + TypeScript Foundation**。provider-backed Backend Step 8 は引き続き未実装です。
+> **現在の Frontend:** **F1-F6 完了 — Authentication + deterministic Assessment flow を Result / History まで実装**<br>
+> **次の主な作業:** **AWS deployment / Containerization / Terraform / GitHub Actions CI/CD**。provider-backed LLM interaction、Group / Sharing、cross-domain historical deletion は意図的に後続へ defer しています。
 
 ---
 
@@ -47,7 +47,7 @@ Identity / Assessment / Group / AI Integration を business module として分�
 
 ```mermaid
 flowchart TD
-    Browser["React + TypeScript<br/>Frontend - F0 design complete"]
+    Browser["React + TypeScript<br/>Frontend - Auth + Assessment F1-F6 implemented"]
 
     subgraph Backend[Java 21 + Spring Boot Modular Monolith]
         Identity[Identity]
@@ -58,7 +58,7 @@ flowchart TD
 
     DB[(PostgreSQL)]
     Provider["External LLM Provider<br/>planned"]
-    AWS["AWS Deployment<br/>planned"]
+    AWS["AWS Deployment<br/>next active focus"]
 
     Browser -->|REST / JSON| Backend
     Identity --> DB
@@ -105,6 +105,8 @@ History → Historical Detail
 
 Provider-backed AI conversation は Backend Step 8 で実装予定です。
 ```
+
+React frontend は現在、この deterministic flow を Browser から end-to-end で利用できます。Session/CSRF authentication、Questionnaire autosave/submission、Skip/Tie-break、Result provenance、completed History navigation まで実装済みです。
 
 詳細な Architecture baseline は [`docs/architecture.md`](docs/architecture.md) にまとめています。
 
@@ -182,6 +184,16 @@ Browser からの state-changing request に対する CSRF protection も無効�
 
 詳細: [`ADR-0016`](docs/adr/ADR-0016-dimension-clarification-separate-aggregate.md)
 
+### 9. Backend-authoritative な React workflow
+
+Frontend は独自の Assessment state machine を持たず、`AssessmentSessionResponse` を authoritative state として Questionnaire / Clarification / Tie-break / Result を同じ canonical Session route 上で描画します。
+
+TanStack Query が server state を担当し、未保存 Questionnaire draft は local state に残します。Mutation 後も Frontend が「次の step」を手動決定するのではなく、Backend が返した Session を cache に反映し、workflow resolver が次の presentation を選択します。
+
+また real-browser integration により、MSW だけでは見つからなかった Restart response shape の誤認、React StrictMode による autosave lifecycle bug、exact-tie finalization 後の Backend response mapping failure なども発見・修正しました。
+
+詳細: [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md)
+
 ---
 
 ## Tech Stack
@@ -193,14 +205,14 @@ Browser からの state-changing request に対する CSRF protection も無効�
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
 | API | REST, OpenAPI 3.1 | ✅ Assessment Step 7 まで実装 |
-| Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers | ✅ Implemented |
+| Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ 現在の Backend + Frontend scope で実装 |
 | Local environment | Docker Compose | ✅ PostgreSQL 環境を実装 |
-| Frontend | React + TypeScript | 🚧 F0 architecture 完了・F1 実装が次 |
-| AI integration | External LLM behind an adapter boundary | ⏳ Planned |
-| Containerization | Docker application image | ⏳ Planned |
-| Cloud | AWS | ⏳ Planned |
-| CI/CD | GitHub Actions | ⏳ Planned |
-| Infrastructure as Code | Terraform | ⏳ Planned |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow を F6 まで実装 |
+| AI integration | External LLM behind an adapter boundary | ⏸ Cloud/CI-CD 完了後まで deferred |
+| Containerization | Docker application image | 🚧 次の active focus |
+| Cloud | AWS | 🚧 次の active focus |
+| CI/CD | GitHub Actions | 🚧 次の active focus |
+| Infrastructure as Code | Terraform | 🚧 次の active focus |
 
 ---
 
@@ -219,14 +231,14 @@ Browser からの state-changing request に対する CSRF protection も無効�
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
 | Clarification + Tie-break mutation | ✅ Complete |
-| External AI adapter / runtime context | ⏳ Planned |
-| Historical assessment deletion | ⏳ Planned |
-| Group / Membership / Sharing implementation | ⏳ Planned |
-| React frontend | 🚧 F0 architecture 完了・F1 が次 |
-| Docker application image | ⏳ Planned |
-| AWS deployment | ⏳ Planned |
-| GitHub Actions CI/CD | ⏳ Planned |
-| Terraform infrastructure | ⏳ Planned |
+| External AI adapter / runtime context | ⏸ Cloud/CI-CD 完了後まで deferred |
+| Historical assessment deletion | ⏸ Group sharing backend 実装後まで deferred |
+| Group / Membership / Sharing implementation | ⏳ 現在の Cloud/CI-CD work 後に実装予定 |
+| React frontend | ✅ 現在 executable な Auth + deterministic Assessment scope を F1-F6 まで完了 |
+| Docker application image | 🚧 次の active focus |
+| AWS deployment | 🚧 次の active focus |
+| GitHub Actions CI/CD | 🚧 次の active focus |
+| Terraform infrastructure | 🚧 次の active focus |
 
 詳細な roadmap は [`docs/roadmap.md`](docs/roadmap.md) に記録しています。
 
@@ -264,7 +276,25 @@ Browser からの state-changing request に対する CSRF protection も無効�
 - PostgreSQL-backed read projection
 - critical path に対する retry / concurrency / recovery test
 
-現時点で executable backend に未実装なのは、provider-backed LLM interaction、historical deletion orchestration、Group / Sharing です。Frontend 実装は F1 から開始し、Cloud deployment も引き続き未実装です。
+現時点で executable backend に未実装なのは、provider-backed LLM interaction、historical deletion orchestration、Group / Sharing です。Historical deletion は ACTIVE な Group share を先に終了させる必要があるため、Group sharing boundary が存在するまで意図的に defer しています。
+
+### Frontend
+
+- React + TypeScript + Vite application shell
+- Register / Login / current-user Session restore / protected routes / Logout
+- in-memory CSRF management と stale-token refresh/retry
+- Assessment Catalog / Detail / Start / Resume / Start New
+- canonical `/assessment-sessions/:sessionId` workflow route
+- Session-bound Questionnaire rendering / persisted answer restore
+- debounced・serialized な full-snapshot autosave と save/error/retry state
+- in-flight autosave と coordination した final Submit / already-submitted recovery
+- deterministic Clarification read model / Skip Current / Skip Remaining
+- exact-tie Tie-break / deterministic finalization
+- per-dimension decision provenance を表示する Result read model
+- completed Assessment History / URL pagination / canonical Session detail navigation
+- Vitest / React Testing Library / MSW と real-browser integration verification
+
+real provider-backed clarification、Group / Sharing UI、historical deletion UI は未実装です。現在は Frontend feature development を一旦停止し、AWS / CI-CD line に移っています。
 
 ---
 
@@ -283,7 +313,7 @@ docs/
 │   └── openapi.yaml          Machine-readable HTTP contract
 ├── adr/                      Architecture Decision Records
 ├── backend/                  Detailed backend design and implementation checkpoints
-└── frontend/                 Frontend F0 architecture / integration baseline
+└── frontend/                 Frontend architecture + F1-F6 implementation checkpoint
 ```
 
 主なドキュメント:
@@ -295,7 +325,8 @@ docs/
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — Current OpenAPI contract
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records
 - [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — Latest accepted backend checkpoint
-- [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend F0 design checkpoint / implementation handoff
+- [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend architecture / implementation index
+- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — F1-F6 implementation checkpoint / Cloud handoff
 
 ---
 
@@ -303,12 +334,13 @@ docs/
 
 Risk の種類に応じて test level を分けています。
 
-- **Domain tests** — Spring / DB に依存しない business rule と state transition
-- **Application tests** — Use Case orchestration と boundary behavior
-- **Web MVC tests** — HTTP / Security / Controller contract
+- **Backend Domain tests** — Spring / DB に依存しない business rule と state transition
+- **Backend Application / Web MVC tests** — Use Case orchestration、HTTP / Security / Controller contract
 - **PostgreSQL integration tests** — JPA mapping、Flyway schema、constraint、JSONB、query behavior
 - **Concurrency tests** — locking、uniqueness、retry / recovery
 - **Architecture tests** — package / module dependency の guardrail
+- **Frontend unit / integration tests** — Vitest + React Testing Library + MSW
+- **Real-browser verification** — Browser -> Vite -> Spring Boot -> PostgreSQL の実 stack 確認
 
 Backend test suite:
 
@@ -317,6 +349,17 @@ cd backend
 ./mvnw test
 ```
 
+Frontend quality gates:
+
+```bash
+cd frontend
+npm run test
+npm run build
+npm run lint
+```
+
+Dedicated Playwright E2E は、CI/CD により repeatable な full-stack environment が整った段階で追加する予定です。
+
 ---
 
 ## ローカル実行
@@ -324,8 +367,9 @@ cd backend
 ### Prerequisites
 
 - JDK 21
+- Node.js 24 LTS
 - Docker + Docker Compose
-- 初回 Maven Wrapper 実行時の Internet access
+- 初回 Maven Wrapper / npm dependency install 時の Internet access
 
 ### 1. PostgreSQL を起動
 
@@ -360,11 +404,40 @@ Expected response:
 {"status":"UP"}
 ```
 
-### 3. Test を実行
+### 3. Frontend を起動
+
+別 terminal で:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Browser で:
+
+```text
+http://localhost:5173
+```
+
+Vite は relative `/api` / `/actuator` request を Backend `8080` port へ proxy します。
+
+### 4. Test / Build check
+
+Backend:
 
 ```bash
 cd backend
 ./mvnw test
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run test
+npm run build
+npm run lint
 ```
 
 ---
@@ -396,16 +469,17 @@ V5__add_clarification_execution_token.sql
 ```text
 spring-aws-portfolio/
 ├── backend/                  Java 21 + Spring Boot application
+├── frontend/                 React + TypeScript + Vite application
 ├── docs/                     Requirements, architecture, ADRs and checkpoints
 ├── infra/
-│   └── terraform/            Terraform workspace placeholder for the AWS phase
+│   └── terraform/            現在の AWS phase 用 Terraform workspace
 ├── compose.yaml              Local PostgreSQL environment
 ├── .env.example              Local configuration example
 ├── README.md                 English / development README
 └── README.ja.md              Japanese / portfolio README
 ```
 
-root の `frontend/` 実装ディレクトリは F1 で追加します。F0 の architecture / integration baseline はすでに `docs/frontend/` に記録済みです。Deployable Terraform infrastructure は後続 phase で追加します。
+Deterministic な full-stack Assessment slice は local で runnable です。現在の delivery phase では、この application を Docker / AWS / Terraform / GitHub Actions によって reproducible に deploy できる状態へ進めます。
 
 ---
 
@@ -433,6 +507,6 @@ root の `frontend/` 実装ディレクトリは F1 で追加します。F0 の 
 - MVP で JWT ではなく server-side Session を選んだ理由
 - Deterministic logic と AI-assisted behavior をどのように分離するのか
 - Risk に応じて test strategy をどう変えるのか
-- そして今後、Application をどのように Containerize し、AWS へ deploy し、GitHub Actions と Terraform で再現可能な運用環境へ発展させるのか
+- すでに local で runnable な Application を、どのように Containerize し、AWS へ deploy し、GitHub Actions と Terraform で再現可能な運用環境へ発展させるのか
 
 最終的には、**実際に動作する Full-stack Application、明確な Architecture documentation、自動 Test、CI/CD、AWS deployment、再現可能な Infrastructure** までを一つの Project として完成させることを目標としています。

@@ -62,23 +62,24 @@ The review is complete; future changes should be driven by implementation findin
 
 ## 5. UI / UX Detailed Design
 
-Define user-visible behavior before or alongside Frontend implementation:
+User-visible behavior for the currently executable Identity + deterministic Assessment slice is now implemented and validated in the browser.
 
-- [ ] Assessment catalog/entry.
-- [ ] Resume vs Start New.
-- [ ] Questionnaire interaction.
-- [ ] Autosave/progress UX.
-- [ ] Submit confirmation and irreversible-boundary UX.
-- [ ] Ambiguity explanation/choice.
-- [ ] AI clarification conversation UX.
-- [ ] Retry / Skip Current / Decline Remaining AI UX.
-- [ ] Recovery UX when temporary AI conversation context is lost.
-- [ ] Result UX.
-- [ ] History UX.
-- [ ] Delete historical assessment UX.
-- [ ] Group/join/admin/sharing UX.
+- [x] Assessment catalog/entry.
+- [x] Resume vs Start New.
+- [x] Questionnaire interaction.
+- [x] Autosave/progress UX.
+- [x] Submit confirmation and irreversible-boundary UX.
+- [x] Ambiguity evidence / deterministic clarification-ready presentation.
+- [ ] Provider-backed AI clarification conversation UX.
+- [x] Skip Current / Decline Remaining clarification UX.
+- [ ] Retry / temporary-runtime-loss UX for real AI clarification; deferred with Backend Step 8.
+- [x] Exact-tie user decision UX.
+- [x] Result UX with decision provenance.
+- [x] Completed History UX with pagination and canonical detail navigation.
+- [ ] Delete historical assessment UX; deferred until Group sharing exists because deletion is cross-domain orchestration.
+- [ ] Group/join/admin/sharing UX; wait for executable Group backend capability.
 
-UI/UX answers what the user sees and does. React implementation answers how that experience is built.
+UI/UX answers what the user sees and does. React implementation answers how that experience is built. The current implementation checkpoint is `docs/frontend/05-implementation-checkpoint-f1-f6.md`.
 
 ## 6. Backend Detailed Design
 
@@ -154,19 +155,23 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-**Current status:** Frontend **F0 complete — Integration Baseline + Architecture**. Routing/page boundaries, executable API baseline, server-state ownership, Session/CSRF HTTP behavior, project structure and testing boundaries are accepted. Next: **F1 — React + TypeScript Foundation**.
+**Current status:** Frontend **F1-F6 complete for the executable Authentication + deterministic Assessment slice**. The browser application now covers Session/CSRF authentication, Assessment entry, questionnaire/autosave/submit, deterministic clarification Skip/Tie-break, Result, completed History and canonical navigation. Frontend feature work is intentionally paused before deletion/Group/real-LLM work while the project moves to AWS/CI/CD.
 
-- [x] React + TypeScript project architecture baseline (F0).
-- [ ] Authentication experience.
-- [ ] Assessment catalog/entry.
-- [ ] Questionnaire/resume/autosave.
-- [ ] Clarification flow.
-- [ ] Result/history/deletion.
-- [ ] Group/join/admin/sharing.
-- [ ] Loading/error/retry UX.
-- [ ] Frontend tests.
+- [x] F0 — React + TypeScript architecture/integration baseline.
+- [x] F1 — React + TypeScript/Vite foundation and test infrastructure.
+- [x] F2 — Register / Login / Session restore / protected routes / CSRF recovery / Logout.
+- [x] F3 — Assessment catalog/detail + Start/Resume/Restart + canonical Session routing.
+- [x] F4 — Questionnaire rendering, local draft ownership, debounced autosave, Submit and recovery.
+- [x] F5 — deterministic Clarification read/Skip/Skip Remaining + exact Tie-break/finalization.
+- [x] F6 — Result read model + completed History + canonical detail/navigation integration.
+- [x] Loading/error/retry UX for implemented Identity + deterministic Assessment flows.
+- [x] Vitest / React Testing Library / MSW coverage plus repeated real-browser integration verification.
+- [ ] Dedicated Playwright E2E automation; defer until a repeatable CI/full-stack environment exists.
+- [ ] Provider-backed clarification Start/Continue/Retry UI; defer with Backend Step 8.
+- [ ] Historical Assessment deletion UI; defer until Group sharing + deletion orchestration exist.
+- [ ] Group/join/admin/sharing UI; wait for executable Group backend capability.
 
-Accepted F0 artifacts live under `docs/frontend/`. Frontend must express user intent; it must not become the source of truth for backend lifecycle or authorization rules.
+Accepted F0 baseline and the F1-F6 implementation checkpoint live under `docs/frontend/`. Frontend continues to express user intent and render backend-authoritative lifecycle state rather than becoming a second business state machine.
 
 ## 9. Backend Implementation
 
@@ -189,14 +194,33 @@ Current backend checkpoint: **Assessment Step 7 complete**.
 - [ ] Dedicated simultaneous-transaction Clarification/finalization race tests.
 - [ ] Group/sharing/deletion concurrency tests.
 
+Implementation sequencing note:
+
+```text
+Cloud / Container / CI-CD work (current)
+        ↓
+Group backend + sharing boundary (later)
+        ↓
+Historical Assessment deletion orchestration + frontend deletion UX
+
+Provider-backed LLM Step 8 is intentionally postponed until after the Cloud/CI-CD line is established.
+```
+
+Historical deletion remains in Core MVP, but implementing it before Group sharing would create a fake cross-module dependency or require rework.
+
 ## 10. Containerization and Local Environment
 
-- [ ] Dockerfile(s).
+**Current active project focus begins here.** The application is locally runnable as Spring Boot + Vite + PostgreSQL; production packaging is the next delivery boundary.
+
+- [ ] Dockerfile(s) for deployable application components.
 - [x] Local PostgreSQL environment.
-- [ ] Reproducible local startup.
-- [ ] Environment/configuration strategy.
+- [x] Documented local Backend + Frontend startup through Maven/Vite with relative `/api` proxying.
+- [ ] Reproducible production-like local startup for the complete application.
+- [ ] Production environment/configuration strategy.
 
 ## 11. AWS / Infrastructure as Code
+
+**Current active focus:** resume AWS deployment work after the deterministic full-stack Assessment slice reached Frontend F6.
 
 - [ ] AWS target architecture detailed design.
 - [ ] Networking/security boundaries.
@@ -208,6 +232,8 @@ Current backend checkpoint: **Assessment Step 7 complete**.
 - [ ] Cost-awareness review for a personal portfolio project.
 
 ## 12. CI/CD
+
+**Current active focus together with AWS deployment.** CI should verify both already-established Backend and Frontend quality gates before deployment automation is added.
 
 - [ ] GitHub Actions CI.
 - [ ] Backend tests/build.

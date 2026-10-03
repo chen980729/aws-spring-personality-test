@@ -360,3 +360,41 @@ A concise explanation:
 
 > I modeled each ambiguous-dimension clarification as a separate Aggregate, but kept the AssessmentSession as the workflow and finalization concurrency anchor. External AI work is split across two short database transactions. An opaque execution token protects against a subtle stale-result race where an older provider call returns after the same clarification has already been retried and is IN_PROGRESS again. Final personality results remain deterministic: AI contributes only an accepted dimension-level clarification fact, while the backend applies explicit fallback, exact-tie and finalization rules.
 
+## 15. Post-checkpoint full-stack integration corrections
+
+Frontend F5/F6 integration exercised the Step 7 HTTP boundary against the real Spring Boot runtime and exposed one backend mapping defect without changing the accepted Domain/REST contract.
+
+For a completed exact-tie dimension, `InitialDimensionResult.questionnairePreference` is legitimately `null` while the final preference may come from `USER_TIE_BREAK`. The original Web mapper projected the nullable preference inside a Java Stream and then called `findFirst()`, allowing a null stream element to trigger a `NullPointerException` after deterministic finalization had already succeeded.
+
+The resulting failure mode was important:
+
+```text
+PUT final tie-break
+  -> Domain/Application finalization succeeds
+  -> transaction commits COMPLETED Session
+  -> Web response mapping encounters null questionnaire baseline
+  -> HTTP 500
+
+later GET same Session
+  -> persisted Session is still COMPLETED
+  -> same response mapper fails again
+  -> HTTP 500
+```
+
+The mapper now finds the matching initial dimension first and then maps the nullable preference through `Optional`, so exact-tie history can expose:
+
+```text
+questionnairePreference = null
+finalPreference = <selected pole>
+source = USER_TIE_BREAK
+overrodeBaseline = false
+```
+
+A dedicated regression test covers the completed exact-tie Web mapping. No OpenAPI version bump is required because the public schema already allowed the nullable questionnaire preference; the implementation was corrected to honor the existing contract.
+
+## 16. Project sequencing update
+
+Step 8 remains required, but it is no longer the immediate project workstream. After Frontend F6 completed the executable deterministic slice, the active focus moved to containerization, AWS deployment, Terraform and GitHub Actions CI/CD.
+
+Historical Assessment deletion remains deferred until the Group sharing boundary exists. Provider-backed LLM interaction is intentionally postponed until after the Cloud/CI-CD line is established.
+

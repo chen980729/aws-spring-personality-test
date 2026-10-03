@@ -1,7 +1,9 @@
 # Backend Design Status & Implementation Handoff
 
-> **Status:** Historical design-to-implementation handoff; implementation has progressed through Assessment Step 7
-> **Last updated:** 2026-09-30
+> **Status:** Architecture handoff + current implementation routing reference; Backend is implemented through Assessment Step 7 and Frontend through F6
+> **Last updated:** 2026-10-03
+> **Current project workstream:** containerization / AWS deployment / Terraform / GitHub Actions CI/CD
+> **Deferred feature work:** Group/Sharing; historical Assessment deletion after Group sharing exists; provider-backed Step 8 LLM runtime after the Cloud/CI-CD line
 
 ## 1. What is frozen enough to implement
 
@@ -53,7 +55,27 @@ Assessment and Group Domain Models are the business source of truth.
 
 `docs/api/openapi.yaml` contains the design-first DTO/security contract, including Session-bound questionnaire retrieval, clarification `UNCLEAR` semantics, Group display identity, and authentication/CSRF behavior. The design baseline remains accepted; the repository has since implemented Identity/Security and Assessment through Step 7. Deterministic Skip/Tie-break routes are now implemented; provider-backed Start/Continue/Retry interaction remains Step 8 work.
 
-### Deferred slice-specific decisions that need not block skeleton creation
+### Current execution-order note
+
+The original implementation phases below remain useful as a dependency map, but they are no longer a literal statement of the immediate project schedule. The repository has already completed the Identity/Security foundation, Backend Assessment Steps 1-7, and Frontend F1-F6 for the executable deterministic slice.
+
+The active project sequence is now:
+
+```text
+Containerization / AWS / Terraform / CI-CD   (current)
+        ↓
+Group backend + sharing boundary             (later feature work)
+        ↓
+Historical Assessment deletion orchestration
+
+Provider-backed LLM Step 8 remains deferred until after the Cloud/CI-CD line is established.
+```
+
+Historical Assessment deletion must not be implemented as an Assessment-only shortcut. The real delete use case must coordinate with Group sharing so ACTIVE shares are ended before the completed Assessment Session is hard-deleted. Until the Group sharing boundary exists, implementing deletion would either invent a fake dependency or force later rework.
+
+The relative order of Group work versus provider-backed Step 8 may be revisited after Cloud/CI-CD is stable; neither is the immediate workstream at this checkpoint.
+
+### Deferred slice-specific decisions that need not block current delivery work
 
 - JoinRequest expiration execution: correctness must be lazy (`now >= expiresAt` on relevant operations); scheduled cleanup may be added to normalize rows promptly. Freeze concrete scheduling when implementing Group.
 - AI runtime context ownership/storage, provider retry/timeout and structured-output parsing. Freeze these before implementing the real AI adapter; a fake adapter may be used earlier.
@@ -99,7 +121,7 @@ List Assessment
 -> history
 ```
 
-Clarification/tie-break behavior is now implemented through the deterministic HTTP boundary, including lifecycle persistence, Skip, exact-tie handling, deterministic finalization and stale external-result protection. The real provider adapter/runtime interaction is the next Assessment slice.
+Clarification/tie-break behavior is now implemented through the deterministic HTTP boundary, including lifecycle persistence, Skip, exact-tie handling, deterministic finalization and stale external-result protection. The real provider adapter/runtime interaction remains the next Assessment-specific slice when Assessment feature work resumes, but it is **not** the immediate project workstream; Cloud/Delivery work is active first.
 
 ### Phase 5 — Group vertical slice
 
@@ -144,7 +166,9 @@ Authentication/Security design is accepted
 OpenAPI exact DTO contract is accepted
 ```
 
-At the current repository checkpoint, Authentication/Security and Assessment Steps 1-7 are implemented and tested. OpenAPI v0.4.0 is the active design-first DTO contract. Step 8 real LLM integration is the next Assessment implementation focus.
+At the current repository checkpoint, Authentication/Security and Assessment Steps 1-7 are implemented and tested, and the executable deterministic browser slice is implemented through Frontend F6. OpenAPI v0.4.0 remains the active design-first DTO contract.
+
+The immediate implementation focus is now Cloud/Delivery: containerization, AWS deployment, Terraform and GitHub Actions CI/CD. Step 8 real LLM integration remains the next Assessment-specific feature slice after the Cloud/CI-CD line; historical Assessment deletion remains blocked on the real Group sharing boundary.
 
 ## 5. Implementation principle for Codex
 

@@ -352,6 +352,8 @@ userId
 email
 ```
 
+`AuthenticatedUserPrincipal` also implements Spring Security `AuthenticatedPrincipal` and returns `userId.toString()` from `getName()`. This keeps Spring Session's indexed principal name stable and bounded instead of relying on the record's full `toString()` representation (which may include a long email address).
+
 Mutable profile/read-model data such as `displayName` is read through the Application layer rather than copied into the Session. This keeps the Session focused on authentication identity and avoids stale profile data.
 
 An anonymous request does not enter the Controller. The Security layer returns:

@@ -1,12 +1,13 @@
 # Frontend Architecture Baseline
 
-> **Checkpoint:** Frontend F0
-> **Status:** Accepted
-> **Date:** 2026-09-30
+> **Original checkpoint:** Frontend F0
+> **Status:** Accepted baseline; validated by implementation through Frontend F6
+> **Original date:** 2026-09-30
+> **Implementation review:** 2026-10-03
 
 ## 1. Purpose
 
-This document freezes the frontend architecture before React implementation begins.
+This document records the frontend architecture that was frozen before React implementation began. The implemented F1-F6 browser flow has validated the main boundaries below; implementation-specific outcomes are recorded in [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md).
 
 The primary goals are:
 
@@ -76,7 +77,7 @@ tieBreakRequiredDimensions
 completed
 ```
 
-It does not expose `activeClarificationDimension` explicitly. The current Step 7 public runtime does not start real AI conversations, so this is not a blocker for F1-F8.
+It does not expose `activeClarificationDimension` explicitly. The current deterministic frontend infers the single active clarification from `clarifications[].status == IN_PROGRESS`; real provider-backed conversation is still deferred, so this is not a blocker for the completed F1-F6 scope.
 
 Before implementing provider-backed Step 8 clarification UI, review whether the public workflow projection should explicitly expose the active/in-progress dimension rather than requiring the frontend to infer it from `clarifications[].status == IN_PROGRESS`.
 
@@ -199,21 +200,21 @@ History remains inside Assessment because it is the read side of the same `Asses
 
 Do not create an empty `group/` feature until Group has executable backend capability.
 
-A likely Assessment shape is:
+The implemented Assessment feature follows the same ownership idea and currently contains:
 
 ```text
 features/assessment/
 ├── api/
 ├── pages/
-├── session/
+├── workflow/
 ├── questionnaire/
 ├── clarification/
-├── tie-break/
+├── tiebreak/
 ├── result/
-└── test/
+└── history/
 ```
 
-`session/` contains presentation mapping such as `resolveAssessmentSessionView`. It is deliberately not named `domain/`; backend Domain remains the owner of lifecycle rules.
+`workflow/` contains the presentation resolver (`AssessmentSessionResponse -> UI view`). It is deliberately not named `domain/`; the backend Domain remains the owner of lifecycle rules and valid transitions.
 
 ### 4.3 `shared/`
 
@@ -260,10 +261,24 @@ These do not navigate to separate workflow routes.
 
 `Restart` is different because it creates a replacement resource with a new Session ID; navigation should move to the replacement ID, preferably with browser-history replacement so Back does not immediately return to the abandoned Session.
 
-## 7. Type/client generation rule during F1
+## 7. Type/client generation rule
 
 `docs/api/openapi.yaml` is a design-first MVP contract and intentionally includes future Group, deletion and provider-backed clarification paths that are not all executable today.
 
-Therefore F1 must not generate and treat the entire OpenAPI document as a currently available runtime client.
+The implementation therefore does not generate and treat the entire OpenAPI document as a currently available runtime client.
 
-Until executable backend and target OpenAPI are fully aligned, frontend TypeScript DTO/API modules should be scoped to implemented Controller/DTO/Security behavior. Full OpenAPI client generation can be reconsidered after the executable surface and design contract converge.
+Until executable backend and target OpenAPI are fully aligned, frontend TypeScript DTO/API modules remain scoped to implemented Controller/DTO/Security behavior. This rule prevented Group/deletion/provider-backed AI paths from becoming fake runtime dependencies. Full OpenAPI client generation can be reconsidered after the executable surface and design contract converge.
+
+## 8. Implementation alignment through F6
+
+The F0 architecture has now been exercised by the real frontend:
+
+- `AuthenticatedLayout` protects Assessment/History routes using the current-user query;
+- `/assessment-sessions/:sessionId` remains the only Session detail/workflow route;
+- Questionnaire, Clarification, Tie-break and Result re-render from authoritative Session state without step-navigation routes;
+- Restart navigates to a replacement Session resource with a new ID;
+- History uses `/history?page=N`, while transient History-origin navigation is kept in Router state rather than added to the Session URL;
+- Result presentation uses a frontend read model to explain backend decision provenance without recomputing Domain results;
+- no empty Group feature, deletion client or live LLM interaction client exists before the corresponding executable backend boundary.
+
+Historical Assessment deletion remains deferred until Group sharing exists because it is a cross-module orchestration, not an isolated frontend action.

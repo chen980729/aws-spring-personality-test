@@ -1,75 +1,97 @@
-# React + TypeScript + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript frontend for the Spring AWS Portfolio project.
 
-Currently, two official plugins are available:
+The application is a first-party SPA that consumes the Spring Boot backend through relative `/api/...` requests. In local development Vite proxies `/api` and `/actuator` to `http://localhost:8080`, keeping the browser-facing topology effectively same-origin and allowing the real Session/CSRF model to be exercised without adding unnecessary CORS behavior.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Current scope
 
-## React Compiler
+Implemented through Frontend F6:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- registration, login, Session restoration, protected routes and logout;
+- CSRF token management and one-time stale-token recovery;
+- Assessment catalog/detail, Start/Resume and Start New/Restart;
+- Session-bound questionnaire rendering, local draft ownership, debounced full-snapshot autosave and explicit save status;
+- final questionnaire submission with in-flight autosave coordination and lost-response recovery;
+- backend-authoritative Assessment workflow resolution;
+- deterministic clarification read/Skip/Skip Remaining interaction;
+- exact-tie user decision and deterministic finalization;
+- completed Result read model with per-dimension decision provenance;
+- completed Assessment History with URL pagination and canonical Session detail navigation;
+- Vitest + React Testing Library + MSW coverage for implemented browser behavior.
 
-## Expanding the ESLint configuration
+Deferred until their backend boundaries exist:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- provider-backed LLM clarification interaction;
+- Group / Membership / Sharing frontend;
+- historical Assessment deletion.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Technology
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- React 19
+- TypeScript
+- Vite
+- React Router
+- TanStack Query
+- React Hook Form
+- Vitest
+- React Testing Library
+- MSW
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Local development
 
+Prerequisites:
+
+- Node.js 24 LTS;
+- Spring Boot backend running on `http://localhost:8080`;
+- PostgreSQL/backend dependencies configured as described in the root README.
+
+Install dependencies:
+
+```bash
+npm ci
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Run the development server:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm run dev
 ```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Vite proxies:
+
+```text
+/api      -> http://localhost:8080
+/actuator -> http://localhost:8080
+```
+
+## Verification commands
+
+```bash
+npm run test
+npm run build
+npm run lint
+```
+
+`npm run test` uses Vitest with jsdom, React Testing Library and MSW. `npm run build` runs TypeScript project compilation before the Vite production build, so it catches type errors that a passing Vitest run alone may not detect.
+
+## Architecture notes
+
+The frontend follows these rules:
+
+- `/assessment-sessions/:sessionId` is the canonical Assessment Session route;
+- Questionnaire, Clarification, Tie-break and Result are presentations of backend Session state rather than separate workflow routes;
+- TanStack Query owns server state; unsaved questionnaire drafts stay local;
+- the browser owns the opaque HttpOnly Session cookie;
+- unsafe requests obtain CSRF state through the shared HTTP client;
+- mutations consume authoritative backend responses rather than manually advancing a client-side state machine;
+- deterministic `4xx` query failures are not generically retried, while network/`5xx` read failures may retry once;
+- design-first OpenAPI paths are not treated as executable until corresponding backend Controllers/DTOs exist.
+
+For design and implementation history, see [`../docs/frontend/README.md`](../docs/frontend/README.md).

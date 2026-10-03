@@ -1,8 +1,9 @@
 # Frontend API Integration Baseline
 
-> **Checkpoint:** Frontend F0
-> **Status:** Accepted
-> **Date:** 2026-09-30
+> **Original checkpoint:** Frontend F0
+> **Status:** Accepted baseline; implemented through Frontend F6 for the executable Identity + deterministic Assessment surface
+> **Original date:** 2026-09-30
+> **Implementation review:** 2026-10-03
 
 ## 1. Contract sources
 
@@ -76,7 +77,7 @@ These operations return the updated authoritative `AssessmentSessionResponse`.
 
 ## 3. Design target but not executable yet
 
-Do not build F1-F8 runtime dependencies on:
+Do not build current runtime dependencies on:
 
 - provider-backed clarification Start / Message / Retry endpoints;
 - historical Assessment deletion;
@@ -98,7 +99,7 @@ Recommended query-key families:
 ["assessment-history", page, size]
 ```
 
-The exact helper API may evolve during F1, but ownership remains feature-local.
+The helper names have evolved during implementation, but ownership remains feature-local and query keys still separate current-user, catalog/detail, active Session, Session/questionnaire and History state.
 
 ## 5. Authoritative Session mutation rule
 
@@ -136,7 +137,22 @@ success updates saved snapshot
 
 Do not use `localStorage` as a second questionnaire persistence system. Backend autosave remains the persistence source of truth.
 
-Concurrency, stale save response ordering, pending-save submit behavior and reconciliation are detailed implementation topics for the Questionnaire phase rather than F0.
+The implemented Questionnaire flow resolves those concurrency concerns as follows:
+
+```text
+local draft changes
+    -> debounce
+    -> serialize complete-snapshot PUTs (one in flight)
+    -> if edits occur while saving, immediately persist the latest snapshot after the current save
+
+Submit
+    -> stop scheduling new autosaves
+    -> clear pending debounce
+    -> wait for any already in-flight autosave
+    -> POST the latest complete local snapshot
+```
+
+A failed autosave keeps the latest local answers and explicit Retry saves the current draft rather than replaying an older failed payload. `ASSESSMENT_ALREADY_SUBMITTED` is treated as an uncertain-outcome recovery signal and triggers an authoritative Session GET rather than re-running scoring.
 
 ## 7. Problem Details contract
 
@@ -196,4 +212,20 @@ GET authoritative AssessmentSession
 recover Clarification/Result UI
 ```
 
-Read queries may use limited retry for network or selected transient 5xx failures. Normal 4xx application responses are not generic retry candidates.
+Read queries use limited retry for network/transient failures: the current QueryClient does not retry deterministic `4xx` API responses and retries network/`5xx` read failures at most once. Mutations do not use generic automatic retry.
+
+## 9. Current frontend integration alignment
+
+The F1-F6 implementation consumes the executable endpoints above through handwritten feature-local TypeScript DTO/API modules and the shared HTTP client.
+
+Important implemented rules:
+
+- unsafe requests obtain CSRF state centrally;
+- `CSRF_VALIDATION_FAILED` refreshes CSRF and replays the request exactly once;
+- final `AUTHENTICATION_REQUIRED` transitions the current-user cache to anonymous;
+- Session mutations cache the authoritative returned `AssessmentSessionResponse` and let the canonical Session route resolve the next presentation;
+- completed Session mutations invalidate Assessment History;
+- History is currently `COMPLETED`-only because that is the executable backend query contract;
+- provider-backed clarification, historical deletion and Group paths remain intentionally unused even though they are present in the design-first target.
+
+Real-browser integration found contract/lifecycle issues that MSW alone could not prove, including the wrapped Restart response shape and a backend exact-tie response-mapping bug. This is why the executable Spring runtime remains the final integration authority even when frontend mocks are contract-shaped.

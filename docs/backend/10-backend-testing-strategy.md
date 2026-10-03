@@ -528,9 +528,9 @@ HTTP + authentication + CSRF + 404 privacy boundary
 
 The execution-boundary integration tests prove stale-result rejection and Restart recovery with real PostgreSQL. They do **not** yet constitute a dedicated two-thread/two-transaction stress test for every possible Clarification/finalization race.
 
-## 13. Next testing focus: Step 8 LLM Integration + concurrency hardening
+## 13. Deferred backend-feature testing focus: Step 8 LLM Integration + concurrency hardening
 
-Step 8 should add focused tests around the provider boundary without re-testing the deterministic Domain rules already covered above.
+The current project focus has moved to AWS/CI-CD, so the immediate testing additions should center on deployable configuration, build/startup verification and production-profile assumptions. When backend feature work returns to Step 8, it should add focused tests around the provider boundary without re-testing the deterministic Domain rules already covered above.
 
 Priority areas:
 
@@ -557,3 +557,5 @@ final tie-break vs another finalization-triggering command
 Because ADR-0016 makes `DimensionClarification` a separate Aggregate, these tests should keep proving Session + Clarification coordination and PostgreSQL constraints rather than relying only on mocked Application tests.
 
 The Identity/Security test infrastructure remains reusable for authenticated Assessment and future Group endpoint testing.
+
+Before production deployment is considered stable, add configuration-level verification for environment-driven datasource settings, secure production Session-cookie behavior, health/readiness expectations and any AWS-specific profile assumptions. CI should also run the existing backend suite together with the frontend test/build/lint gates rather than treating either build unit as optional.
