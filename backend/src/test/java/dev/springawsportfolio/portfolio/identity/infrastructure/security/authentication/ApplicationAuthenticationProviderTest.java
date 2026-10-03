@@ -84,6 +84,11 @@ class ApplicationAuthenticationProviderTest {
                 principal.email()
         );
 
+        assertEquals(
+                userId.value().toString(),
+                result.getName()
+        );
+
         assertNull(result.getCredentials());
     }
 

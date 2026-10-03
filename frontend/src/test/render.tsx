@@ -8,6 +8,7 @@ import {
   render,
   type RenderOptions,
 } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 
 export function createTestQueryClient(
   config?: QueryClientConfig,
@@ -28,19 +29,23 @@ export function createTestQueryClient(
 interface RenderWithProvidersOptions
   extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient
+  initialEntries?: string[]
 }
 
 export function renderWithProviders(
   ui: ReactElement,
   {
     queryClient = createTestQueryClient(),
+    initialEntries = ['/'],
     ...renderOptions
   }: RenderWithProvidersOptions = {},
 ) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        {children}
+        <MemoryRouter initialEntries={initialEntries}>
+          {children}
+        </MemoryRouter>
       </QueryClientProvider>
     )
   }
