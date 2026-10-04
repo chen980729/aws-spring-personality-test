@@ -1,0 +1,377 @@
+name: CD
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-backend:
+    name: Deploy backend
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (
+        vars.CD_ENABLED == 'true' &&
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY_URL: ${{ vars.BACKEND_ECR_REPOSITORY_URL }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+      CONTAINER_NAME: backend
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+    steps:
+      - name: Checkout deployment revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Build backend image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --tag spring-aws-portfolio-backend:deploy \
+            ./backend
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-cd-backend
+          mask-aws-account-id: true
+
+      - name: Prepare ECR image reference
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ECR_REGISTRY="${ECR_REPOSITORY_URL%%/*}"
+          IMAGE_TAG="${DEPLOY_SHA}-${GITHUB_RUN_ATTEMPT}"
+          IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+
+          echo "registry=${ECR_REGISTRY}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Amazon ECR
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login \
+                --username AWS \
+                --password-stdin \
+                "${{ steps.image.outputs.registry }}"
+
+      - name: Push backend image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker tag \
+            spring-aws-portfolio-backend:deploy \
+            "${{ steps.image.outputs.image_uri }}"
+
+          docker push "${{ steps.image.outputs.image_uri }}"
+
+      - name: Read current ECS task definition
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_TASK_DEFINITION_ARN="$(
+            aws ecs describe-services \
+              --cluster "$ECS_CLUSTER" \
+              --services "$ECS_SERVICE" \
+              --query 'services[0].taskDefinition' \
+              --output text
+          )"
+
+          if [ -z "$CURRENT_TASK_DEFINITION_ARN" ] || [ "$CURRENT_TASK_DEFINITION_ARN" = "None" ]; then
+            echo "Could not resolve current ECS task definition."
+            exit 1
+          fi
+
+          aws ecs describe-task-definition \
+            --task-definition "$CURRENT_TASK_DEFINITION_ARN" \
+            --query 'taskDefinition' \
+            > task-definition.json
+
+      - name: Render next ECS task definition
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          jq -e \
+            --arg container "$CONTAINER_NAME" \
+            '.containerDefinitions | any(.name == $container)' \
+            task-definition.json \
+            > /dev/null
+
+          jq \
+            --arg container "$CONTAINER_NAME" \
+            --arg image "${{ steps.image.outputs.image_uri }}" \
+            '
+              .containerDefinitions |= map(
+                if .name == $container
+                then .image = $image
+                else .
+                end
+              )
+              | del(
+                  .taskDefinitionArn,
+                  .revision,
+                  .status,
+                  .requiresAttributes,
+                  .compatibilities,
+                  .registeredAt,
+                  .registeredBy
+                )
+            ' \
+            task-definition.json \
+            > task-definition-deploy.json
+
+      - name: Register ECS task definition
+        id: task-definition
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          NEW_TASK_DEFINITION_ARN="$(
+            aws ecs register-task-definition \
+              --cli-input-json file://task-definition-deploy.json \
+              --query 'taskDefinition.taskDefinitionArn' \
+              --output text
+          )"
+
+          echo "arn=${NEW_TASK_DEFINITION_ARN}" >> "$GITHUB_OUTPUT"
+
+      - name: Update ECS service
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "${{ steps.task-definition.outputs.arn }}" \
+            > /dev/null
+
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+      - name: Verify backend deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DEPLOYED_TASK_DEFINITION="$(
+            aws ecs describe-services \
+              --cluster "$ECS_CLUSTER" \
+              --services "$ECS_SERVICE" \
+              --query 'services[0].taskDefinition' \
+              --output text
+          )"
+
+          if [ "$DEPLOYED_TASK_DEFINITION" != "${{ steps.task-definition.outputs.arn }}" ]; then
+            echo "ECS service is not using the expected task definition."
+            exit 1
+          fi
+
+          DEPLOYED_IMAGE="$(
+            aws ecs describe-task-definition \
+              --task-definition "$DEPLOYED_TASK_DEFINITION" \
+              --query "taskDefinition.containerDefinitions[?name=='${CONTAINER_NAME}'].image | [0]" \
+              --output text
+          )"
+
+          if [ "$DEPLOYED_IMAGE" != "${{ steps.image.outputs.image_uri }}" ]; then
+            echo "ECS service is not using the expected backend image."
+            exit 1
+          fi
+
+          {
+            echo "### Backend deployment"
+            echo "- Task definition: \`${DEPLOYED_TASK_DEFINITION}\`"
+            echo "- Image tag: \`${DEPLOY_SHA}-${GITHUB_RUN_ATTEMPT}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-frontend:
+    name: Deploy frontend
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (
+        vars.CD_ENABLED == 'true' &&
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+    steps:
+      - name: Checkout deployment revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Reject local backend URL in production bundle
+        working-directory: frontend
+        run: |
+          if grep -R "localhost:8080" dist; then
+            echo "Production bundle contains localhost:8080"
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-cd-frontend
+          mask-aws-account-id: true
+
+      - name: Deploy frontend to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws s3 sync \
+            frontend/dist \
+            "s3://${FRONTEND_BUCKET}" \
+            --delete \
+            --cache-control "no-cache" \
+            --region "$AWS_REGION"
+
+          aws s3 cp \
+            frontend/dist/assets \
+            "s3://${FRONTEND_BUCKET}/assets" \
+            --recursive \
+            --cache-control "public,max-age=31536000,immutable" \
+            --region "$AWS_REGION"
+
+      - name: Invalidate CloudFront
+        id: invalidation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INVALIDATION_ID="$(
+            aws cloudfront create-invalidation \
+              --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+              --paths '/*' \
+              --query 'Invalidation.Id' \
+              --output text
+          )"
+
+          echo "id=${INVALIDATION_ID}" >> "$GITHUB_OUTPUT"
+
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --id "$INVALIDATION_ID"
+
+          {
+            echo "### Frontend deployment"
+            echo "- S3 bucket: \`${FRONTEND_BUCKET}\`"
+            echo "- CloudFront invalidation: \`${INVALIDATION_ID}\`"
+            echo "- Commit: \`${DEPLOY_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    name: Public smoke test
+    needs:
+      - deploy-backend
+      - deploy-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      CLOUDFRONT_DOMAIN_NAME: ${{ vars.CLOUDFRONT_DOMAIN_NAME }}
+
+    steps:
+      - name: Verify frontend root
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --head \
+            "https://${CLOUDFRONT_DOMAIN_NAME}/"
+
+      - name: Verify SPA direct route
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --head \
+            "https://${CLOUDFRONT_DOMAIN_NAME}/login"
+
+      - name: Verify backend API route
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            "https://${CLOUDFRONT_DOMAIN_NAME}/api/v1/auth/csrf" \
+            > /dev/null
+
+      - name: Record smoke test result
+        run: |
+          {
+            echo "### Public smoke test"
+            echo "- Frontend root: OK"
+            echo "- SPA direct route: OK"
+            echo "- Backend API route: OK"
+          } >> "$GITHUB_STEP_SUMMARY"
