@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+server:
+  forward-headers-strategy: native
+
+  servlet:
+    session:
+      cookie:
+        name: __Host-SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+        path: /

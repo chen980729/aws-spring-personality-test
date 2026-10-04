@@ -45,7 +45,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/auth/csrf",
-                                "/actuator/health"
+                                "/actuator/health",
+                                "/actuator/health/liveness",
+                                "/actuator/health/readiness"
                         ).permitAll()
 
                         .requestMatchers(
