@@ -8,10 +8,10 @@ The application is designed to let users complete versioned personality assessme
 
 The project is intentionally developed as an end-to-end engineering exercise rather than a feature-only demo: **domain modeling → API design → persistence → security → testing → frontend → containerization → AWS → CI/CD → Infrastructure as Code**.
 
-> **Current application:** Authentication + deterministic Assessment flow through Result/History is implemented and deployed on AWS.<br>
+> **Current application:** Authentication + deterministic Assessment flow through Result/History is implemented and deployed on AWS; this release branch also completes dual-version contextual Tie-break compatibility and the refreshed Result/Landing presentation layer.<br>
 > **Current cloud delivery:** Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, OIDC and least-privilege CD are implemented.<br>
 > **CD status:** Manual production CD and public smoke tests are verified. The automatic CI-success → CD trigger is prepared and will receive its final end-to-end verification with the next feature update.<br>
-> **Next product focus:** Provider-backed LLM clarification, Group/Sharing, historical deletion orchestration, and further product refinement.
+> **Next product focus:** deploy this compatibility release, verify the automatic CI-success → CD path, then activate DefinitionVersion 1.1 in a separate release before returning to provider-backed LLM clarification and Group/Sharing work.
 
 ---
 
@@ -37,7 +37,7 @@ The final MVP combines two main product areas:
    - autosave questionnaire progress;
    - submit through an immutable business boundary;
    - calculate deterministic scores and ambiguity;
-   - optionally resolve ambiguous dimensions through AI-assisted clarification or user tie-break;
+   - optionally resolve ambiguous dimensions through bounded clarification and versioned exact-tie fallback semantics;
    - retain and manage historical completed assessments.
 
 2. **Group & Explicit Sharing**
@@ -213,10 +213,10 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Security | Spring Security, Spring Session JDBC, CSRF | ✅ Implemented |
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
-| API | REST, OpenAPI 3.1 | ✅ Implemented through Assessment Step 7 |
+| API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + DefinitionVersion 1.1 compatibility implemented |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ Implemented for current Backend + Frontend scope |
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
-| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow through F6 |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow through F7-D |
 | AI integration | External LLM behind an adapter boundary | ⏳ Next product milestone after the completed cloud foundation |
 | Containerization | Multi-stage Docker backend image | ✅ Implemented and deployed |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ Deployed in ap-northeast-1 |
@@ -243,7 +243,7 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | External AI adapter / runtime context | ⏳ Planned next after the cloud foundation |
 | Historical assessment deletion | ⏸ Deferred until Group sharing backend exists |
 | Group / Membership / Sharing implementation | ⏳ Planned product milestone |
-| React frontend | ✅ F1-F6 complete for current executable Auth + deterministic Assessment scope |
+| React frontend | ✅ F1-F6 + F7-A–F7-D complete for current executable/staged Assessment scope |
 | Docker application image | ✅ Implemented and deployed via ECR/ECS |
 | AWS deployment | ✅ Full-stack production deployment verified |
 | GitHub Actions CI/CD | ✅ CI + OIDC + manual CD verified; automatic trigger awaiting final live verification |
@@ -279,7 +279,7 @@ The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
 - immediate finalization when clarification is unnecessary;
 - persisted Clarification lifecycle and stale external-result protection;
 - Skip Current / Skip Remaining deterministic clarification mutations;
-- explicit exact-tie user decision and deterministic post-clarification finalization;
+- version-aware exact-tie finalization: retained 1.0 direct-pole semantics plus staged 1.1 contextual question support;
 - completed Assessment History;
 - historical Assessment detail;
 - PostgreSQL-backed read projections;
@@ -298,8 +298,9 @@ Not yet implemented in the executable backend are provider-backed LLM interactio
 - debounced serialized full-snapshot autosave with save/error/retry state;
 - final Submit coordinated with in-flight autosave and already-submitted recovery;
 - deterministic Clarification read model, Skip Current and Skip Remaining;
-- exact-tie Tie-break interaction and deterministic finalization;
-- Result read model with per-dimension decision provenance;
+- dual-version exact-tie UI: retained 1.0 direct-pole flow plus staged 1.1 contextual-question flow without exposing option-to-pole mappings;
+- enriched Result interpretation with 8 preference-letter descriptions, 16 type profiles, optimized per-type artwork, and preserved per-dimension decision provenance;
+- optimized four-profile Landing hero artwork;
 - completed Assessment History, URL pagination and canonical Session detail navigation;
 - Vitest / React Testing Library / MSW coverage plus repeated real-browser integration verification.
 
@@ -326,7 +327,7 @@ docs/
 │   └── openapi.yaml          Machine-readable HTTP contract
 ├── adr/                      Architecture Decision Records
 ├── backend/                  Detailed backend design and implementation checkpoints
-└── frontend/                 Frontend architecture + F1-F6 implementation checkpoint
+└── frontend/                 Frontend architecture + F1-F7 implementation checkpoints
 ```
 
 Recommended starting points:
@@ -337,9 +338,11 @@ Recommended starting points:
 - [`docs/domain/group-spec-aligned.md`](docs/domain/group-spec-aligned.md) — Group, membership and sharing rules;
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — current OpenAPI contract;
 - [`docs/adr/`](docs/adr/) — major design decisions and trade-offs;
-- [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — latest accepted backend checkpoint;
+- [`docs/backend/16-contextual-tie-break-compatibility-checkpoint.md`](docs/backend/16-contextual-tie-break-compatibility-checkpoint.md) — latest Backend compatibility/pre-activation checkpoint;
 - [`docs/frontend/README.md`](docs/frontend/README.md) — frontend architecture/implementation index.
-- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — current F1-F6 implementation checkpoint;
+- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — F1-F6 implementation checkpoint;
+- [`docs/frontend/06-result-content-checkpoint-f7c.md`](docs/frontend/06-result-content-checkpoint-f7c.md) — F7-C Result content/image checkpoint;
+- [`docs/frontend/07-landing-hero-checkpoint-f7d.md`](docs/frontend/07-landing-hero-checkpoint-f7d.md) — F7-D Landing hero checkpoint;
 - [`docs/deployment/aws-deployment.md`](docs/deployment/aws-deployment.md) — deployed AWS topology and trade-offs;
 - [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md) — CI/CD, OIDC and deployment ownership;
 - [`docs/future-work.md`](docs/future-work.md) — future architecture options and deferred work.
