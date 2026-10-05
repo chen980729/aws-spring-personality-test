@@ -92,7 +92,7 @@ resource "aws_ecs_service" "backend" {
   desired_count = 1
   launch_type   = "FARGATE"
 
-  health_check_grace_period_seconds = 120
+  health_check_grace_period_seconds = 240
 
   network_configuration {
     subnets = [
@@ -119,5 +119,11 @@ resource "aws_ecs_service" "backend" {
 
   tags = {
     Name = "${local.name_prefix}-backend"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      task_definition,
+    ]
   }
 }
