@@ -10,6 +10,7 @@ import java.util.Set;
 public final class AssessmentSpecification {
 
     private final List<DimensionDefinition> dimensions;
+    private final List<TieBreakQuestionDefinition> tieBreakQuestions;
     private final QuestionnaireDefinition questionnaire;
     private final ScoringPolicy scoringPolicy;
     private final AmbiguityPolicy ambiguityPolicy;
@@ -23,6 +24,26 @@ public final class AssessmentSpecification {
             AmbiguityPolicy ambiguityPolicy,
             ClarificationPolicy clarificationPolicy,
             FinalizationPolicy finalizationPolicy
+    ) {
+        this(
+                dimensions,
+                questionnaire,
+                scoringPolicy,
+                ambiguityPolicy,
+                clarificationPolicy,
+                finalizationPolicy,
+                List.of()
+        );
+    }
+
+    public AssessmentSpecification(
+            List<DimensionDefinition> dimensions,
+            QuestionnaireDefinition questionnaire,
+            ScoringPolicy scoringPolicy,
+            AmbiguityPolicy ambiguityPolicy,
+            ClarificationPolicy clarificationPolicy,
+            FinalizationPolicy finalizationPolicy,
+            List<TieBreakQuestionDefinition> tieBreakQuestions
     ) {
         Objects.requireNonNull(
                 dimensions,
@@ -43,6 +64,24 @@ public final class AssessmentSpecification {
         }
 
         this.dimensions = List.copyOf(dimensions);
+
+        Objects.requireNonNull(
+                tieBreakQuestions,
+                "tieBreakQuestions must not be null"
+        );
+
+        for (
+                TieBreakQuestionDefinition tieBreakQuestion
+                : tieBreakQuestions
+        ) {
+            Objects.requireNonNull(
+                    tieBreakQuestion,
+                    "tieBreakQuestions must not contain null"
+            );
+        }
+
+        this.tieBreakQuestions =
+                List.copyOf(tieBreakQuestions);
 
         this.questionnaire = Objects.requireNonNull(
                 questionnaire,
@@ -76,6 +115,10 @@ public final class AssessmentSpecification {
         return dimensions;
     }
 
+    public List<TieBreakQuestionDefinition> tieBreakQuestions() {
+        return tieBreakQuestions;
+    }
+
     public QuestionnaireDefinition questionnaire() {
         return questionnaire;
     }
@@ -101,6 +144,7 @@ public final class AssessmentSpecification {
                 validateDimensions();
 
         validateQuestionDimensions(dimensionsByCode);
+        validateTieBreakQuestions(dimensionsByCode);
         validateAnswerScale();
         validateQuestionDistribution(dimensionsByCode);
         validatePolicyConsistency();
@@ -170,6 +214,108 @@ public final class AssessmentSpecification {
                                 + question.keyedPole().value()
                                 + " outside dimension "
                                 + dimension.code().value()
+                );
+            }
+        }
+    }
+
+    private void validateTieBreakQuestions(
+            Map<DimensionCode, DimensionDefinition> dimensionsByCode
+    ) {
+        if (finalizationPolicy.usesLegacyDirectTieBreak()) {
+            if (!tieBreakQuestions.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "legacy finalization policy must not "
+                                + "define contextual tie-break questions"
+                );
+            }
+
+            return;
+        }
+
+        if (!finalizationPolicy.usesContextualTieBreakQuestions()) {
+            throw new IllegalStateException(
+                    "unsupported finalization policy semantics"
+            );
+        }
+
+        Map<DimensionCode, TieBreakQuestionDefinition>
+                questionsByDimension =
+                new HashMap<>();
+
+        Set<TieBreakQuestionId> questionIds =
+                new HashSet<>();
+
+        for (
+                TieBreakQuestionDefinition question
+                : tieBreakQuestions
+        ) {
+            if (!questionIds.add(question.questionId())) {
+                throw new IllegalArgumentException(
+                        "duplicate tie-break question id: "
+                                + question.questionId().value()
+                );
+            }
+
+            DimensionDefinition dimension =
+                    dimensionsByCode.get(
+                            question.dimension()
+                    );
+
+            if (dimension == null) {
+                throw new IllegalArgumentException(
+                        "tie-break question "
+                                + question.questionId().value()
+                                + " references unknown dimension "
+                                + question.dimension().value()
+                );
+            }
+
+            if (
+                    questionsByDimension.put(
+                            question.dimension(),
+                            question
+                    ) != null
+            ) {
+                throw new IllegalArgumentException(
+                        "multiple tie-break questions for dimension: "
+                                + question.dimension().value()
+                );
+            }
+
+            for (
+                    TieBreakOptionDefinition option
+                    : question.options()
+            ) {
+                if (
+                        !dimension.containsPole(
+                                option.resolvedPole()
+                        )
+                ) {
+                    throw new IllegalArgumentException(
+                            "tie-break option "
+                                    + option.optionId().value()
+                                    + " resolves to pole "
+                                    + option.resolvedPole().value()
+                                    + " outside dimension "
+                                    + dimension.code().value()
+                    );
+                }
+            }
+        }
+
+        for (
+                DimensionCode dimensionCode
+                : dimensionsByCode.keySet()
+        ) {
+            if (
+                    !questionsByDimension.containsKey(
+                            dimensionCode
+                    )
+            ) {
+                throw new IllegalArgumentException(
+                        "missing tie-break question for dimension: "
+                                + dimensionCode.value()
                 );
             }
         }
