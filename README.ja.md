@@ -333,8 +333,12 @@ real provider-backed clarification、Group / Sharing UI、historical deletion UI
 docs/
 ├── README.md                 Documentation entry point
 ├── requirements.md           Product goals, MVP scope and privacy rules
-├── architecture.md           System and module architecture baseline
+├── architecture.md           As-built system/cloud architecture + module boundary
 ├── roadmap.md                Current progress and remaining work
+├── future-work.md            Deferred options / hardening backlog
+├── deployment/
+│   ├── aws-deployment.md     Current AWS topology / trade-off
+│   └── ci-cd.md              CI/CD / OIDC / release flow
 ├── domain/                   Assessment and Group domain design
 ├── api/
 │   └── openapi.yaml          Machine-readable HTTP contract
@@ -353,7 +357,10 @@ docs/
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records
 - [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — Latest accepted backend checkpoint
 - [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend architecture / implementation index
-- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — F1-F6 implementation checkpoint / Cloud handoff
+- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — F1-F6 implementation checkpoint
+- [`docs/deployment/aws-deployment.md`](docs/deployment/aws-deployment.md) — deployed AWS topology / trade-off
+- [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md) — CI/CD / OIDC / deployment ownership
+- [`docs/future-work.md`](docs/future-work.md) — future architecture option / deferred work
 
 ---
 
@@ -499,14 +506,14 @@ spring-aws-portfolio/
 ├── frontend/                 React + TypeScript + Vite application
 ├── docs/                     Requirements, architecture, ADRs and checkpoints
 ├── infra/
-│   └── terraform/            現在の AWS phase 用 Terraform workspace
+│   └── terraform/            deployed AWS infrastructure 用 Terraform
 ├── compose.yaml              Local PostgreSQL environment
 ├── .env.example              Local configuration example
 ├── README.md                 English / development README
 └── README.ja.md              Japanese / portfolio README
 ```
 
-Deterministic な full-stack Assessment slice は local で runnable です。現在の delivery phase では、この application を Docker / AWS / Terraform / GitHub Actions によって reproducible に deploy できる状態へ進めます。
+Deterministic な full-stack Assessment slice は local で runnable であり、AWS 上にも deployment 済みです。Terraform が current infrastructure baseline を管理し、GitHub Actions が CI と OIDC-based application delivery を提供します。
 
 ---
 
@@ -534,6 +541,7 @@ Deterministic な full-stack Assessment slice は local で runnable です。�
 - MVP で JWT ではなく server-side Session を選んだ理由
 - Deterministic logic と AI-assisted behavior をどのように分離するのか
 - Risk に応じて test strategy をどう変えるのか
-- すでに local で runnable な Application を、どのように Containerize し、AWS へ deploy し、GitHub Actions と Terraform で再現可能な運用環境へ発展させるのか
+- Application をどのように Containerize し、AWS へ deploy し、GitHub Actions / OIDC と Terraform で再現可能な delivery environment を構成したのか
+- Terraform が所有する infrastructure と CD が所有する ECS release revision をなぜ分離するのか
 
 最終的には、**実際に動作する Full-stack Application、明確な Architecture documentation、自動 Test、CI/CD、AWS deployment、再現可能な Infrastructure** までを一つの Project として完成させることを目標としています。
