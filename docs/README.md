@@ -18,11 +18,11 @@ Use these documents as the main entry points:
 - `domain/group-spec-aligned.md` — accepted Group lifecycle, memberships, join requests, admin authority, and sharing consent.
 - `sixteen-personality-spec-aligned.md` — executable Sixteen Personality Assessment specification.
 - `backend/README.md` — backend design + implementation-checkpoint index.
-- `frontend/README.md` — frontend documentation index, current F6 + UI optimization checkpoint and deferred boundaries.
+- `frontend/README.md` — frontend documentation index, current F7-D checkpoint and deferred boundaries.
 - `frontend/05-implementation-checkpoint-f1-f6.md` — accepted F1-F6 implementation checkpoint, post-F6 UI optimization checkpoint and cloud handoff.
 - `frontend/06-result-content-checkpoint-f7c.md` — F7-C result interpretation/content/image checkpoint.
 - `frontend/07-landing-hero-checkpoint-f7d.md` — F7-D Landing hero visual/performance/accessibility checkpoint.
-- `api/openapi.yaml` — OpenAPI **v0.5.0** contract; DefinitionVersion 1.1 contextual tie-break Backend compatibility is implemented and pre-activation acceptance-tested, while activation/Frontend integration remain pending.
+- `api/openapi.yaml` — OpenAPI **v0.5.0** contract; DefinitionVersion 1.1 Backend compatibility and Frontend dual-version support are implemented and pre-activation acceptance-tested, while activation remains pending.
 - `roadmap.md` — current implementation progress and remaining workstreams.
 - `deployment/aws-deployment.md` — as-built AWS topology, networking, cost/security trade-offs and rollout tuning.
 - `deployment/ci-cd.md` — CI/CD flow, OIDC security, least-privilege deployment and release ownership.
