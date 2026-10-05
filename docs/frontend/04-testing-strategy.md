@@ -1,7 +1,7 @@
 # Frontend Testing Strategy
 
 > **Original checkpoint:** Frontend F0
-> **Status:** Accepted; Vitest/RTL/MSW strategy implemented through Frontend F6 and exercised through the UI optimization checkpoint
+> **Status:** Accepted; Vitest/RTL/MSW strategy implemented through Frontend F7-A and exercised through the UI optimization checkpoint
 > **Original date:** 2026-09-30
 > **Implementation review:** 2026-10-04
 
@@ -172,7 +172,7 @@ TypeScript production build
 ESLint
 ```
 
-Implemented regression coverage now includes CSRF recovery, auth/session restoration, Restart response handling, invalid Session IDs, serialized questionnaire autosave, Submit/autosave coordination, `ASSESSMENT_ALREADY_SUBMITTED` recovery, React StrictMode effect replay, Clarification/Tie-break workflow resolution, Result provenance, History pagination and History -> canonical Session -> Result navigation.
+Implemented regression coverage now includes CSRF recovery, auth/session restoration, Restart response handling, invalid Session IDs, serialized questionnaire autosave, Submit/autosave coordination, `ASSESSMENT_ALREADY_SUBMITTED` recovery, React StrictMode effect replay, Clarification/Tie-break workflow resolution, Result provenance, History pagination and History -> canonical Session -> Result navigation. F7-A additionally covers contextual Tie-break GET parsing, contextual PUT request shape + CSRF, and `TIE_BREAK_QUESTION` result-source presentation while preserving the legacy direct-pole workflow tests.
 
 The implementation produced three testing lessons worth keeping explicit:
 
