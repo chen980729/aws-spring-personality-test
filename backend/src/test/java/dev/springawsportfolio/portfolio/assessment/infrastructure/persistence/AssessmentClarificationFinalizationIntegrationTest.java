@@ -14,6 +14,7 @@ import dev.springawsportfolio.portfolio.assessment.application.session.Assessmen
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionVersionRepository;
@@ -48,6 +49,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 @Testcontainers
 class AssessmentClarificationFinalizationIntegrationTest {
+
+    private static final AssessmentDefinitionVersionId
+            VERSION_1_0_ID =
+            new AssessmentDefinitionVersionId(
+                    UUID.fromString(
+                            "9e2b641f-7600-4a4c-8f56-2d74c9b03e11"
+                    )
+            );
 
     @Container
     @ServiceConnection
@@ -102,7 +111,7 @@ class AssessmentClarificationFinalizationIntegrationTest {
                 definition();
 
         AssessmentDefinitionVersion version =
-                availableVersion(
+                legacyVersionOne(
                         definition
                 );
 
@@ -429,14 +438,22 @@ class AssessmentClarificationFinalizationIntegrationTest {
                 .orElseThrow();
     }
 
-    private AssessmentDefinitionVersion availableVersion(
+    private AssessmentDefinitionVersion legacyVersionOne(
             AssessmentDefinition definition
     ) {
-        return versionRepository
-                .findAvailableByDefinitionId(
-                        definition.id()
-                )
-                .orElseThrow();
+        AssessmentDefinitionVersion version =
+                versionRepository
+                        .findById(
+                                VERSION_1_0_ID
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                definition.id(),
+                version.definitionId()
+        );
+
+        return version;
     }
 
     private UserId createUser() {
