@@ -1,19 +1,31 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence;
 
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationExecutionCompletionResult;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationExecutionTicket;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.CompleteClarificationExecutionService;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationService;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipRemainingClarificationsCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipRemainingClarificationsService;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.StartDimensionClarificationCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.StartDimensionClarificationService;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakService;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.TieBreakSelection;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidDimensionTieBreakException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakAlreadyDecidedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakNotRequiredException;
 import dev.springawsportfolio.portfolio.assessment.application.query.tiebreak.DimensionTieBreakInteractionResult;
+import dev.springawsportfolio.portfolio.assessment.application.query.session.GetAssessmentSessionService;
 import dev.springawsportfolio.portfolio.assessment.application.query.tiebreak.GetDimensionTieBreakInteractionService;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.domain.clarification.AIProvenance;
+import dev.springawsportfolio.portfolio.assessment.domain.clarification.ClarificationConfidence;
+import dev.springawsportfolio.portfolio.assessment.domain.clarification.ClarificationResolution;
+import dev.springawsportfolio.portfolio.assessment.domain.clarification.ClarificationResult;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionId;
@@ -46,11 +58,18 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @SpringBootTest
 @Testcontainers
@@ -78,12 +97,24 @@ class AssessmentContextualTieBreakIntegrationTest {
             skipDimensionClarificationService;
 
     @Autowired
+    StartDimensionClarificationService
+            startDimensionClarificationService;
+
+    @Autowired
+    CompleteClarificationExecutionService
+            completeClarificationExecutionService;
+
+    @Autowired
     SkipRemainingClarificationsService
             skipRemainingClarificationsService;
 
     @Autowired
     GetDimensionTieBreakInteractionService
             getDimensionTieBreakInteractionService;
+
+    @Autowired
+    GetAssessmentSessionService
+            getAssessmentSessionService;
 
     @Autowired
     SubmitDimensionTieBreakService
@@ -299,6 +330,126 @@ class AssessmentContextualTieBreakIntegrationTest {
                                 session.id(),
                                 dimension.code()
                         )
+        );
+    }
+
+    @Test
+    void unclearClarificationStillRequiresContextualTieBreakForVersionOnePointOne() {
+        UserId userId =
+                createUser();
+
+        AssessmentDefinition definition =
+                definitionRepository
+                        .findByCode(
+                                "SIXTEEN_PERSONALITY"
+                        )
+                        .orElseThrow();
+
+        AssessmentDefinitionVersion version =
+                versionRepository
+                        .findById(
+                                VERSION_1_1_ID
+                        )
+                        .orElseThrow();
+
+        AssessmentSession session =
+                createSession(
+                        userId,
+                        definition,
+                        version
+                );
+
+        submitQuestionnaireService.execute(
+                new SubmitQuestionnaireCommand(
+                        userId,
+                        session.id(),
+                        neutralAnswers(
+                                version
+                        )
+                )
+        );
+
+        DimensionDefinition dimension =
+                version
+                        .specification()
+                        .dimensions()
+                        .getFirst();
+
+        ClarificationExecutionTicket ticket =
+                startDimensionClarificationService.execute(
+                        new StartDimensionClarificationCommand(
+                                userId,
+                                session.id(),
+                                dimension.code()
+                        )
+                );
+
+        ClarificationExecutionCompletionResult completion =
+                completeClarificationExecutionService.accept(
+                        ticket,
+                        new ClarificationResult(
+                                ClarificationResolution.UNCLEAR,
+                                null,
+                                ClarificationConfidence.LOW,
+                                "Acceptance sweep remained balanced."
+                        ),
+                        new AIProvenance(
+                                "test-provider",
+                                "test-model",
+                                version
+                                        .specification()
+                                        .clarificationPolicy()
+                                        .revision()
+                        )
+                );
+
+        assertTrue(
+                completion.accepted()
+        );
+
+        assertTrue(
+                completion
+                        .session()
+                        .workflow()
+                        .tieBreakRequiredDimensions()
+                        .contains(
+                                dimension
+                                        .code()
+                                        .value()
+                        )
+        );
+
+        DimensionTieBreakInteractionResult.ContextualQuestion
+                interaction =
+                assertInstanceOf(
+                        DimensionTieBreakInteractionResult
+                                .ContextualQuestion.class,
+                        getDimensionTieBreakInteractionService
+                                .execute(
+                                        userId,
+                                        session.id(),
+                                        dimension.code()
+                                )
+                );
+
+        assertEquals(
+                "TB-EI-1",
+                interaction.questionId()
+        );
+
+        assertEquals(
+                List.of(
+                        "TB-EI-01",
+                        "TB-EI-02"
+                ),
+                interaction
+                        .options()
+                        .stream()
+                        .map(
+                                DimensionTieBreakInteractionResult
+                                        .Option::optionId
+                        )
+                        .toList()
         );
     }
 
