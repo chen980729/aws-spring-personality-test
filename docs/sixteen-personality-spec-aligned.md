@@ -1,9 +1,9 @@
 # Four-Dimension Personality Assessment Specification
 
-> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is a docs-only design, pending implementation and migration; it is not a deployment claim. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented. 1.1 remains DRAFT; activation and Frontend integration remain pending. Published 1.0 remains immutable and supported.
 
 > **File:** `docs/sixteen-personality-spec-aligned.md`\
-> **Status:** Immutable 1.0 baseline / Accepted 1.1 design, pending implementation\
+> **Status:** Immutable 1.0 baseline / Implemented 1.1 Backend specification, staged as DRAFT\
 > **Last updated:** 2026-10-05\
 > **Scope:** Personality assessment domain rules, scoring, AI clarification, finalization, result composition, and content/legal boundaries.
 
