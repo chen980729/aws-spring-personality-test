@@ -192,24 +192,6 @@ function installCsrfHandler() {
   )
 }
 
-function installLegacyInteraction(
-  dimensionCode: string,
-  allowedPoles: [string, string],
-) {
-  server.use(
-    http.get(
-      `${sessionEndpoint}/tie-breaks/${dimensionCode}`,
-      () =>
-        HttpResponse.json({
-          interactionType:
-            'DIRECT_POLE_SELECTION',
-          dimensionCode,
-          allowedPoles,
-        }),
-    ),
-  )
-}
-
 function installContextualEiInteraction() {
   server.use(
     http.get(
@@ -291,10 +273,6 @@ describe('tie-break workflow', () => {
     let receivedBody: unknown
 
     installCsrfHandler()
-    installLegacyInteraction(
-      'EI',
-      ['E', 'I'],
-    )
 
     server.use(
       http.get(
@@ -379,14 +357,6 @@ describe('tie-break workflow', () => {
       )
 
     installCsrfHandler()
-    installLegacyInteraction(
-      'EI',
-      ['E', 'I'],
-    )
-    installLegacyInteraction(
-      'SN',
-      ['S', 'N'],
-    )
 
     server.use(
       http.get(
