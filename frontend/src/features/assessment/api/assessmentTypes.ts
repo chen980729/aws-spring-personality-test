@@ -53,9 +53,42 @@ export interface QuestionnaireSnapshotRequest {
   answers: QuestionAnswer[]
 }
 
-export interface TieBreakRequest {
+export interface LegacyTieBreakRequest {
   selectedPole: string
 }
+
+export interface ContextualTieBreakRequest {
+  questionId: string
+  selectedOptionId: string
+}
+
+export type TieBreakRequest =
+  | LegacyTieBreakRequest
+  | ContextualTieBreakRequest
+
+export interface DirectPoleTieBreakInteraction {
+  interactionType: 'DIRECT_POLE_SELECTION'
+  dimensionCode: string
+  allowedPoles: string[]
+}
+
+export interface ContextualTieBreakInteractionOption {
+  optionId: string
+  text: string
+}
+
+export interface ContextualTieBreakInteraction {
+  interactionType: 'CONTEXTUAL_QUESTION'
+  dimensionCode: string
+  questionId: string
+  instruction: string
+  prompt: string
+  options: ContextualTieBreakInteractionOption[]
+}
+
+export type TieBreakInteraction =
+  | DirectPoleTieBreakInteraction
+  | ContextualTieBreakInteraction
 
 export type AssessmentSessionStatus =
   | 'IN_PROGRESS'
@@ -152,11 +185,22 @@ export interface ClarificationState {
   acceptedAt: string | null
 }
 
-export interface TieBreakState {
+export interface LegacyTieBreakState {
   dimensionCode: string
   selectedPole: string
   decidedAt: string
 }
+
+export interface ContextualTieBreakState {
+  dimensionCode: string
+  questionId: string
+  selectedOptionId: string
+  decidedAt: string
+}
+
+export type TieBreakState =
+  | LegacyTieBreakState
+  | ContextualTieBreakState
 
 export type FinalDecisionSource =
   | 'QUESTIONNAIRE'
@@ -164,6 +208,7 @@ export type FinalDecisionSource =
   | 'AI_CLARIFICATION'
   | 'QUESTIONNAIRE_FALLBACK'
   | 'USER_TIE_BREAK'
+  | 'TIE_BREAK_QUESTION'
 
 export interface FinalAssessmentResult {
   finalType: string
