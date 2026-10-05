@@ -203,69 +203,112 @@ Current backend checkpoint: **Assessment Step 7 complete**.
 Implementation sequencing note:
 
 ```text
-Cloud / Container / CI-CD work (current)
+AWS / Container / CI-CD foundation (completed)
         ↓
-Group backend + sharing boundary (later)
+Next real feature update + final automatic-CD verification
+        ↓
+Provider-backed LLM / Group backend work
         ↓
 Historical Assessment deletion orchestration + frontend deletion UX
-
-Provider-backed LLM Step 8 is intentionally postponed until after the Cloud/CI-CD line is established.
 ```
+
+Provider-backed LLM Step 8 was intentionally postponed until the Cloud/CI-CD foundation existed; that infrastructure milestone is now complete enough for product work to resume.
 
 Historical deletion remains in Core MVP, but implementing it before Group sharing would create a fake cross-module dependency or require rework.
 
 ## 10. Containerization and Local Environment
 
-**Current active project focus begins here.** The application is locally runnable as Spring Boot + Vite + PostgreSQL; production packaging is the next delivery boundary.
+**Status: production containerization is implemented and deployed.**
 
-- [ ] Dockerfile(s) for deployable application components.
+- [x] Multi-stage Dockerfile for the Spring Boot backend.
+- [x] Non-root runtime user.
+- [x] Exposed runtime port verified in CI.
+- [x] Linux/amd64 image build used by deployment.
 - [x] Local PostgreSQL environment.
 - [x] Documented local Backend + Frontend startup through Maven/Vite with relative `/api` proxying.
-- [ ] Reproducible production-like local startup for the complete application.
-- [ ] Production environment/configuration strategy.
+- [x] Production Spring profile and environment-variable configuration.
+- [ ] Optional full production-like local orchestration for all components; not required for the current AWS milestone.
 
 ## 11. AWS / Infrastructure as Code
 
-**Current active focus:** resume AWS deployment work after the deterministic full-stack Assessment slice reached Frontend F6 and completed its current-scope UI optimization.
+**Status: first full-stack AWS deployment complete.**
 
-- [ ] AWS target architecture detailed design.
-- [ ] Networking/security boundaries.
-- [ ] Managed PostgreSQL decision.
-- [ ] Container/application hosting decision.
-- [ ] Secrets/configuration management.
-- [ ] Terraform implementation.
-- [ ] Deployment validation.
-- [ ] Cost-awareness review for a personal portfolio project.
+- [x] AWS target architecture implemented in `ap-northeast-1`.
+- [x] VPC, two public app subnets and two private DB subnets.
+- [x] Security Group boundaries for CloudFront/ALB/ECS/RDS.
+- [x] RDS PostgreSQL deployed privately.
+- [x] ECR backend repository with immutable tags.
+- [x] ALB + ECS Fargate Spring Boot service.
+- [x] Private S3 frontend bucket + CloudFront OAC.
+- [x] CloudFront same-origin routing for frontend and `/api/*`.
+- [x] CloudWatch backend logging.
+- [x] Secrets Manager-backed RDS credentials.
+- [x] Terraform remote state in S3 with native lockfile support.
+- [x] Cost-aware no-NAT MVP topology.
+- [x] Deployment validation through browser and public smoke tests.
+- [x] ECS rollout tuning based on measured Spring Boot startup.
+- [ ] Custom domain / ACM.
+- [ ] Optional WAF/origin hardening.
+- [ ] Optional private ECS + NAT/VPC endpoints.
+- [ ] Higher-availability production profile (multi-task ECS, RDS Multi-AZ).
+
+Detailed as-built documentation: `docs/deployment/aws-deployment.md`.
 
 ## 12. CI/CD
 
-**Current active focus together with AWS deployment.** CI should verify both already-established Backend and Frontend quality gates before deployment automation is added.
+**Status: CI + OIDC + manual end-to-end CD verified.**
 
-- [ ] GitHub Actions CI.
-- [ ] Backend tests/build.
-- [ ] Frontend tests/build.
-- [ ] Container build.
-- [ ] Infrastructure/deployment workflow.
-- [ ] Safe environment/secret handling.
+- [x] GitHub Actions CI.
+- [x] Backend Maven `verify`.
+- [x] Frontend lint/test/build.
+- [x] Production-bundle localhost guard.
+- [x] Backend Docker build/runtime checks.
+- [x] GitHub OIDC authentication to AWS.
+- [x] Immutable repository/branch trust restriction.
+- [x] Least-privilege AWS deploy role.
+- [x] Backend image push to ECR.
+- [x] ECS Task Definition revision + Service update.
+- [x] Frontend S3 sync + CloudFront invalidation.
+- [x] Public post-deployment smoke test.
+- [x] Manual production CD verified end-to-end.
+- [x] Automatic CD trigger implemented behind `CD_ENABLED`.
+- [ ] Final live verification of successful-main-CI → automatic CD during the next real feature update.
+
+Detailed pipeline documentation: `docs/deployment/ci-cd.md`.
 
 ## 13. Quality, Security, and Observability
 
-- [ ] Authorization/security review.
-- [ ] Sensitive-data and AI data-minimization review.
-- [ ] Logs/metrics appropriate for debugging without leaking personal content.
-- [ ] Failure/recovery testing.
-- [ ] Basic performance review.
+Current baseline:
+
+- [x] Server-side Session + CSRF security.
+- [x] Non-root backend container.
+- [x] Private RDS.
+- [x] Private S3 + CloudFront OAC.
+- [x] Secrets Manager for production DB credentials.
+- [x] GitHub OIDC instead of long-lived AWS deployment credentials.
+- [x] Least-privilege deployment role.
+- [x] CloudWatch backend logs.
+- [x] ALB health checks + ECS rolling deployment.
+- [ ] CloudWatch alarms/dashboard.
+- [ ] Automated rollback/circuit-breaker policy.
+- [ ] Browser E2E deployment test.
+- [ ] WAF/custom origin-header hardening if justified.
+- [ ] Formal LLM privacy/safety review when provider-backed clarification is implemented.
 
 ## 14. Portfolio Finalization
 
-- [ ] Final README.
-- [ ] Architecture diagram.
-- [ ] Local-run instructions.
-- [ ] AWS deployment explanation.
-- [ ] CI/CD explanation.
-- [ ] Testing strategy explanation.
-- [ ] Key ADR/index.
-- [ ] Interview-ready explanation of major technical decisions and trade-offs.
+- [x] GitHub README shows the current production architecture.
+- [x] Architecture document contains the production architecture diagram first.
+- [x] CI/CD flow diagram follows the architecture diagram.
+- [x] Local-run instructions.
+- [x] AWS deployment explanation.
+- [x] CI/CD and OIDC explanation.
+- [x] Testing strategy explanation.
+- [x] Key ADR/index.
+- [x] Future-work/options document.
+- [ ] Final automatic-CD live verification.
+- [ ] Final MVP feature-completion review after LLM / Group / deletion scope.
+- [ ] Final interview-ready project retrospective after MVP completion.
 
 ## 15. Deferred / Post-MVP
 
