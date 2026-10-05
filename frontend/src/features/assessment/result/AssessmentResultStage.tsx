@@ -37,29 +37,19 @@ export function AssessmentResultStage({
       result.finalType,
     )
 
-  if (!typeDescription) {
-    return (
-      <section className="assessment-stage">
-        <h2>Assessment complete</h2>
-        <p
-          className="assessment-inline-alert"
-          role="alert"
-        >
-          The final type was returned, but its explanatory content is not available in this frontend content version.
-        </p>
-      </section>
-    )
-  }
-
   const letterDescriptions =
-    getPersonalityLetterDescriptions(
-      typeDescription.typeCode,
-    )
+    typeDescription
+      ? getPersonalityLetterDescriptions(
+          typeDescription.typeCode,
+        )
+      : []
 
   const imagePath =
-    getPersonalityImagePath(
-      typeDescription.typeCode,
-    )
+    typeDescription
+      ? getPersonalityImagePath(
+          typeDescription.typeCode,
+        )
+      : null
 
   return (
     <section
@@ -82,166 +72,183 @@ export function AssessmentResultStage({
             {result.finalType}
           </div>
 
-          <p className="result-hero__summary">
-            {typeDescription.coreTendency}
-          </p>
-        </div>
-
-        <div className="result-hero__visual">
-          <span
-            className="result-hero__visual-fallback"
-            aria-hidden="true"
-          >
-            ✦
-          </span>
-          <img
-            src={imagePath}
-            alt={`${result.finalType} personality illustration`}
-          />
-        </div>
-      </div>
-
-      <section
-        className="result-interpretation"
-        aria-labelledby="result-letters-heading"
-      >
-        <div className="result-section-heading">
-          <div>
-            <p className="assessment-stage__eyebrow">
-              Four preference dimensions
+          {typeDescription ? (
+            <p className="result-hero__summary">
+              {typeDescription.coreTendency}
             </p>
-            <h3 id="result-letters-heading">
-              What your letters mean
-            </h3>
-          </div>
-          <p>
-            These letters describe preference tendencies, not ability levels or fixed rules of behavior.
-          </p>
-        </div>
-
-        <div className="result-letter-grid">
-          {letterDescriptions.map(
-            (description) => (
-              <article
-                className="result-letter-card"
-                key={description.letter}
-              >
-                <div className="result-letter-card__heading">
-                  <span aria-hidden="true">
-                    {description.letter}
-                  </span>
-                  <div>
-                    <p>
-                      {description.letter}
-                    </p>
-                    <h4>
-                      {description.name}
-                    </h4>
-                  </div>
-                </div>
-
-                <p>
-                  {description.coreMeaning}
-                </p>
-
-                <details className="result-letter-card__details">
-                  <summary>
-                    More context
-                  </summary>
-
-                  <div>
-                    <h5>
-                      You may tend to
-                    </h5>
-                    <ul>
-                      {description.tendencies.map(
-                        (tendency) => (
-                          <li key={tendency}>
-                            {tendency}
-                          </li>
-                        ),
-                      )}
-                    </ul>
-
-                    <h5>
-                      This does not mean
-                    </h5>
-                    <ul>
-                      {description.doesNotMean.map(
-                        (misconception) => (
-                          <li
-                            key={
-                              misconception
-                            }
-                          >
-                            {misconception}
-                          </li>
-                        ),
-                      )}
-                    </ul>
-                  </div>
-                </details>
-              </article>
-            ),
+          ) : (
+            <p
+              className="assessment-inline-alert"
+              role="status"
+            >
+              Explanatory content is not available for this final type in the current frontend content version. The authoritative assessment result and decision trace are still shown below.
+            </p>
           )}
         </div>
-      </section>
 
-      <section
-        className="result-profile"
-        aria-labelledby="result-profile-heading"
-      >
-        <div className="result-section-heading">
-          <div>
-            <p className="assessment-stage__eyebrow">
-              Combined tendency
-            </p>
-            <h3 id="result-profile-heading">
-              Your {result.finalType} profile
-            </h3>
+        {imagePath && (
+          <div className="result-hero__visual">
+            <span
+              className="result-hero__visual-fallback"
+              aria-hidden="true"
+            >
+              ✦
+            </span>
+            <img
+              src={imagePath}
+              width="320"
+              height="320"
+              alt={`${result.finalType} personality illustration`}
+            />
           </div>
-          <p>
-            The four letters are combined here as a practical interpretation, not a deterministic prediction of your behavior.
-          </p>
-        </div>
+        )}
+      </div>
 
-        <div className="result-profile-grid">
-          <article className="result-profile-card">
-            <h4>Common strengths</h4>
-            <ul>
-              {typeDescription.strengths.map(
-                (strength) => (
-                  <li key={strength}>
-                    {strength}
-                  </li>
-                ),
-              )}
-            </ul>
-          </article>
-
-          <article className="result-profile-card result-profile-card--watch">
-            <h4>Possible blind spots</h4>
-            <ul>
-              {typeDescription.blindSpots.map(
-                (blindSpot) => (
-                  <li key={blindSpot}>
-                    {blindSpot}
-                  </li>
-                ),
-              )}
-            </ul>
-          </article>
-        </div>
-
-        <aside className="result-disclaimer">
-          <strong>
-            How to read this result
-          </strong>
-          <p>
-            A preference closer to 50 / 50 should be interpreted less strongly. This assessment is an original self-reflection tool and is not an official MBTI® assessment or affiliated with third-party personality testing services.
-          </p>
-        </aside>
-      </section>
+      {typeDescription && (
+        <>
+        <section
+          className="result-interpretation"
+          aria-labelledby="result-letters-heading"
+        >
+          <div className="result-section-heading">
+            <div>
+              <p className="assessment-stage__eyebrow">
+                Four preference dimensions
+              </p>
+              <h3 id="result-letters-heading">
+                What your letters mean
+              </h3>
+            </div>
+            <p>
+              These letters describe preference tendencies, not ability levels or fixed rules of behavior.
+            </p>
+          </div>
+  
+          <div className="result-letter-grid">
+            {letterDescriptions.map(
+              (description) => (
+                <article
+                  className="result-letter-card"
+                  key={description.letter}
+                >
+                  <div className="result-letter-card__heading">
+                    <span aria-hidden="true">
+                      {description.letter}
+                    </span>
+                    <div>
+                      <p>
+                        {description.letter}
+                      </p>
+                      <h4>
+                        {description.name}
+                      </h4>
+                    </div>
+                  </div>
+  
+                  <p>
+                    {description.coreMeaning}
+                  </p>
+  
+                  <details className="result-letter-card__details">
+                    <summary>
+                      More context
+                    </summary>
+  
+                    <div>
+                      <h5>
+                        You may tend to
+                      </h5>
+                      <ul>
+                        {description.tendencies.map(
+                          (tendency) => (
+                            <li key={tendency}>
+                              {tendency}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+  
+                      <h5>
+                        This does not mean
+                      </h5>
+                      <ul>
+                        {description.doesNotMean.map(
+                          (misconception) => (
+                            <li
+                              key={
+                                misconception
+                              }
+                            >
+                              {misconception}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                  </details>
+                </article>
+              ),
+            )}
+          </div>
+        </section>
+  
+        <section
+          className="result-profile"
+          aria-labelledby="result-profile-heading"
+        >
+          <div className="result-section-heading">
+            <div>
+              <p className="assessment-stage__eyebrow">
+                Combined tendency
+              </p>
+              <h3 id="result-profile-heading">
+                Your {result.finalType} profile
+              </h3>
+            </div>
+            <p>
+              The four letters are combined here as a practical interpretation, not a deterministic prediction of your behavior.
+            </p>
+          </div>
+  
+          <div className="result-profile-grid">
+            <article className="result-profile-card">
+              <h4>Common strengths</h4>
+              <ul>
+                {typeDescription.strengths.map(
+                  (strength) => (
+                    <li key={strength}>
+                      {strength}
+                    </li>
+                  ),
+                )}
+              </ul>
+            </article>
+  
+            <article className="result-profile-card result-profile-card--watch">
+              <h4>Possible blind spots</h4>
+              <ul>
+                {typeDescription.blindSpots.map(
+                  (blindSpot) => (
+                    <li key={blindSpot}>
+                      {blindSpot}
+                    </li>
+                  ),
+                )}
+              </ul>
+            </article>
+          </div>
+  
+          <aside className="result-disclaimer">
+            <strong>
+              How to read this result
+            </strong>
+            <p>
+              A preference closer to 50 / 50 should be interpreted less strongly. This assessment is an original self-reflection tool and is not an official MBTI® assessment or affiliated with third-party personality testing services.
+            </p>
+          </aside>
+        </section>
+        </>
+      )}
 
       <section
         className="result-dimensions"
