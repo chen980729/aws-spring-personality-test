@@ -2,7 +2,7 @@
 
 > **Status:** OpenAPI v0.5.0 — active accepted design contract
 > **Last updated:** 2026-10-06
-> **Implementation alignment:** Backend implements and pre-activation acceptance-tests the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence/history projection, v1/v2 finalization provenance and final Session-lock concurrency. Frontend F7-A/F7-B implements both retained 1.0 and staged 1.1 interaction contracts, while F7-C/F7-D completes the associated result/Landing presentation work. DefinitionVersion 1.1 remains DRAFT; activation is still pending.
+> **Implementation alignment:** Backend implements the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence/history projection, v1/v2 finalization provenance, final Session-lock concurrency, and activation regression coverage. Frontend F7-A/F7-B implements both retained 1.0 and 1.1 interaction contracts, while F7-C/F7-D completes the associated result/Landing presentation work. Flyway V8 promotes DefinitionVersion 1.1 to AVAILABLE and retires 1.0 for new Session binding.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
