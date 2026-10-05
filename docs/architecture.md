@@ -4,9 +4,194 @@
 
 This document is the source of truth for the system-level architecture baseline. It describes business/module boundaries, persistence requirements, major flows, and backend capability boundaries without fixing SQL tables, REST endpoints, Spring classes, JPA mappings, or detailed AWS topology.
 
-## 2. System Overview
+## 2. As-Built Production Architecture
 
-The project uses a **Modular Monolith** deployed as one Spring Boot application for the MVP.
+The current system is no longer only a target architecture: the full-stack application has been deployed and manually verified on AWS in `ap-northeast-1`.
+
+CloudFront is the browser-facing entry point. Static React/Vite assets are served from a private S3 bucket through Origin Access Control (OAC), while `/api/*` is routed to an Application Load Balancer and then to the Spring Boot backend on ECS Fargate.
+
+```mermaid
+flowchart TB
+    Browser["Browser"]
+
+    subgraph GitHub["GitHub"]
+        Repo["Repository"]
+        Actions["GitHub Actions<br/>CI + CD"]
+    end
+
+    subgraph AWS["AWS - ap-northeast-1"]
+        CF["CloudFront<br/>single public entry"]
+        S3["Private S3<br/>React/Vite static build"]
+        IAM["IAM deploy role<br/>GitHub OIDC trust"]
+        ECR["ECR<br/>immutable backend images"]
+        SM["Secrets Manager<br/>RDS credentials"]
+        CW["CloudWatch Logs"]
+
+        subgraph VPC["VPC 10.0.0.0/16"]
+            subgraph Public["Public app subnets - 2 AZs"]
+                ALB["Application Load Balancer"]
+                ECS["ECS Fargate Service<br/>Spring Boot container"]
+            end
+
+            subgraph Private["Private DB subnets - 2 AZs"]
+                RDS[("RDS PostgreSQL<br/>Single-AZ")]
+            end
+        end
+    end
+
+    Browser -->|"HTTPS"| CF
+    CF -->|"/* via OAC"| S3
+    CF -->|"/api/*"| ALB
+    ALB -->|"HTTP :8080"| ECS
+    ECS -->|"JDBC :5432"| RDS
+    ECS -->|"read DB secret"| SM
+    ECS -->|"application logs"| CW
+    ECR -->|"container image"| ECS
+
+    Repo --> Actions
+    Actions -->|"AssumeRoleWithWebIdentity"| IAM
+    Actions -->|"push backend image"| ECR
+    Actions -->|"sync frontend"| S3
+    Actions -->|"invalidate distribution"| CF
+    Actions -->|"register task definition + update service"| ECS
+```
+
+### 2.1 Networking and exposure
+
+- VPC CIDR: `10.0.0.0/16`.
+- Two public app subnets across two Availability Zones host the ALB and the current ECS tasks.
+- Two private DB subnets form the RDS subnet group.
+- The MVP intentionally has **no NAT Gateway**.
+- ECS tasks therefore receive public IPs for outbound access, but application ingress is limited by Security Groups to the ALB on port `8080`.
+- RDS is not publicly accessible; PostgreSQL port `5432` is reachable only from the ECS Security Group.
+- The ALB listener is HTTP `:80`; inbound access is restricted to the AWS-managed CloudFront origin-facing prefix list.
+- Browser traffic is HTTPS to CloudFront. End-to-end TLS to the ALB remains future hardening work together with custom-domain/ACM work.
+
+The decision to run ECS tasks in public app subnets is a deliberate portfolio-MVP trade-off: it avoids the fixed cost of a NAT Gateway while preserving a private database boundary. It should not be presented as the maximum-isolation production topology.
+
+### 2.2 Runtime service topology
+
+- **CloudFront** — single external origin for both frontend and API paths.
+- **S3** — private frontend bucket; no S3 website endpoint.
+- **ALB** — public load balancer receiving CloudFront-origin traffic.
+- **ECS Fargate** — one desired Spring Boot task for the MVP.
+- **RDS PostgreSQL** — encrypted Single-AZ database in private DB subnets.
+- **ECR** — immutable backend image repository.
+- **Secrets Manager** — RDS-managed master credentials consumed by the ECS execution role.
+- **CloudWatch Logs** — backend application logs.
+- **Terraform** — infrastructure baseline and remote state.
+- **GitHub Actions** — CI and application deployment.
+
+## 3. CI/CD Delivery Flow
+
+The repository separates verification from deployment. CI proves a commit is acceptable; CD releases the exact commit to the existing AWS infrastructure.
+
+```mermaid
+flowchart LR
+    Change["Feature change"] --> PR["Pull Request"]
+    PR --> Main["Merge to main"]
+    Main --> CI["GitHub Actions CI"]
+
+    CI --> BackendCI["Backend<br/>Maven verify"]
+    CI --> FrontendCI["Frontend<br/>lint + test + build"]
+    BackendCI --> DockerCI["Backend Docker image<br/>build + runtime checks"]
+    FrontendCI --> DockerCI
+
+    DockerCI -->|"CI success"| Gate{"CD_ENABLED<br/>production gate"}
+    Manual["workflow_dispatch<br/>manual deployment"] --> CD["GitHub Actions CD"]
+    Gate -->|"enabled"| CD
+
+    CD --> OIDC["GitHub OIDC<br/>STS temporary credentials"]
+    OIDC --> BackendCD["Backend<br/>build → ECR → ECS revision"]
+    OIDC --> FrontendCD["Frontend<br/>build → S3 → CloudFront invalidation"]
+    BackendCD --> Smoke["Public smoke test"]
+    FrontendCD --> Smoke
+```
+
+### 3.1 CI responsibilities
+
+CI currently verifies:
+
+- Backend Java 21 build and test suite with Maven `verify`.
+- Frontend install, lint, tests and production build.
+- Production frontend bundle does not contain the local backend URL.
+- Backend Docker image builds successfully.
+- Runtime Docker user is the non-root `spring` user.
+- Port `8080` is exposed by the runtime image.
+
+### 3.2 CD responsibilities
+
+CD currently:
+
+- checks out the exact deployment commit;
+- builds the backend image for `linux/amd64`;
+- assumes an AWS role through GitHub OIDC;
+- pushes a unique immutable image tag to ECR;
+- reads the currently deployed ECS Task Definition;
+- creates a new Task Definition revision with only the backend image changed;
+- updates the ECS Service and waits for service stability;
+- builds the frontend and syncs it to the private S3 bucket;
+- applies long-lived immutable caching to hashed assets;
+- creates and waits for a CloudFront invalidation;
+- verifies the public frontend root, SPA route and backend CSRF endpoint.
+
+Manual production CD has been verified end-to-end. The automatic `CI success → CD` path is implemented behind the repository variable `CD_ENABLED`; its final live verification is intentionally deferred to the next real feature update.
+
+### 3.3 Deployment security
+
+GitHub does not store long-lived AWS access keys for deployment.
+
+The CD jobs request `id-token: write`, GitHub issues an OIDC token, and AWS STS returns temporary credentials after the role trust policy validates the repository/branch subject and audience.
+
+The deployment role is least-privilege scoped to the capabilities needed by CD:
+
+- authenticate to ECR and push to the backend repository;
+- describe/register ECS task definitions and update the backend service;
+- `iam:PassRole` only for the ECS task/execution roles and only to `ecs-tasks.amazonaws.com`;
+- list/sync the frontend S3 bucket;
+- create/read CloudFront invalidations for the tagged project distribution.
+
+### 3.4 Terraform / CD ownership boundary
+
+Terraform owns the infrastructure baseline. CD owns application release revisions.
+
+Conceptually:
+
+```text
+Terraform owns
+  VPC / subnets / routes / SGs
+  ALB / target group
+  ECS cluster + service baseline
+  RDS
+  ECR
+  S3 / CloudFront
+  IAM / OIDC
+  CloudWatch / Secrets integration
+
+CD owns
+  backend image tags
+  ECS Task Definition release revisions
+  ECS service deployment target revision
+  frontend build artifacts
+  CloudFront invalidations
+```
+
+Because the deployed Task Definition revision changes on every release, Terraform must not attempt to roll the ECS Service back to the bootstrap Task Definition revision.
+
+### 3.5 ECS rollout tuning learned from production deployment
+
+The first automated backend rollout exposed a real timing mismatch: Spring Boot needed roughly 100–110 seconds to become fully ready, and the original ECS health-check grace period was too close to the observed startup time.
+
+The deployment baseline was therefore tuned to:
+
+- ECS health-check grace period: **240 seconds**.
+- ALB target-group deregistration delay: **60 seconds**.
+
+This is an operational decision derived from measured application startup behavior, not a business-domain rule.
+
+## 4. Architecture Style: Modular Monolith
+
+The deployed backend remains one Spring Boot **Modular Monolith**. Cloud deployment does not change the domain/module architecture.
 
 ```text
 React + TypeScript
@@ -37,8 +222,6 @@ Technology baseline:
 - AWS
 - GitHub Actions
 - Terraform
-
-## 3. Architecture Style: Modular Monolith
 
 A single deployable backend is split by business capability rather than by technical layer alone.
 
@@ -423,11 +606,29 @@ This architecture baseline does not prescribe generic `Idempotency-Key` infrastr
 - Core Assessment domain must remain independent of specific LLM provider SDKs.
 - Avoid unnecessary microservices and shared/common business-logic dumping grounds.
 
-## 14. Cloud Target
+## 14. Cloud Deployment Status
 
-The final MVP must be deployable to AWS, containerized with Docker, automated with GitHub Actions, and represented with Terraform where appropriate.
+The first full-stack AWS deployment is complete and the current as-built topology is documented in Sections 2 and 3.
 
-With the deterministic full-stack Assessment slice now implemented through Frontend F6, Cloud/Delivery is the current active project workstream. Exact AWS service topology, networking, secrets management details, deployment strategy, production cookie/configuration behavior and observability stack belong to AWS/CI-CD Detailed Design.
+Validated delivery capabilities include:
+
+- Dockerized Spring Boot backend.
+- ECR image storage.
+- ECS Fargate backend runtime behind an ALB.
+- RDS PostgreSQL in private DB subnets.
+- Private S3 frontend hosting through CloudFront OAC.
+- Same-origin CloudFront routing for static content and `/api/*`.
+- CloudWatch application logging.
+- RDS credentials from Secrets Manager.
+- Terraform-managed infrastructure with remote S3 state and native locking.
+- GitHub Actions CI.
+- GitHub OIDC → STS temporary deployment credentials.
+- Least-privilege application CD.
+- Successful manual end-to-end production CD and public smoke test.
+
+Automatic CD after a successful `main` CI run is prepared but is intentionally waiting for final validation during the next real feature update.
+
+Detailed operational notes live under `docs/deployment/`.
 
 ## 15. Remaining Open Questions
 
@@ -447,4 +648,4 @@ This Architecture Baseline intentionally does not duplicate lower-level implemen
 Still deferred to specialist design:
 
 - temporary LLM streaming/session/cache/runtime-context implementation.
-- exact AWS architecture.
+- no longer open: the current AWS architecture is implemented and documented; future hardening options are tracked separately.
