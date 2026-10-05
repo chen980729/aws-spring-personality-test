@@ -2,7 +2,7 @@
 
 > **Status:** OpenAPI v0.5.0 — active accepted design contract
 > **Last updated:** 2026-10-05
-> **Implementation alignment:** Backend now implements the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence projection, and v1/v2 finalization provenance. DefinitionVersion 1.1 remains DRAFT; activation and Frontend support are still pending.
+> **Implementation alignment:** Backend implements and pre-activation acceptance-tests the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence/history projection, v1/v2 finalization provenance and final Session-lock concurrency. DefinitionVersion 1.1 remains DRAFT; activation and Frontend support are still pending.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
