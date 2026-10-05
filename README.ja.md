@@ -235,7 +235,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ 現在の Backend + Frontend scope で実装 |
 | Local environment | Docker Compose | ✅ PostgreSQL 環境を実装 |
 | Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow を F6 まで実装 |
-| AI integration | External LLM behind an adapter boundary | ⏸ Cloud/CI-CD 完了後まで deferred |
+| AI integration | External LLM behind an adapter boundary | ⏳ Cloud foundation 完了後の次期 product milestone |
 | Containerization | Multi-stage Docker backend image | ✅ 実装・AWS deployment 済み |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ ap-northeast-1 に deployment 済み |
 | CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ Manual CD 検証済み / automatic trigger 最終検証待ち |
@@ -258,9 +258,9 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
 | Clarification + Tie-break mutation | ✅ Complete |
-| External AI adapter / runtime context | ⏸ Cloud/CI-CD 完了後まで deferred |
+| External AI adapter / runtime context | ⏳ Cloud foundation 完了後に実装予定 |
 | Historical assessment deletion | ⏸ Group sharing backend 実装後まで deferred |
-| Group / Membership / Sharing implementation | ⏳ 現在の Cloud/CI-CD work 後に実装予定 |
+| Group / Membership / Sharing implementation | ⏳ 次期 product milestone |
 | React frontend | ✅ 現在 executable な Auth + deterministic Assessment scope を F1-F6 まで完了 |
 | Docker application image | ✅ ECR / ECS で deployment 済み |
 | AWS deployment | ✅ Full-stack deployment 検証済み |
