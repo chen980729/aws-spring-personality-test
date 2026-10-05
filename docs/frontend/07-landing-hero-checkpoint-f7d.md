@@ -173,7 +173,17 @@ backend: success
 backend Docker Image: success
 ```
 
-Final acceptance additionally requires the binary asset and this documentation to be present on the same feature-branch head with CI green.
+Final acceptance was verified on the complete F7-D head with the binary asset and documentation present together:
+
+```text
+CI run: 37344916764
+Frontend: 30 test files / 102 tests
+Frontend lint: success
+Frontend production build: success
+Backend: success
+Backend Docker Image: success
+Overall CI: success
+```
 
 ## 9. Acceptance criteria
 
@@ -191,7 +201,7 @@ F7-D is accepted when all of the following are true:
 - [x] accessible Landing heading spacing corrected;
 - [x] Landing regression test added;
 - [x] living frontend/roadmap documentation aligned;
-- [ ] final feature-branch CI green on the complete F7-D head.
+- [x] final feature-branch CI green on the complete F7-D head.
 
 ## 10. Remaining frontend work
 
