@@ -1357,6 +1357,10 @@
     linear-gradient(180deg, #fbfdff, #f8f7ff);
 }
 
+.result-hero--text-only {
+  grid-template-columns: 1fr;
+}
+
 .result-hero__copy {
   display: grid;
   justify-items: start;
