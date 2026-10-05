@@ -227,6 +227,191 @@ class AssessmentSpecificationTest {
     }
 
     @Test
+    void acceptsContextualTieBreakSpecificationForV2() {
+        assertDoesNotThrow(
+                () -> createSpecification(
+                        validDimensions(),
+                        validQuestions(),
+                        validAnswerScale(),
+                        validScoringPolicy(),
+                        validAmbiguityPolicy(),
+                        contextualFinalizationPolicy(),
+                        validTieBreakQuestions()
+                )
+        );
+    }
+
+    @Test
+    void rejectsContextualTieBreakQuestionsForLegacyV1() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> createSpecification(
+                        validDimensions(),
+                        validQuestions(),
+                        validAnswerScale(),
+                        validScoringPolicy(),
+                        validAmbiguityPolicy(),
+                        legacyFinalizationPolicy(),
+                        validTieBreakQuestions()
+                )
+        );
+    }
+
+    @Test
+    void rejectsMissingContextualTieBreakQuestionForV2() {
+        List<TieBreakQuestionDefinition> questions =
+                new ArrayList<>(
+                        validTieBreakQuestions()
+                );
+
+        questions.removeLast();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> createSpecification(
+                        validDimensions(),
+                        validQuestions(),
+                        validAnswerScale(),
+                        validScoringPolicy(),
+                        validAmbiguityPolicy(),
+                        contextualFinalizationPolicy(),
+                        questions
+                )
+        );
+    }
+
+    @Test
+    void rejectsDuplicateTieBreakQuestionIdForV2() {
+        List<TieBreakQuestionDefinition> questions =
+                new ArrayList<>(
+                        validTieBreakQuestions()
+                );
+
+        TieBreakQuestionDefinition original =
+                questions.get(1);
+
+        questions.set(
+                1,
+                new TieBreakQuestionDefinition(
+                        questions.getFirst().questionId(),
+                        original.dimension(),
+                        original.instruction(),
+                        original.prompt(),
+                        original.options()
+                )
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> createSpecification(
+                        validDimensions(),
+                        validQuestions(),
+                        validAnswerScale(),
+                        validScoringPolicy(),
+                        validAmbiguityPolicy(),
+                        contextualFinalizationPolicy(),
+                        questions
+                )
+        );
+    }
+
+    @Test
+    void rejectsMultipleTieBreakQuestionsForSameDimension() {
+        List<TieBreakQuestionDefinition> questions =
+                new ArrayList<>(
+                        validTieBreakQuestions()
+                );
+
+        TieBreakQuestionDefinition original =
+                questions.get(1);
+
+        questions.set(
+                1,
+                tieBreakQuestion(
+                        "TB-SN-2",
+                        "EI",
+                        "E",
+                        "I"
+                )
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> createSpecification(
+                        validDimensions(),
+                        validQuestions(),
+                        validAnswerScale(),
+                        validScoringPolicy(),
+                        validAmbiguityPolicy(),
+                        contextualFinalizationPolicy(),
+                        questions
+                )
+        );
+    }
+
+    @Test
+    void rejectsTieBreakQuestionReferencingUnknownDimension() {
+        List<TieBreakQuestionDefinition> questions =
+                new ArrayList<>(
+                        validTieBreakQuestions()
+                );
+
+        questions.set(
+                0,
+                tieBreakQuestion(
+                        "TB-EI-1",
+                        "UNKNOWN",
+                        "E",
+                        "I"
+                )
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> createSpecification(
+                        validDimensions(),
+                        validQuestions(),
+                        validAnswerScale(),
+                        validScoringPolicy(),
+                        validAmbiguityPolicy(),
+                        contextualFinalizationPolicy(),
+                        questions
+                )
+        );
+    }
+
+    @Test
+    void rejectsTieBreakOptionResolvingOutsideDimension() {
+        List<TieBreakQuestionDefinition> questions =
+                new ArrayList<>(
+                        validTieBreakQuestions()
+                );
+
+        questions.set(
+                0,
+                tieBreakQuestion(
+                        "TB-EI-1",
+                        "EI",
+                        "E",
+                        "T"
+                )
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> createSpecification(
+                        validDimensions(),
+                        validQuestions(),
+                        validAnswerScale(),
+                        validScoringPolicy(),
+                        validAmbiguityPolicy(),
+                        contextualFinalizationPolicy(),
+                        questions
+                )
+        );
+    }
+
+    @Test
     void rejectsNullDimensionElement() {
         List<DimensionDefinition> dimensions =
                 new ArrayList<>(
@@ -257,6 +442,26 @@ class AssessmentSpecificationTest {
             ScoringPolicy scoringPolicy,
             AmbiguityPolicy ambiguityPolicy
     ) {
+        return createSpecification(
+                dimensions,
+                questions,
+                answerScale,
+                scoringPolicy,
+                ambiguityPolicy,
+                legacyFinalizationPolicy(),
+                List.of()
+        );
+    }
+
+    private AssessmentSpecification createSpecification(
+            List<DimensionDefinition> dimensions,
+            List<QuestionDefinition> questions,
+            List<AnswerOption> answerScale,
+            ScoringPolicy scoringPolicy,
+            AmbiguityPolicy ambiguityPolicy,
+            FinalizationPolicy finalizationPolicy,
+            List<TieBreakQuestionDefinition> tieBreakQuestions
+    ) {
         QuestionnaireDefinition questionnaire =
                 new QuestionnaireDefinition(
                         answerScale,
@@ -273,10 +478,93 @@ class AssessmentSpecificationTest {
                                 .DIMENSION_SCOPED_AI_CLARIFICATION,
                         "v1"
                 ),
-                new FinalizationPolicy(
-                        FinalizationPolicyType
-                                .QUESTIONNAIRE_WITH_OPTIONAL_CLARIFICATION,
-                        "v1"
+                finalizationPolicy,
+                tieBreakQuestions
+        );
+    }
+
+    private FinalizationPolicy legacyFinalizationPolicy() {
+        return new FinalizationPolicy(
+                FinalizationPolicyType
+                        .QUESTIONNAIRE_WITH_OPTIONAL_CLARIFICATION,
+                FinalizationPolicy
+                        .LEGACY_DIRECT_TIE_BREAK_REVISION
+        );
+    }
+
+    private FinalizationPolicy contextualFinalizationPolicy() {
+        return new FinalizationPolicy(
+                FinalizationPolicyType
+                        .QUESTIONNAIRE_WITH_OPTIONAL_CLARIFICATION,
+                FinalizationPolicy
+                        .CONTEXTUAL_TIE_BREAK_REVISION
+        );
+    }
+
+    private List<TieBreakQuestionDefinition> validTieBreakQuestions() {
+        return List.of(
+                tieBreakQuestion(
+                        "TB-EI-1",
+                        "EI",
+                        "E",
+                        "I"
+                ),
+                tieBreakQuestion(
+                        "TB-SN-1",
+                        "SN",
+                        "S",
+                        "N"
+                ),
+                tieBreakQuestion(
+                        "TB-TF-1",
+                        "TF",
+                        "T",
+                        "F"
+                ),
+                tieBreakQuestion(
+                        "TB-JP-1",
+                        "JP",
+                        "J",
+                        "P"
+                )
+        );
+    }
+
+    private TieBreakQuestionDefinition tieBreakQuestion(
+            String questionId,
+            String dimension,
+            String firstPole,
+            String secondPole
+    ) {
+        return new TieBreakQuestionDefinition(
+                new TieBreakQuestionId(
+                        questionId
+                ),
+                new DimensionCode(
+                        dimension
+                ),
+                "Choose the option that feels more natural.",
+                "Contextual tie-break question for "
+                        + dimension,
+                List.of(
+                        new TieBreakOptionDefinition(
+                                new TieBreakOptionId(
+                                        questionId + "-01"
+                                ),
+                                "First option",
+                                new PoleCode(
+                                        firstPole
+                                )
+                        ),
+                        new TieBreakOptionDefinition(
+                                new TieBreakOptionId(
+                                        questionId + "-02"
+                                ),
+                                "Second option",
+                                new PoleCode(
+                                        secondPole
+                                )
+                        )
                 )
         );
     }
