@@ -8,10 +8,11 @@ React + TypeScript / Java + Spring Boot / PostgreSQL / AWS を中心に、**非�
 
 このプロジェクトでは、単に機能を作ることではなく、**Domain Modeling → API Design → Persistence → Security → Testing → Frontend → Containerization → AWS → CI/CD → Infrastructure as Code** までを一貫して設計・実装・説明できることを目標としています。
 
-> **現在の Application:** Authentication + deterministic Assessment flow を Result / History まで実装し、AWS 上で動作確認済みです。この release branch では dual-version contextual Tie-break compatibility と Result / Landing presentation の更新も完了しています。<br>
+> **公開URL:** [https://dmvsj5bm8m29k.cloudfront.net/](https://dmvsj5bm8m29k.cloudfront.net/)<br>
+> **現在の Application:** Authentication + deterministic Assessment flow を Result / History まで実装し、AWS 上で動作確認済みです。現在の release には dual-version contextual Tie-break compatibility と Result / Landing presentation の更新も含まれています。<br>
 > **現在の Cloud Delivery:** Docker、Terraform、RDS、ECR、ECS Fargate、ALB、private S3 + CloudFront、CloudWatch、Secrets Manager、GitHub Actions CI、OIDC、least-privilege CD を実装済みです。<br>
-> **CD status:** manual production CD と public smoke test は end-to-end で検証済みです。automatic CI-success → CD trigger は実装済みで、次回の実機能更新時に最終 live verification を行います。<br>
-> **次の Product focus:** この compatibility release を deploy して automatic CI-success → CD path を検証し、その後 DefinitionVersion 1.1 を別 release で activate します。activation 後に provider-backed LLM clarification と Group / Sharing に戻ります。
+> **CD status:** manual deployment と automatic CI-success → CD path の両方を `main` で end-to-end 検証済みです。Backend / Frontend deployment と public smoke test まで成功しています。<br>
+> **次の Product focus:** DefinitionVersion 1.1 を activate した後、provider-backed LLM clarification と Group / Sharing の実装に戻ります。
 
 ---
 
@@ -131,7 +132,7 @@ flowchart LR
 
 GitHub Actions には長期 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` を保存せず、OIDC + STS temporary credentials を利用します。Deploy role は ECR push、ECS deployment、frontend S3、CloudFront invalidation、必要最小限の `iam:PassRole` のみに制限しています。
 
-Manual CD は backend rolling deployment、frontend publish、public smoke test まで成功済みです。Automatic CD は `CD_ENABLED` gate の後ろに実装済みで、次回の実機能更新時に最終検証します。
+Manual CD と automatic CD の両方を end-to-end で検証済みです。Automatic path は `CD_ENABLED` gate の後ろで、`main` push の CI success 後にのみ実行されます。Backend rolling deployment、frontend publish、public smoke test まで成功しています。
 
 Terraform は infrastructure baseline を管理し、CD は backend image / ECS Task Definition revision / frontend artifact といった application release を管理します。
 
@@ -238,7 +239,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | AI integration | External LLM behind an adapter boundary | ⏳ Cloud foundation 完了後の次期 product milestone |
 | Containerization | Multi-stage Docker backend image | ✅ 実装・AWS deployment 済み |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ ap-northeast-1 に deployment 済み |
-| CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ Manual CD 検証済み / automatic trigger 最終検証待ち |
+| CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ CI + automatic post-CI CD を end-to-end 検証済み |
 | Infrastructure as Code | Terraform + remote S3 state | ✅ 現在の AWS stack を管理 |
 
 ---
@@ -264,7 +265,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | React frontend | ✅ 現在の executable / staged Assessment scope を F1-F6 + F7-A–F7-D まで完了 |
 | Docker application image | ✅ ECR / ECS で deployment 済み |
 | AWS deployment | ✅ Full-stack deployment 検証済み |
-| GitHub Actions CI/CD | ✅ CI + OIDC + manual CD 検証済み / automatic CD 最終検証待ち |
+| GitHub Actions CI/CD | ✅ CI + OIDC + automatic post-CI CD を end-to-end 検証済み |
 | Terraform infrastructure | ✅ Remote state を含む current AWS infrastructure を実装 |
 
 詳細な roadmap は [`docs/roadmap.md`](docs/roadmap.md) に記録しています。
@@ -516,7 +517,7 @@ spring-aws-portfolio/
 └── README.ja.md              Japanese / portfolio README
 ```
 
-Deterministic な full-stack Assessment slice は local で runnable であり、AWS 上にも deployment 済みです。Terraform が current infrastructure baseline を管理し、GitHub Actions が CI と OIDC-based application delivery を提供します。
+Deterministic な full-stack Assessment slice は local で runnable であり、AWS 上にも deployment 済みです。Terraform が current infrastructure baseline を管理し、GitHub Actions が CI と検証済みの OIDC-based automatic application delivery を提供します。
 
 ---
 
@@ -529,22 +530,3 @@ Deterministic な full-stack Assessment slice は local で runnable であり�
 - **重要な Architecture decision は説明可能な形で残す** — trade-off を ADR に記録する
 - **Premature complexity を避ける** — MVP では Microservices ではなく Modular Monolith を採用する
 - **Implementation feedback を設計へ反映する** — 重要な変更は過去を上書きせず、新しい ADR として記録する
-
----
-
-## このプロジェクトで重視していること
-
-この Repository は、学習と転職活動のための個人 Portfolio Project です。
-
-目的は「機能が動く Web アプリを作ること」だけではなく、面接で次のような設計判断を自分の言葉で説明できる状態まで理解することです。
-
-- なぜこの Domain Model にしたのか
-- Transaction / Concurrency boundary をどこに置くのか
-- なぜ PostgreSQL を invariant enforcement の一部として使うのか
-- MVP で JWT ではなく server-side Session を選んだ理由
-- Deterministic logic と AI-assisted behavior をどのように分離するのか
-- Risk に応じて test strategy をどう変えるのか
-- Application をどのように Containerize し、AWS へ deploy し、GitHub Actions / OIDC と Terraform で再現可能な delivery environment を構成したのか
-- Terraform が所有する infrastructure と CD が所有する ECS release revision をなぜ分離するのか
-
-最終的には、**実際に動作する Full-stack Application、明確な Architecture documentation、自動 Test、CI/CD、AWS deployment、再現可能な Infrastructure** までを一つの Project として完成させることを目標としています。
