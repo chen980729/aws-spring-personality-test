@@ -435,6 +435,50 @@ class AssessmentTieBreakControllerTest {
     }
 
     @Test
+    void returns400WhenRequestContainsUnknownField()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+
+        mockMvc.perform(
+                        put(
+                                "/api/v1/assessment-sessions/"
+                                        + sessionId
+                                        + "/tie-breaks/EI"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "selectedPole": "I",
+                                          "unexpected": "value"
+                                        }
+                                        """
+                                )
+                                .with(
+                                        authenticatedUser(
+                                                userId
+                                        )
+                                )
+                                .with(
+                                        csrf().asHeader()
+                                )
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.code")
+                                .value("VALIDATION_FAILED")
+                );
+
+        verifyNoInteractions(
+                submitDimensionTieBreakService
+        );
+    }
+
+    @Test
     void returns400WhenSelectedPoleIsBlank()
             throws Exception {
 
