@@ -2,6 +2,8 @@ package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.a
 
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.PoleCode;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakOptionId;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakQuestionId;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.DimensionTieBreakRepository;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionId;
 import dev.springawsportfolio.portfolio.assessment.domain.tiebreak.DimensionTieBreak;
@@ -22,6 +24,8 @@ public class PostgresDimensionTieBreakRepositoryAdapter
             SELECT
                 session_id,
                 dimension_code,
+                question_id,
+                selected_option_id,
                 selected_pole,
                 decided_at
             FROM assessment_dimension_tie_breaks
@@ -34,6 +38,8 @@ public class PostgresDimensionTieBreakRepositoryAdapter
             SELECT
                 session_id,
                 dimension_code,
+                question_id,
+                selected_option_id,
                 selected_pole,
                 decided_at
             FROM assessment_dimension_tie_breaks
@@ -46,6 +52,8 @@ public class PostgresDimensionTieBreakRepositoryAdapter
             INSERT INTO assessment_dimension_tie_breaks (
                 session_id,
                 dimension_code,
+                question_id,
+                selected_option_id,
                 selected_pole,
                 decided_at
             )
@@ -93,6 +101,26 @@ public class PostgresDimensionTieBreakRepositoryAdapter
                                         new DimensionCode(
                                                 resultSet.getString(
                                                         "dimension_code"
+                                                )
+                                        ),
+                                        nullableQuestionId(
+                                                resultSet.getString(
+                                                        "question_id"
+                                                )
+                                        ),
+                                        nullableOptionId(
+                                                resultSet.getString(
+                                                        "selected_option_id"
+                                                )
+                                        ),
+                                        nullableQuestionId(
+                                                resultSet.getString(
+                                                        "question_id"
+                                                )
+                                        ),
+                                        nullableOptionId(
+                                                resultSet.getString(
+                                                        "selected_option_id"
                                                 )
                                         ),
                                         new PoleCode(
@@ -167,10 +195,36 @@ public class PostgresDimensionTieBreakRepositoryAdapter
                 INSERT_SQL,
                 tieBreak.sessionId().value(),
                 tieBreak.dimension().value(),
-                tieBreak.selectedPole().value(),
+                tieBreak.questionId() == null
+                        ? null
+                        : tieBreak.questionId().value(),
+                tieBreak.selectedOptionId() == null
+                        ? null
+                        : tieBreak.selectedOptionId().value(),
+                tieBreak.resolvedPole().value(),
                 Timestamp.from(
                         tieBreak.decidedAt()
                 )
         );
     }
+    private static TieBreakQuestionId nullableQuestionId(
+            String value
+    ) {
+        return value == null
+                ? null
+                : new TieBreakQuestionId(
+                        value
+                );
+    }
+
+    private static TieBreakOptionId nullableOptionId(
+            String value
+    ) {
+        return value == null
+                ? null
+                : new TieBreakOptionId(
+                        value
+                );
+    }
+
 }
