@@ -645,7 +645,7 @@ The following are no longer open: `ABANDONED` source states, Group sharing-conse
 
 ## 16. Detailed Design Ownership
 
-This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (currently design contract v0.4.0). Accepted frontend architecture/integration decisions live under `docs/frontend/`.
+This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (currently accepted design contract v0.5.0; the DefinitionVersion 1.1 contextual extension remains pending implementation/migration). Accepted frontend architecture/integration decisions live under `docs/frontend/`.
 
 Still deferred to specialist design:
 
