@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-10-05. Backend compatibility implementation and pre-activation acceptance are complete. DefinitionVersion 1.1 is seeded as DRAFT; activation and Frontend integration remain pending.
+Accepted, 2026-10-05. Backend compatibility implementation, pre-activation acceptance, and Frontend dual-version integration are complete. DefinitionVersion 1.1 is seeded as DRAFT; activation remains pending as a separate post-compatibility release.
 
 ## Context
 
