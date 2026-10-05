@@ -145,11 +145,10 @@ class AssessmentSpecificationPersistenceMapperTest {
     @Test
     void rejectsV2WhenTieBreakQuestionsFieldIsAbsent() {
         String json =
-                validJson(4)
-                        .replace(
-                                "\"revision\": \"v1\"\n                  }\n                }",
-                                "\"revision\": \"v2\"\n                  }\n                }"
-                        );
+                validJson(
+                        4,
+                        "v2"
+                );
 
         JsonNode node =
                 jsonMapper.readTree(json);
@@ -276,6 +275,16 @@ class AssessmentSpecificationPersistenceMapperTest {
     private String validJson(
             int maximumAbsoluteRawScore
     ) {
+        return validJson(
+                maximumAbsoluteRawScore,
+                "v1"
+        );
+    }
+
+    private String validJson(
+            int maximumAbsoluteRawScore,
+            String finalizationRevision
+    ) {
         return """
                 {
                   "dimensions": [
@@ -346,11 +355,12 @@ class AssessmentSpecificationPersistenceMapperTest {
                   },
                   "finalizationPolicy": {
                     "type": "QUESTIONNAIRE_WITH_OPTIONAL_CLARIFICATION",
-                    "revision": "v1"
+                    "revision": "%s"
                   }
                 }
                 """.formatted(
-                maximumAbsoluteRawScore
+                maximumAbsoluteRawScore,
+                finalizationRevision
         );
     }
 }
