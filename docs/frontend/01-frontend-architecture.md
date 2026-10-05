@@ -1,7 +1,7 @@
 # Frontend Architecture Baseline
 
 > **Original checkpoint:** Frontend F0
-> **Status:** Accepted baseline; validated by implementation through Frontend F7-B and the post-F6 UI optimization checkpoint
+> **Status:** Accepted baseline; validated by implementation through Frontend F7-D and the post-F6 UI optimization checkpoint
 > **Original date:** 2026-09-30
 > **Implementation review:** 2026-10-04
 
@@ -281,6 +281,23 @@ Accepted rules:
 - purely visual decoration should not change accessible names or labels relied on by users and tests.
 
 A larger UI framework can be reconsidered if future Group/administrative surfaces materially increase component-system complexity. For the current portfolio MVP, the custom layer keeps dependency and abstraction cost proportional to the product scope.
+
+### 4.2 Static presentation assets
+
+Presentation-only imagery is owned by the frontend build and does not participate in Assessment Domain versioning.
+
+Current examples:
+
+```text
+frontend/public/personality/*.webp
+frontend/public/landing-personality-groups.webp
+```
+
+Result illustrations are mapped by stable personality type code. The Landing hero is a single optimized visual asset referenced directly by the public page.
+
+These assets may change independently from `AssessmentDefinitionVersion` because they do not alter questionnaire, scoring, clarification or finalization semantics.
+
+The Landing hero is treated as a first-screen performance asset: the component provides intrinsic width/height and requests eager/high-priority loading, while CSS owns responsive sizing.
 
 ## 5. State ownership
 
