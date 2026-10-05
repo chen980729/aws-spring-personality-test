@@ -572,6 +572,7 @@ This section specifies future tests only. The docs-only ADR-0018 change adds no 
 - Verify the shared instruction and EI/SN/TF/JP prompt and option texts exactly match the accepted aligned specification §12.8, including stable question/option IDs.
 - Reject nonexistent dimensions, missing/duplicate per-dimension questions under v2, duplicate question IDs, option counts other than two, duplicate option IDs within a question, same-pole option pairs, and poles outside the referenced DimensionDefinition.
 - Published 1.0 specification remains byte/semantically unchanged and has no contextual questions; publication of 1.1 retires 1.0 and leaves exactly one AVAILABLE version without rewriting existing Session bindings.
+- Load the real retained 1.0 JSONB shape where `tieBreakQuestions` is absent and verify it still maps successfully to legacy FinalizationPolicy v1 semantics. Newer in-memory representation may normalize it to an empty collection, but must never require/backfill contextual definitions. Conversely, reject FinalizationPolicy v2 specifications with missing/empty/incomplete contextual definitions.
 
 ### Domain and Application version matrix
 
@@ -586,7 +587,8 @@ This section specifies future tests only. The docs-only ADR-0018 change adds no 
 - Retired 1.0 Sessions can resume/complete with legacy semantics while new Sessions bind 1.1; retained history preserves both sources without automatic upgrade/recalculation.
 - GET returns the correct interaction discriminator; contextual option schemas and serialized DTOs expose only optionId/text, never resolvedPole or mappings. Inspect Session/history projections as well as the interaction DTO.
 - PUT validates the exclusive oneOf request shapes, preserves authentication/ownership/CSRF/privacy boundaries, and distinguishes 400 malformed shape, 422 semantic rejection and 409 conflict.
-- Equivalent retries, including recovery after completion, preserve the original fact/time; conflicting re-selection is rejected. GET is read-only and supports accepted-interaction recovery.
+- Equivalent PUT retries, including recovery after completion, preserve the original fact/time; conflicting re-selection is rejected.
+- GET is read-only and returns an interaction only while that exact tie still requires user input. After a decision has been accepted, clients recover from the authoritative Session/tieBreak/finalResult projection rather than re-fetching the interaction; completed or already-resolved dimensions are not treated as GET-interaction recovery cases.
 - Race the last tie-break against Skip/finalization using the Session lock boundary; produce one immutable fact per Session/dimension and one final result. Existing abandonment/stale-provider-result protections remain valid.
 
 These are implementation acceptance gates to execute when feature work begins, not a reason to rewrite historical Step 6/7 checkpoint documents.
