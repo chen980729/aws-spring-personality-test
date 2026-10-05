@@ -99,18 +99,6 @@ public record AssessmentSessionResponse(
         String dimensionCode();
 
         Instant decidedAt();
-
-        default String selectedPole() {
-            return null;
-        }
-
-        default String questionId() {
-            return null;
-        }
-
-        default String selectedOptionId() {
-            return null;
-        }
     }
 
     public record LegacyTieBreakStateResponse(
