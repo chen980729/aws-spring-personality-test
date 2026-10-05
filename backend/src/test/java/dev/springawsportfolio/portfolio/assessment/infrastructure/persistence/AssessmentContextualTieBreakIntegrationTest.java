@@ -26,6 +26,8 @@ import dev.springawsportfolio.portfolio.assessment.domain.repository.DimensionTi
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSession;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionId;
 import dev.springawsportfolio.portfolio.assessment.domain.tiebreak.DimensionTieBreak;
+import dev.springawsportfolio.portfolio.assessment.web.session.AssessmentSessionWebMapper;
+import dev.springawsportfolio.portfolio.assessment.web.session.dto.AssessmentSessionResponse;
 import dev.springawsportfolio.portfolio.identity.api.UserId;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,6 +96,9 @@ class AssessmentContextualTieBreakIntegrationTest {
     @Autowired
     DimensionTieBreakRepository
             tieBreakRepository;
+
+    @Autowired
+    AssessmentSessionWebMapper sessionWebMapper;
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -224,6 +229,31 @@ class AssessmentContextualTieBreakIntegrationTest {
                 state.selectedPole()
         );
 
+        AssessmentSessionResponse response =
+                sessionWebMapper.toSessionResponse(
+                        afterTieBreak
+                );
+
+        AssessmentSessionResponse.ContextualTieBreakStateResponse
+                contextualState =
+                assertInstanceOf(
+                        AssessmentSessionResponse
+                                .ContextualTieBreakStateResponse.class,
+                        response
+                                .tieBreaks()
+                                .getFirst()
+                );
+
+        assertEquals(
+                "TB-EI-1",
+                contextualState.questionId()
+        );
+
+        assertEquals(
+                "TB-EI-02",
+                contextualState.selectedOptionId()
+        );
+
         DimensionTieBreak persisted =
                 tieBreakRepository
                         .findBySessionIdAndDimension(
@@ -261,6 +291,83 @@ class AssessmentContextualTieBreakIntegrationTest {
                                 session.id(),
                                 dimension.code()
                         )
+        );
+    }
+
+    @Test
+    void legacyAvailableVersionStillExposesDirectPoleInteraction() {
+        UserId userId =
+                createUser();
+
+        AssessmentDefinition definition =
+                definitionRepository
+                        .findByCode(
+                                "SIXTEEN_PERSONALITY"
+                        )
+                        .orElseThrow();
+
+        AssessmentDefinitionVersion version =
+                versionRepository
+                        .findAvailableByDefinitionId(
+                                definition.id()
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                "1.0",
+                version.versionCode()
+        );
+
+        AssessmentSession session =
+                createSession(
+                        userId,
+                        definition,
+                        version
+                );
+
+        submitQuestionnaireService.execute(
+                new SubmitQuestionnaireCommand(
+                        userId,
+                        session.id(),
+                        neutralAnswers(
+                                version
+                        )
+                )
+        );
+
+        DimensionDefinition dimension =
+                version
+                        .specification()
+                        .dimensions()
+                        .getFirst();
+
+        skipDimensionClarificationService.execute(
+                new SkipDimensionClarificationCommand(
+                        userId,
+                        session.id(),
+                        dimension.code()
+                )
+        );
+
+        DimensionTieBreakInteractionResult.DirectPoleSelection
+                interaction =
+                assertInstanceOf(
+                        DimensionTieBreakInteractionResult
+                                .DirectPoleSelection.class,
+                        getDimensionTieBreakInteractionService
+                                .execute(
+                                        userId,
+                                        session.id(),
+                                        dimension.code()
+                                )
+                );
+
+        assertEquals(
+                List.of(
+                        dimension.poleA().value(),
+                        dimension.poleB().value()
+                ),
+                interaction.allowedPoles()
         );
     }
 
