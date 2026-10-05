@@ -22,7 +22,9 @@ Retain `DimensionTieBreak` rather than introducing a competing TieBreakResponse 
 
 Add version-aware GET `/api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}` returning DIRECT_POLE_SELECTION or CONTEXTUAL_QUESTION. Preserve PUT at the same path with exclusive legacy `{ "selectedPole": "I" }` or contextual `{ "questionId": "TB-EI-1", "selectedOptionId": "TB-EI-02" }` bodies. Bound-version validation applies to both. OpenAPI info.version advances from 0.4.0 to 0.5.0; `/api/v1` is unchanged. See [REST contract](../backend/06-rest-api-contract.md#tie-break).
 
-When the implementation/migration is published, retire 1.0 and make 1.1 the sole AVAILABLE version. Existing 1.0 Sessions never auto-upgrade and must remain completable with original semantics. RETIRED changes new-Session eligibility, not retained Session execution or historical interpretation. This ADR does not activate 1.1.
+Activation uses an expand-then-promote rollout rather than switching availability in the same deployment that first introduces support. The compatibility release adds the persistence columns and seeds the complete 1.1 specification as DRAFT while 1.0 remains AVAILABLE. Backend code is then deployed with support for both semantics. Only after all running application tasks understand 1.1 does a later activation migration retire 1.0 and promote 1.1 to the sole AVAILABLE version. Existing 1.0 Sessions never auto-upgrade and must remain completable with original semantics. RETIRED changes new-Session eligibility, not retained Session execution or historical interpretation.
+
+This staged activation is required by rolling deployment: a new ECS task may execute Flyway while an old task still serves requests. Promoting 1.1 too early could let old code bind a new Session to semantics it does not understand. The compatibility release therefore expands the database first and changes availability only in a subsequent deployment.
 
 ## Alternatives rejected
 
@@ -36,7 +38,7 @@ When the implementation/migration is published, retire 1.0 and make 1.1 the sole
 
 The same questionnaire retains reproducible scoring, while version identity explains different finalization evidence. Audit/history preserves legacy direct choices and new contextual selections distinctly. AI remains bounded and does not generate tie-break questions, rewrite evidence, or decide the final type.
 
-Backend must support two semantics simultaneously even though only one version is AVAILABLE for new Sessions. Definition loading, request validation, finalization and persistence/recovery must dispatch from the Session binding. Frontend must handle both interaction variants without obtaining mappings. Nullable legacy IDs and contextual required IDs need future persistence/migration design, and both final source values must remain readable.
+Backend must support two semantics simultaneously even though only one version is AVAILABLE for new Sessions. Definition loading, request validation, finalization and persistence/recovery must dispatch from the Session binding. Frontend must handle both interaction variants without obtaining mappings. Persistence keeps `selected_pole` as the resolved business outcome and adds nullable `question_id` / `selected_option_id` provenance. The database requires the contextual IDs to be both null or both populated; bound-version Domain/Application validation decides whether a legacy or contextual fact is semantically legal. Both final source values must remain readable.
 
 Future tests must cover both versions, retirement/resume, immutable question content, definition validation, DTO mapping exclusion, retries and concurrent finalization. Existing technical-failure/clarification behavior and Session consistency boundaries remain intact. See [planned testing](../backend/10-backend-testing-strategy.md#14-planned-definitionversion-11-acceptance-coverage-not-implemented).
 
