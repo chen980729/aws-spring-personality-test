@@ -1,10 +1,10 @@
 # Backend Testing Strategy & Current Coverage
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and the Step 2E pre-activation acceptance sweep are complete. 1.1 remains DRAFT while activation and Frontend integration are pending. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility, the Step 2E pre-activation acceptance sweep, Frontend dual-version integration, and the separate activation regression coverage are complete. V8 promotes 1.1 to AVAILABLE and retires 1.0 for new Session binding; retained 1.0 Sessions remain supported.
 
 > **Status:** Active implementation guidance
 > **Last reviewed:** 2026-10-05
-> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 Backend compatibility/pre-activation acceptance through Step 2E
+> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 compatibility/pre-activation acceptance + activation regression coverage
 
 ## 1. Testing principle
 
@@ -642,6 +642,6 @@ new Session started after activation
   -> records TIE_BREAK_QUESTION
 ```
 
-That post-activation matrix belongs to the activation step because it cannot be truthfully exercised while 1.1 remains DRAFT.
+The activation release now exercises this post-activation matrix against the migrated PostgreSQL fixture: normal Start binds 1.1, while an explicitly retained 1.0 Session continues to expose legacy direct-pole semantics.
 
-Historical Step 6/7 checkpoint documents remain unchanged. DefinitionVersion 1.1 compatibility is recorded in `16-contextual-tie-break-compatibility-checkpoint.md`.
+Historical Step 6/7 checkpoint documents remain unchanged. DefinitionVersion 1.1 compatibility is recorded in `16-contextual-tie-break-compatibility-checkpoint.md`; promotion and post-activation coverage are recorded in `17-definition-version-1-1-activation-checkpoint.md`.
