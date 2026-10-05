@@ -1,7 +1,7 @@
 # Frontend Architecture Baseline
 
 > **Original checkpoint:** Frontend F0
-> **Status:** Accepted baseline; validated by implementation through Frontend F6 and the post-F6 UI optimization checkpoint
+> **Status:** Accepted baseline; validated by implementation through Frontend F7-B and the post-F6 UI optimization checkpoint
 > **Original date:** 2026-09-30
 > **Implementation review:** 2026-10-04
 
@@ -66,7 +66,20 @@ A useful presentation precedence for the current executable workflow is:
 
 The backend may expose both clarification work and required tie-break dimensions at the same time. The frontend presents clarification work first, then tie-breaks, to keep UX sequential without changing backend rules.
 
-### 2.3 Step 8 contract review note
+### 2.3 Version-bound Tie-break presentation and rollout compatibility
+
+The frontend does not infer contextual option-to-pole mappings. For DefinitionVersion 1.1 it reads the Backend-owned contextual interaction and submits only the stable question/option IDs.
+
+The retained 1.0 path is deliberately different during rollout: it continues to render its existing direct-pole choice from the Session's immutable questionnaire evidence and does not depend on the new GET interaction endpoint. This preserves compatibility while the CD workflow deploys Backend and Frontend in parallel and old ECS tasks may still be draining.
+
+```text
+1.0 Session -> existing direct-pole UI -> PUT selectedPole
+1.1 Session -> GET contextual question -> PUT questionId + selectedOptionId
+```
+
+Unknown future DefinitionVersion codes are not guessed into either behavior; the current frontend shows an unsupported-contract recovery state instead.
+
+### 2.4 Step 8 contract review note
 
 The current workflow projection exposes:
 
