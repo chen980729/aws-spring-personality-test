@@ -2,6 +2,7 @@ package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence;
 
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionVersionRepository;
@@ -14,6 +15,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -112,6 +116,90 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
                         .specification()
                         .ambiguityPolicy()
                         .inclusiveThreshold()
+        );
+    }
+
+    @Test
+    void keepsVersionOneAvailableAndLoadsVersionOnePointOneAsDraft() {
+        AssessmentDefinition definition =
+                definitionRepository
+                        .findByCode(
+                                "SIXTEEN_PERSONALITY"
+                        )
+                        .orElseThrow();
+
+        AssessmentDefinitionVersion available =
+                versionRepository
+                        .findAvailableByDefinitionId(
+                                definition.id()
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                "1.0",
+                available.versionCode()
+        );
+
+        assertEquals(
+                AssessmentDefinitionVersionStatus.AVAILABLE,
+                available.status()
+        );
+
+        assertTrue(
+                available
+                        .specification()
+                        .tieBreakQuestions()
+                        .isEmpty()
+        );
+
+        AssessmentDefinitionVersion draft =
+                versionRepository
+                        .findById(
+                                new AssessmentDefinitionVersionId(
+                                        UUID.fromString(
+                                                "b7a63f1e-60f4-4b5e-a0e3-1c1b1a110001"
+                                        )
+                                )
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                "1.1",
+                draft.versionCode()
+        );
+
+        assertEquals(
+                AssessmentDefinitionVersionStatus.DRAFT,
+                draft.status()
+        );
+
+        assertNull(
+                draft.publishedAt()
+        );
+
+        assertEquals(
+                "v2",
+                draft
+                        .specification()
+                        .finalizationPolicy()
+                        .revision()
+        );
+
+        assertEquals(
+                4,
+                draft
+                        .specification()
+                        .tieBreakQuestions()
+                        .size()
+        );
+
+        assertEquals(
+                48,
+                draft
+                        .specification()
+                        .questionnaire()
+                        .questions()
+                        .size()
         );
     }
 
