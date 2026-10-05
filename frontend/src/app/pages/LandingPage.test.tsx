@@ -48,13 +48,30 @@ describe('LandingPage', () => {
       '/login',
     )
 
-    expect(
+    const heroImage =
       screen.getByRole('img', {
         name: 'Four illustrated personality profiles representing the assessment experience',
-      }),
-    ).toHaveAttribute(
+      })
+
+    expect(heroImage).toHaveAttribute(
       'src',
       '/landing-personality-groups.webp',
+    )
+    expect(heroImage).toHaveAttribute(
+      'width',
+      '900',
+    )
+    expect(heroImage).toHaveAttribute(
+      'height',
+      '859',
+    )
+    expect(heroImage).toHaveAttribute(
+      'loading',
+      'eager',
+    )
+    expect(heroImage).toHaveAttribute(
+      'fetchpriority',
+      'high',
     )
 
     expect(
