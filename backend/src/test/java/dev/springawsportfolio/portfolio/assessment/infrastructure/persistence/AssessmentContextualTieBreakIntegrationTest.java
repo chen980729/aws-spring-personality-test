@@ -465,6 +465,18 @@ class AssessmentContextualTieBreakIntegrationTest {
                         )
                         .orElseThrow();
 
+        AssessmentDefinitionVersion available =
+                versionRepository
+                        .findAvailableByDefinitionId(
+                                definition.id()
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                "1.0",
+                available.versionCode()
+        );
+
         AssessmentDefinitionVersion version =
                 versionRepository
                         .findById(
@@ -575,6 +587,16 @@ class AssessmentContextualTieBreakIntegrationTest {
                         )
         );
 
+        assertTrue(
+                completed
+                        .dimensionEvidence()
+                        .stream()
+                        .allMatch(evidence ->
+                                evidence.poleAPercentage() == 50.0
+                                        && evidence.poleBPercentage() == 50.0
+                        )
+        );
+
         AssessmentSession reloaded =
                 sessionRepository
                         .findOwnedById(
@@ -605,6 +627,159 @@ class AssessmentContextualTieBreakIntegrationTest {
                                         == FinalDecisionSource
                                         .TIE_BREAK_QUESTION
                         )
+        );
+
+        AssessmentSessionResult historicalDetail =
+                getAssessmentSessionService.execute(
+                        userId,
+                        session.id()
+                );
+
+        assertEquals(
+                4,
+                historicalDetail
+                        .tieBreaks()
+                        .size()
+        );
+
+        assertTrue(
+                historicalDetail
+                        .tieBreaks()
+                        .stream()
+                        .allMatch(
+                                AssessmentSessionResult
+                                        .TieBreakStateResult::contextual
+                        )
+        );
+
+        assertTrue(
+                historicalDetail
+                        .finalResult()
+                        .dimensions()
+                        .stream()
+                        .allMatch(conclusion ->
+                                conclusion.decisionSource()
+                                        == FinalDecisionSource
+                                        .TIE_BREAK_QUESTION
+                        )
+        );
+
+        AssessmentSessionResponse historicalResponse =
+                sessionWebMapper.toSessionResponse(
+                        historicalDetail
+                );
+
+        assertTrue(
+                historicalResponse
+                        .tieBreaks()
+                        .stream()
+                        .allMatch(state ->
+                                state
+                                        instanceof AssessmentSessionResponse
+                                        .ContextualTieBreakStateResponse
+                        )
+        );
+
+        var lastQuestion =
+                version
+                        .specification()
+                        .tieBreakQuestions()
+                        .getLast();
+
+        DimensionTieBreak beforeRetry =
+                tieBreakRepository
+                        .findBySessionIdAndDimension(
+                                session.id(),
+                                lastQuestion.dimension()
+                        )
+                        .orElseThrow();
+
+        Instant originalDecidedAt =
+                beforeRetry.decidedAt();
+
+        AssessmentSessionResult retry =
+                submitDimensionTieBreakService.execute(
+                        new SubmitDimensionTieBreakCommand(
+                                userId,
+                                session.id(),
+                                lastQuestion.dimension(),
+                                new TieBreakSelection
+                                        .ContextualOptionSelection(
+                                        lastQuestion.questionId(),
+                                        lastQuestion
+                                                .options()
+                                                .getFirst()
+                                                .optionId()
+                                )
+                        )
+                );
+
+        assertEquals(
+                AssessmentSessionStatus.COMPLETED,
+                retry.status()
+        );
+
+        assertEquals(
+                4,
+                tieBreakRepository
+                        .findBySessionId(
+                                session.id()
+                        )
+                        .size()
+        );
+
+        DimensionTieBreak afterRetry =
+                tieBreakRepository
+                        .findBySessionIdAndDimension(
+                                session.id(),
+                                lastQuestion.dimension()
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                originalDecidedAt,
+                afterRetry.decidedAt()
+        );
+
+        assertThrows(
+                TieBreakAlreadyDecidedException.class,
+                () ->
+                        submitDimensionTieBreakService.execute(
+                                new SubmitDimensionTieBreakCommand(
+                                        userId,
+                                        session.id(),
+                                        lastQuestion.dimension(),
+                                        new TieBreakSelection
+                                                .ContextualOptionSelection(
+                                                lastQuestion.questionId(),
+                                                lastQuestion
+                                                        .options()
+                                                        .get(1)
+                                                        .optionId()
+                                        )
+                                )
+                        )
+        );
+
+        DimensionTieBreak afterConflict =
+                tieBreakRepository
+                        .findBySessionIdAndDimension(
+                                session.id(),
+                                lastQuestion.dimension()
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                originalDecidedAt,
+                afterConflict.decidedAt()
+        );
+
+        assertEquals(
+                lastQuestion
+                        .options()
+                        .getFirst()
+                        .optionId(),
+                afterConflict.selectedOptionId()
         );
     }
 
