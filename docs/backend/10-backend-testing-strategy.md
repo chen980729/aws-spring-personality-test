@@ -1,10 +1,10 @@
 # Backend Testing Strategy & Current Coverage
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Specification Domain, persistence expansion, and version-aware Tie-break Application/REST are implemented. 1.1 remains DRAFT while finalization compatibility and activation are pending. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Specification Domain, persistence expansion, version-aware Tie-break Application/REST, and provenance-aware finalization are implemented. 1.1 remains DRAFT while the final acceptance sweep, activation and Frontend integration are pending. Published 1.0 remains immutable and supported.
 
 > **Status:** Active implementation guidance
 > **Last reviewed:** 2026-10-05
-> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 compatibility through Step 2C
+> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 Backend compatibility through Step 2D
 
 ## 1. Testing principle
 
@@ -564,7 +564,7 @@ Before production deployment is considered stable, add configuration-level verif
 
 ## 14. DefinitionVersion 1.1 acceptance coverage
 
-Coverage is being implemented incrementally. Steps 2A-2C now exercise specification invariants, legacy JSON compatibility, staged Flyway persistence, version-aware interaction/query behavior, contextual submission/persistence, request-shape validation, and legacy compatibility. Step 2D finalization-source behavior and the final Step 2E acceptance sweep remain pending.
+Coverage is being implemented incrementally. Steps 2A-2D now exercise specification invariants, legacy JSON compatibility, staged Flyway persistence, version-aware interaction/query behavior, contextual submission/persistence, request-shape validation, legacy compatibility, and provenance-aware finalization. The final Step 2E acceptance sweep, activation and Frontend integration remain pending.
 
 ### Immutable specification and content
 
