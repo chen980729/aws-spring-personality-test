@@ -28,6 +28,8 @@ resource "aws_lb_target_group" "backend" {
 
   vpc_id = aws_vpc.main.id
 
+  deregistration_delay = 60
+
   health_check {
     enabled = true
 
