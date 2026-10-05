@@ -2,6 +2,7 @@ package dev.springawsportfolio.portfolio.assessment.application.command.tiebreak
 
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidDimensionTieBreakException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakAlreadyDecidedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakNotRequiredException;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
@@ -11,6 +12,11 @@ import dev.springawsportfolio.portfolio.assessment.domain.clarification.Dimensio
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionDefinition;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.PoleCode;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakOptionDefinition;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakOptionId;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakQuestionDefinition;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakQuestionId;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionVersionRepository;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentSessionRepository;
@@ -134,18 +140,12 @@ public class SubmitDimensionTieBreakService {
                                 .value()
                 );
 
-        if (
-                !dimension.containsPole(
-                        command.selectedPole()
-                )
-        ) {
-            throw new InvalidDimensionTieBreakException(
-                    "selected pole is not valid for dimension "
-                            + dimension.code().value()
-                            + ": "
-                            + command.selectedPole().value()
-            );
-        }
+        ResolvedSelection resolvedSelection =
+                resolveSelection(
+                        version,
+                        dimension,
+                        command.selection()
+                );
 
         InitialDimensionResult initialDimension =
                 findInitialDimension(
@@ -176,10 +176,10 @@ public class SubmitDimensionTieBreakService {
                         == AssessmentSessionStatus.COMPLETED
         ) {
             return recoverCompletedRetry(
-                    command,
                     session,
                     version,
-                    existingTieBreak
+                    existingTieBreak,
+                    resolvedSelection
             );
         }
 
@@ -217,34 +217,30 @@ public class SubmitDimensionTieBreakService {
             );
         }
 
-        DimensionTieBreak acceptedTieBreak;
-
         if (existingTieBreak.isPresent()) {
-            acceptedTieBreak =
+            DimensionTieBreak acceptedTieBreak =
                     existingTieBreak.orElseThrow();
 
             if (
-                    !acceptedTieBreak
-                            .selectedPole()
-                            .equals(
-                                    command.selectedPole()
-                            )
+                    !matches(
+                            acceptedTieBreak,
+                            resolvedSelection
+                    )
             ) {
-                throw new TieBreakNotRequiredException(
+                throw new TieBreakAlreadyDecidedException(
                         "tie-break has already been decided for this dimension"
                 );
             }
         } else {
-            acceptedTieBreak =
+            tieBreakRepository.add(
                     new DimensionTieBreak(
                             session.id(),
                             command.dimension(),
-                            command.selectedPole(),
+                            resolvedSelection.questionId(),
+                            resolvedSelection.selectedOptionId(),
+                            resolvedSelection.resolvedPole(),
                             clock.instant()
-                    );
-
-            tieBreakRepository.add(
-                    acceptedTieBreak
+                    )
             );
         }
 
@@ -300,10 +296,10 @@ public class SubmitDimensionTieBreakService {
     }
 
     private AssessmentSessionResult recoverCompletedRetry(
-            SubmitDimensionTieBreakCommand command,
             AssessmentSession session,
             AssessmentDefinitionVersion version,
-            Optional<DimensionTieBreak> existingTieBreak
+            Optional<DimensionTieBreak> existingTieBreak,
+            ResolvedSelection resolvedSelection
     ) {
         DimensionTieBreak persisted =
                 existingTieBreak
@@ -316,13 +312,12 @@ public class SubmitDimensionTieBreakService {
                         );
 
         if (
-                !persisted
-                        .selectedPole()
-                        .equals(
-                                command.selectedPole()
-                        )
+                !matches(
+                        persisted,
+                        resolvedSelection
+                )
         ) {
-            throw new TieBreakNotRequiredException(
+            throw new TieBreakAlreadyDecidedException(
                     "completed assessment tie-break cannot be changed"
             );
         }
@@ -348,6 +343,148 @@ public class SubmitDimensionTieBreakService {
                         tieBreaks
                 )
         );
+    }
+
+    private ResolvedSelection resolveSelection(
+            AssessmentDefinitionVersion version,
+            DimensionDefinition dimension,
+            TieBreakSelection selection
+    ) {
+        if (
+                version
+                        .specification()
+                        .finalizationPolicy()
+                        .usesLegacyDirectTieBreak()
+        ) {
+            if (
+                    !(selection
+                            instanceof TieBreakSelection
+                            .DirectPoleSelection direct)
+            ) {
+                throw new InvalidDimensionTieBreakException(
+                        "bound assessment version requires direct pole selection"
+                );
+            }
+
+            if (
+                    !dimension.containsPole(
+                            direct.selectedPole()
+                    )
+            ) {
+                throw new InvalidDimensionTieBreakException(
+                        "selected pole is not valid for dimension "
+                                + dimension.code().value()
+                                + ": "
+                                + direct.selectedPole().value()
+                );
+            }
+
+            return new ResolvedSelection(
+                    null,
+                    null,
+                    direct.selectedPole()
+            );
+        }
+
+        if (
+                !version
+                        .specification()
+                        .finalizationPolicy()
+                        .usesContextualTieBreakQuestions()
+        ) {
+            throw new IllegalStateException(
+                    "unsupported finalization policy semantics"
+            );
+        }
+
+        if (
+                !(selection
+                        instanceof TieBreakSelection
+                        .ContextualOptionSelection contextual)
+        ) {
+            throw new InvalidDimensionTieBreakException(
+                    "bound assessment version requires contextual option selection"
+            );
+        }
+
+        TieBreakQuestionDefinition question =
+                version
+                        .specification()
+                        .tieBreakQuestions()
+                        .stream()
+                        .filter(candidate ->
+                                candidate
+                                        .dimension()
+                                        .equals(
+                                                dimension.code()
+                                        )
+                        )
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "contextual finalization policy is missing "
+                                                        + "tie-break question for dimension "
+                                                        + dimension.code().value()
+                                        )
+                        );
+
+        if (
+                !question
+                        .questionId()
+                        .equals(
+                                contextual.questionId()
+                        )
+        ) {
+            throw new InvalidDimensionTieBreakException(
+                    "questionId does not match the bound dimension question"
+            );
+        }
+
+        TieBreakOptionDefinition option =
+                question
+                        .options()
+                        .stream()
+                        .filter(candidate ->
+                                candidate
+                                        .optionId()
+                                        .equals(
+                                                contextual.selectedOptionId()
+                                        )
+                        )
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new InvalidDimensionTieBreakException(
+                                                "selectedOptionId does not belong "
+                                                        + "to the bound tie-break question"
+                                        )
+                        );
+
+        return new ResolvedSelection(
+                question.questionId(),
+                option.optionId(),
+                option.resolvedPole()
+        );
+    }
+
+    private boolean matches(
+            DimensionTieBreak persisted,
+            ResolvedSelection submitted
+    ) {
+        return Objects.equals(
+                persisted.questionId(),
+                submitted.questionId()
+        )
+                && Objects.equals(
+                persisted.selectedOptionId(),
+                submitted.selectedOptionId()
+        )
+                && persisted
+                .resolvedPole()
+                .equals(
+                        submitted.resolvedPole()
+                );
     }
 
     private boolean requiresTieBreak(
@@ -473,5 +610,28 @@ public class SubmitDimensionTieBreakService {
                                                 + dimensionCode
                                 )
                 );
+    }
+
+    private record ResolvedSelection(
+            TieBreakQuestionId questionId,
+            TieBreakOptionId selectedOptionId,
+            PoleCode resolvedPole
+    ) {
+
+        private ResolvedSelection {
+            Objects.requireNonNull(
+                    resolvedPole,
+                    "resolvedPole must not be null"
+            );
+
+            if (
+                    (questionId == null)
+                            != (selectedOptionId == null)
+            ) {
+                throw new IllegalArgumentException(
+                        "contextual provenance must be complete"
+                );
+            }
+        }
     }
 }
