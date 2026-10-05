@@ -6,7 +6,10 @@ import {
   useDimensionTieBreakInteractionQuery,
   useSubmitDimensionTieBreakMutation,
 } from '../api/assessmentQueries'
-import type { AssessmentSession } from '../api/assessmentTypes'
+import type {
+  AssessmentSession,
+  TieBreakRequest,
+} from '../api/assessmentTypes'
 import { buildTieBreakReadModel } from './tieBreakReadModel'
 
 interface TieBreakStageProps {
@@ -265,6 +268,23 @@ export function TieBreakStage({
         )
       : undefined
 
+  const selectedRequest:
+    TieBreakRequest | null =
+    !selectedValue
+      ? null
+      : interaction.interactionType ===
+          'DIRECT_POLE_SELECTION'
+        ? {
+            selectedPole:
+              selectedValue,
+          }
+        : {
+            questionId:
+              interaction.questionId,
+            selectedOptionId:
+              selectedValue,
+          }
+
   function chooseValue(value: string) {
     mutation.reset()
     setSelectedValue(value)
@@ -286,28 +306,16 @@ export function TieBreakStage({
 
   async function confirmTieBreak() {
     if (
-      !selectedValue ||
+      !selectedRequest ||
       mutation.isPending
     ) {
       return
     }
 
     try {
-      if (
-        interaction.interactionType ===
-        'DIRECT_POLE_SELECTION'
-      ) {
-        await mutation.mutateAsync({
-          selectedPole: selectedValue,
-        })
-      } else {
-        await mutation.mutateAsync({
-          questionId:
-            interaction.questionId,
-          selectedOptionId:
-            selectedValue,
-        })
-      }
+      await mutation.mutateAsync(
+        selectedRequest,
+      )
     } catch {
       // Keep the accepted local selection for an explicit same-value retry.
     }
