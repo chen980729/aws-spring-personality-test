@@ -42,6 +42,7 @@ Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.5.0*
 14. `14-assessment-history-detail-checkpoint.md` — completed History + Historical Detail and authoritative persisted workflow reads.
 15. `15-assessment-clarification-workflow-checkpoint.md` — Clarification Aggregate lifecycle, deterministic finalization, stale-result protection and deterministic HTTP boundary.
 16. `16-contextual-tie-break-compatibility-checkpoint.md` — DefinitionVersion 1.1 dual-version Backend compatibility, staged rollout and Step 2E acceptance checkpoint.
+17. `17-definition-version-1-1-activation-checkpoint.md` — V8 activation, 1.1 AVAILABLE / 1.0 RETIRED state, and post-activation Session-binding regression coverage.
 
 ## High-level backend shape
 
