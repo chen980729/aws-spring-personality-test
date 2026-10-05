@@ -394,19 +394,6 @@ describe('clarification skip workflow', () => {
             tieBreakSession,
           ),
       ),
-      http.get(
-        `${sessionEndpoint}/tie-breaks/EI`,
-        () =>
-          HttpResponse.json({
-            interactionType:
-              'DIRECT_POLE_SELECTION',
-            dimensionCode: 'EI',
-            allowedPoles: [
-              'E',
-              'I',
-            ],
-          }),
-      ),
     )
 
     renderSessionPage()
