@@ -1,7 +1,7 @@
 # Persistence / PostgreSQL Detailed Design
 
-> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 7
-> **Last updated:** 2026-09-30
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through contextual tie-break persistence expansion
+> **Last updated:** 2026-10-05
 
 ## 1. Persistence stack
 
@@ -83,7 +83,25 @@ specification
 
 This deliberately avoids exploding the 48-question questionnaire and small result objects into many relational rows when they are loaded/replaced as units.
 
-`DimensionClarification` remains relational because it is a separate Assessment Aggregate with its own durable lifecycle/uniqueness semantics (ADR-0016). User tie-break facts are also relational because they have independent uniqueness/query semantics.
+`DimensionClarification` remains relational because it is a separate Assessment Aggregate with its own durable lifecycle/uniqueness semantics (ADR-0016). Tie-break facts are also relational because they have independent uniqueness/query semantics. Legacy 1.0 facts persist only the resolved/direct pole; contextual 1.1 facts additionally retain stable question and option IDs while keeping the resolved pole as the finalization-friendly business outcome.
+
+### Tie-break provenance expansion
+
+`assessment_dimension_tie_breaks` retains the original primary key `(session_id, dimension_code)` and `selected_pole` column, and adds nullable `question_id` / `selected_option_id`.
+
+```text
+legacy 1.0
+question_id = NULL
+selected_option_id = NULL
+selected_pole = direct user selection
+
+contextual 1.1
+question_id = stable bound-specification question ID
+selected_option_id = stable selected option ID
+selected_pole = Backend-resolved pole
+```
+
+The two contextual provenance columns are structurally all-or-nothing. SQL does not duplicate DefinitionVersion-specific question/pole rules; the bound immutable specification remains authoritative.
 
 ## 6. Generic Assessment schema rule
 
