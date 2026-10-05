@@ -86,7 +86,7 @@ describe('personality content catalog', () => {
           typeCode,
         ),
       ).toBe(
-        `/personality/${typeCode.toLowerCase()}.png`,
+        `/personality/${typeCode.toLowerCase()}.webp`,
       )
     }
   })
