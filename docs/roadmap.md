@@ -92,7 +92,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** the Step 7 runtime baseline remains intact, and DefinitionVersion 1.1 Backend compatibility has completed **Step 2E — pre-activation acceptance sweep**. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific projections and final-source semantics. DefinitionVersion 1.1 remains DRAFT while the activation migration and Frontend integration are pending. Real provider-backed clarification interaction remains Step 8.
+**Current status:** the Step 7 runtime baseline remains intact, DefinitionVersion 1.1 Backend compatibility has completed **Step 2E — pre-activation acceptance sweep**, and Frontend dual-version support is complete through F7-D. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific projections and final-source semantics. DefinitionVersion 1.1 remains DRAFT while this compatibility release awaits deployment; activation will be a separate migration/release after old ECS tasks drain. Real provider-backed clarification interaction remains Step 8.
 
 ### Domain/Application
 
@@ -124,7 +124,7 @@ Accepted persistence artifacts are `docs/backend/04-persistence-postgresql-desig
 
 - [x] HTTP resource/use-case mapping.
 - [x] Routes and methods.
-- [x] OpenAPI v0.5.0 version-aware Tie-break GET/PUT and legacy/contextual state projections implemented in Backend; 1.1 activation remains deferred until finalization compatibility is complete.
+- [x] OpenAPI v0.5.0 version-aware Tie-break GET/PUT and legacy/contextual state projections implemented in Backend; 1.1 activation remains deferred until the compatibility-capable Backend + Frontend release is deployed and old ECS tasks drain.
 - [x] Status/error mapping.
 - [x] Business authentication/authorization boundary.
 - [x] Authentication transport/security mechanics (server-side Session + JDBC + cookie + CSRF).
