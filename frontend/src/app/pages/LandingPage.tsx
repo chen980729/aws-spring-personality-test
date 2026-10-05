@@ -36,7 +36,7 @@ export function LandingPage() {
           </p>
 
           <h1 id="landing-title">
-            Understand yourself.
+            Understand yourself.{' '}
             <span>Discover your patterns.</span>
           </h1>
 
