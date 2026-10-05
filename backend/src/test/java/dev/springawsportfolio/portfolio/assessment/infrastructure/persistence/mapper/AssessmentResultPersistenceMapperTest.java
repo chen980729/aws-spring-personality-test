@@ -102,6 +102,40 @@ class AssessmentResultPersistenceMapperTest {
     }
 
     @Test
+    void roundTripsLegacyAndContextualTieBreakDecisionSources() {
+        FinalAssessmentResult original =
+                new FinalAssessmentResult(
+                        "IN",
+                        List.of(
+                                new FinalDimensionConclusion(
+                                        new DimensionCode("EI"),
+                                        new PoleCode("I"),
+                                        FinalDecisionSource
+                                                .USER_TIE_BREAK
+                                ),
+                                new FinalDimensionConclusion(
+                                        new DimensionCode("SN"),
+                                        new PoleCode("N"),
+                                        FinalDecisionSource
+                                                .TIE_BREAK_QUESTION
+                                )
+                        )
+                );
+
+        FinalAssessmentResult restored =
+                mapper.toFinalDomain(
+                        mapper.toFinalJsonNode(
+                                original
+                        )
+                );
+
+        assertEquals(
+                original,
+                restored
+        );
+    }
+
+    @Test
     void mapsMissingResultsToNull() {
         assertNull(
                 mapper.toInitialDomain(
