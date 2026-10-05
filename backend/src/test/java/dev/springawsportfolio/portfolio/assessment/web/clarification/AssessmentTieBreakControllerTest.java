@@ -318,10 +318,8 @@ class AssessmentTieBreakControllerTest {
                 )
         )
                 .willReturn(
-                        sessionResult(
-                                sessionId,
-                                AssessmentSessionStatus
-                                        .AWAITING_CLARIFICATION
+                        contextualSessionResult(
+                                sessionId
                         )
                 );
 
@@ -351,7 +349,31 @@ class AssessmentTieBreakControllerTest {
                                         csrf().asHeader()
                                 )
                 )
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].questionId"
+                        )
+                                .value("TB-EI-1")
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].selectedOptionId"
+                        )
+                                .value("TB-EI-02")
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].selectedPole"
+                        )
+                                .doesNotExist()
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].resolvedPole"
+                        )
+                                .doesNotExist()
+                );
 
         org.mockito.ArgumentCaptor
                 <SubmitDimensionTieBreakCommand>
@@ -687,6 +709,47 @@ class AssessmentTieBreakControllerTest {
 
         verifyNoInteractions(
                 submitDimensionTieBreakService
+        );
+    }
+
+    private AssessmentSessionResult contextualSessionResult(
+            UUID sessionId
+    ) {
+        return new AssessmentSessionResult(
+                sessionId,
+                "SIXTEEN_PERSONALITY",
+                "1.1",
+                AssessmentSessionStatus.AWAITING_CLARIFICATION,
+                List.of(),
+                Instant.parse(
+                        "2026-10-05T13:00:00Z"
+                ),
+                null,
+                List.of(),
+                List.of(),
+                List.of(
+                        new AssessmentSessionResult.TieBreakStateResult(
+                                "EI",
+                                "TB-EI-1",
+                                "TB-EI-02",
+                                "I",
+                                Instant.parse(
+                                        "2026-10-05T13:01:00Z"
+                                )
+                        )
+                ),
+                null,
+                new AssessmentSessionResult.WorkflowResult(
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        false
+                ),
+                Instant.parse(
+                        "2026-10-05T12:00:00Z"
+                ),
+                null,
+                null
         );
     }
 
