@@ -1,7 +1,7 @@
 # Backend Documentation Index
 
 > **Status:** Active backend design + implementation record
-> **Last updated:** 2026-10-03
+> **Last updated:** 2026-10-05
 > **Current implementation checkpoint:** Assessment Step 7 — deterministic Clarification/Tie-break workflow boundaries complete
 > **Current project focus:** AWS deployment / containerization / Terraform / CI/CD
 > **Deferred backend feature work:** Group/Sharing; historical deletion after Group sharing; provider-backed Step 8 LLM runtime after the Cloud/CI-CD line
@@ -31,7 +31,7 @@ Domain truth remains primarily in:
 8. `08-authentication-security.md` — server-side Session/JDBC, cookie, CSRF, password and Spring Security boundary design.
 10. `10-backend-testing-strategy.md` — active testing strategy and coverage through Assessment Step 7.
 
-Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.4.0**).
+Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.5.0**). The runtime remains aligned through the Step 7 legacy subset; DefinitionVersion 1.1 contextual tie-break behavior is accepted design pending implementation/migration.
 
 ## Implementation checkpoints
 
