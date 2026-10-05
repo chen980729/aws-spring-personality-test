@@ -1,7 +1,7 @@
 # Frontend Testing Strategy
 
 > **Original checkpoint:** Frontend F0
-> **Status:** Accepted; Vitest/RTL/MSW strategy implemented through Frontend F7-B and exercised through the UI optimization checkpoint
+> **Status:** Accepted; Vitest/RTL/MSW strategy implemented through Frontend F7-C and exercised through the UI optimization checkpoint
 > **Original date:** 2026-09-30
 > **Implementation review:** 2026-10-04
 
@@ -172,7 +172,7 @@ TypeScript production build
 ESLint
 ```
 
-Implemented regression coverage now includes CSRF recovery, auth/session restoration, Restart response handling, invalid Session IDs, serialized questionnaire autosave, Submit/autosave coordination, `ASSESSMENT_ALREADY_SUBMITTED` recovery, React StrictMode effect replay, Clarification/Tie-break workflow resolution, Result provenance, History pagination and History -> canonical Session -> Result navigation. F7-A added contextual Tie-break GET parsing, contextual PUT request shape + CSRF, and `TIE_BREAK_QUESTION` result-source presentation. F7-B adds component/workflow coverage for contextual prompt/options, confirmation, completed-result transition and the rolling-deploy compatibility rule: legacy 1.0 tests intentionally provide no GET tie-break handler, so any accidental dependency on the new endpoint fails as an unhandled MSW request.
+Implemented regression coverage now includes CSRF recovery, auth/session restoration, Restart response handling, invalid Session IDs, serialized questionnaire autosave, Submit/autosave coordination, `ASSESSMENT_ALREADY_SUBMITTED` recovery, React StrictMode effect replay, Clarification/Tie-break workflow resolution, Result provenance, History pagination and History -> canonical Session -> Result navigation. F7-A added contextual Tie-break GET parsing, contextual PUT request shape + CSRF, and `TIE_BREAK_QUESTION` result-source presentation. F7-B adds component/workflow coverage for contextual prompt/options, confirmation, completed-result transition and the rolling-deploy compatibility rule: legacy 1.0 tests intentionally provide no GET tie-break handler, so any accidental dependency on the new endpoint fails as an unhandled MSW request. F7-C adds a content-catalog integrity test proving all eight preference letters and all sixteen final types are present, each type resolves to four letter descriptions and one stable image path, and the Result component renders summary/letters/strengths/blind spots/disclaimer while retaining the existing Decision trace.
 
 The implementation produced three testing lessons worth keeping explicit:
 
