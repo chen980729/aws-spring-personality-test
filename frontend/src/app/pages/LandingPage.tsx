@@ -70,36 +70,13 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="landing-visual" aria-hidden="true">
-          <div className="landing-visual__glow" />
-          <div className="landing-visual__orbit landing-visual__orbit--outer" />
-          <div className="landing-visual__orbit landing-visual__orbit--inner" />
-
-          <div className="landing-visual__profile">
-            <div className="landing-visual__profile-head" />
-            <div className="landing-visual__profile-body" />
-            <span className="landing-visual__star landing-visual__star--one">✦</span>
-            <span className="landing-visual__star landing-visual__star--two">✦</span>
-            <span className="landing-visual__star landing-visual__star--three">•</span>
-          </div>
-
-          <div className="landing-visual__dimension landing-visual__dimension--ei">
-            <strong>E / I</strong>
-            <span>Energy</span>
-          </div>
-          <div className="landing-visual__dimension landing-visual__dimension--sn">
-            <strong>S / N</strong>
-            <span>Information</span>
-          </div>
-          <div className="landing-visual__dimension landing-visual__dimension--tf">
-            <strong>T / F</strong>
-            <span>Decisions</span>
-          </div>
-          <div className="landing-visual__dimension landing-visual__dimension--jp">
-            <strong>J / P</strong>
-            <span>Lifestyle</span>
-          </div>
-        </div>
+        <figure className="landing-visual">
+          <div className="landing-visual__backdrop" aria-hidden="true" />
+          <img
+            src="/landing-personality-groups.webp"
+            alt="Four illustrated personality profiles representing the assessment experience"
+          />
+        </figure>
       </section>
 
       <section
