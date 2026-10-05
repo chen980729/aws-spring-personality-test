@@ -113,6 +113,87 @@ describe('AssessmentResultStage', () => {
     ).toBeInTheDocument()
 
     expect(
+      screen.getByRole('img', {
+        name: 'INTJ personality illustration',
+      }),
+    ).toHaveAttribute(
+      'src',
+      '/personality/intj.png',
+    )
+
+    expect(
+      screen.getByText(
+        /INTJs may prefer independently analyzing complex problems/,
+      ),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'What your letters mean',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Introversion',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Intuition',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Thinking',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Judging',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Common strengths',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText(
+        'strong at long-term planning',
+      ),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Possible blind spots',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText(
+        /may underestimate the importance of emotion, relationships, or organizational culture/,
+      ),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText(
+        /preference closer to 50 \/ 50 should be interpreted less strongly/i,
+      ),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'How this result was decided',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
       screen.getByText('User tie-break'),
     ).toBeInTheDocument()
 
