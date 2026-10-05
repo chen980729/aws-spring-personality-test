@@ -11,8 +11,24 @@ public record SubmitDimensionTieBreakCommand(
         UserId actorUserId,
         AssessmentSessionId sessionId,
         DimensionCode dimension,
-        PoleCode selectedPole
+        TieBreakSelection selection
 ) {
+
+    public SubmitDimensionTieBreakCommand(
+            UserId actorUserId,
+            AssessmentSessionId sessionId,
+            DimensionCode dimension,
+            PoleCode selectedPole
+    ) {
+        this(
+                actorUserId,
+                sessionId,
+                dimension,
+                new TieBreakSelection.DirectPoleSelection(
+                        selectedPole
+                )
+        );
+    }
 
     public SubmitDimensionTieBreakCommand {
         Objects.requireNonNull(
@@ -31,8 +47,8 @@ public record SubmitDimensionTieBreakCommand(
         );
 
         Objects.requireNonNull(
-                selectedPole,
-                "selectedPole must not be null"
+                selection,
+                "selection must not be null"
         );
     }
 }
