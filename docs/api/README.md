@@ -1,8 +1,8 @@
 # API Contract
 
-> **Status:** OpenAPI v0.4.0 — active accepted design contract
-> **Last updated:** 2026-10-03
-> **Implementation alignment:** Identity/Security + deterministic Assessment HTTP behavior through Step 7; consumed by the React frontend through F6
+> **Status:** OpenAPI v0.5.0 — active accepted design contract
+> **Last updated:** 2026-10-05
+> **Implementation alignment:** Runtime remains aligned through deterministic Assessment Step 7 / Frontend F6; v0.5.0 additionally records the accepted, pending DefinitionVersion 1.1 contextual tie-break design.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -31,6 +31,19 @@ The OpenAPI document is the accepted **design-first MVP target**, not a claim th
 The React frontend therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. This rule has now been exercised through F6: the frontend calls only implemented Identity/Assessment endpoints and deliberately does not instantiate runtime dependencies on Group, historical deletion or provider-backed clarification paths merely because they exist in the design-first target. Full-client generation can be reconsidered once the target contract and executable surface converge.
 
 ## Contract version history
+
+### v0.5.0 — 2026-10-05
+
+Records the accepted DefinitionVersion 1.1 contextual tie-break contract without claiming runtime implementation:
+
+- preserves immutable 1.0 direct-pole semantics and `USER_TIE_BREAK`;
+- adds the version-aware tie-break interaction design for 1.1;
+- adds the contextual `questionId + selectedOptionId` request shape and `TIE_BREAK_QUESTION`;
+- keeps contextual option-to-pole mappings Backend-owned;
+- keeps HTTP paths under `/api/v1`;
+- requires existing 1.0 Sessions to remain completable after 1.0 is retired for new starts.
+
+The executable runtime remains aligned through Step 7 legacy behavior until the 1.1 implementation/migration is completed.
 
 ### v0.4.0 — 2026-09-30
 
