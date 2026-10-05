@@ -102,6 +102,17 @@ function tieBreakSession(
   }
 }
 
+function contextualTieBreakSession() {
+  return {
+    ...tieBreakSession(['EI']),
+    assessment: {
+      code: 'SIXTEEN_PERSONALITY',
+      version: '1.1',
+    },
+    tieBreaks: [],
+  }
+}
+
 function completedSession() {
   return {
     ...tieBreakSession(
@@ -131,6 +142,42 @@ function completedSession() {
   }
 }
 
+function completedContextualSession() {
+  return {
+    ...contextualTieBreakSession(),
+    status: 'COMPLETED',
+    tieBreaks: [
+      {
+        dimensionCode: 'EI',
+        questionId: 'TB-EI-1',
+        selectedOptionId: 'TB-EI-02',
+        decidedAt:
+          '2026-10-05T07:00:00Z',
+      },
+    ],
+    finalResult: {
+      finalType: 'INTJ',
+      dimensions: [
+        {
+          dimensionCode: 'EI',
+          questionnairePreference: null,
+          finalPreference: 'I',
+          source: 'TIE_BREAK_QUESTION',
+          overrodeBaseline: false,
+        },
+      ],
+    },
+    workflow: {
+      pendingClarificationDimensions: [],
+      retryableClarificationDimensions: [],
+      tieBreakRequiredDimensions: [],
+      completed: true,
+    },
+    completedAt:
+      '2026-10-05T07:00:00Z',
+  }
+}
+
 function installCsrfHandler() {
   server.use(
     http.get(
@@ -140,6 +187,53 @@ function installCsrfHandler() {
           token: 'tie-break-csrf',
           headerName: 'X-CSRF-TOKEN',
           parameterName: '_csrf',
+        }),
+    ),
+  )
+}
+
+function installLegacyInteraction(
+  dimensionCode: string,
+  allowedPoles: [string, string],
+) {
+  server.use(
+    http.get(
+      `${sessionEndpoint}/tie-breaks/${dimensionCode}`,
+      () =>
+        HttpResponse.json({
+          interactionType:
+            'DIRECT_POLE_SELECTION',
+          dimensionCode,
+          allowedPoles,
+        }),
+    ),
+  )
+}
+
+function installContextualEiInteraction() {
+  server.use(
+    http.get(
+      `${sessionEndpoint}/tie-breaks/EI`,
+      () =>
+        HttpResponse.json({
+          interactionType:
+            'CONTEXTUAL_QUESTION',
+          dimensionCode: 'EI',
+          questionId: 'TB-EI-1',
+          instruction:
+            'Both options may describe you in different situations. If you had to choose, select the one that feels more natural to you most of the time.',
+          prompt:
+            'When you are trying to make sense of an important issue, which approach more often helps your thoughts become clear?',
+          options: [
+            {
+              optionId: 'TB-EI-01',
+              text: 'I start discussing it with someone and often discover what I think while talking.',
+            },
+            {
+              optionId: 'TB-EI-02',
+              text: 'I first spend some time thinking it through privately, then share my thoughts once they have taken shape.',
+            },
+          ],
         }),
     ),
   )
@@ -169,7 +263,7 @@ async function chooseAndConfirm(
   dimensionCode: string,
 ) {
   await user.click(
-    screen.getByLabelText(
+    await screen.findByLabelText(
       `${pole} — questionnaire evidence 50.0%`,
     ),
   )
@@ -192,11 +286,15 @@ describe('tie-break workflow', () => {
     csrfTokenManager.invalidate()
   })
 
-  it('submits the selected pole with CSRF and transitions to the completed result returned by the backend', async () => {
+  it('submits the selected legacy pole with CSRF and transitions to the completed result returned by the backend', async () => {
     const user = userEvent.setup()
     let receivedBody: unknown
 
     installCsrfHandler()
+    installLegacyInteraction(
+      'EI',
+      ['E', 'I'],
+    )
 
     server.use(
       http.get(
@@ -258,7 +356,7 @@ describe('tie-break workflow', () => {
     ).toBeInTheDocument()
   })
 
-  it('uses the authoritative response to advance to the next required tie-break', async () => {
+  it('uses the authoritative response to advance to the next required legacy tie-break', async () => {
     const user = userEvent.setup()
 
     const initial =
@@ -281,6 +379,14 @@ describe('tie-break workflow', () => {
       )
 
     installCsrfHandler()
+    installLegacyInteraction(
+      'EI',
+      ['E', 'I'],
+    )
+    installLegacyInteraction(
+      'SN',
+      ['S', 'N'],
+    )
 
     server.use(
       http.get(
@@ -325,7 +431,6 @@ describe('tie-break workflow', () => {
       ),
     ).toBeInTheDocument()
 
-
     const reviewButton =
       screen.getByRole('button', {
         name: 'Review tie-break decision',
@@ -356,11 +461,15 @@ describe('tie-break workflow', () => {
     ).toBeInTheDocument()
   })
 
-  it('keeps the selected pole available for a safe same-value retry after an uncertain failure', async () => {
+  it('keeps the selected legacy pole available for a safe same-value retry after an uncertain failure', async () => {
     const user = userEvent.setup()
     let requestCount = 0
 
     installCsrfHandler()
+    installLegacyInteraction(
+      'EI',
+      ['E', 'I'],
+    )
 
     server.use(
       http.get(
@@ -437,5 +546,104 @@ describe('tie-break workflow', () => {
     ).toBeInTheDocument()
 
     expect(requestCount).toBe(2)
+  })
+
+  it('submits a contextual option without exposing pole mapping and transitions to the completed result', async () => {
+    const user = userEvent.setup()
+    let receivedBody: unknown
+
+    installCsrfHandler()
+    installContextualEiInteraction()
+
+    server.use(
+      http.get(
+        sessionEndpoint,
+        () =>
+          HttpResponse.json(
+            contextualTieBreakSession(),
+          ),
+      ),
+      http.put(
+        `${sessionEndpoint}/tie-breaks/EI`,
+        async ({ request }) => {
+          expect(
+            request.headers.get(
+              'X-CSRF-TOKEN',
+            ),
+          ).toBe(
+            'tie-break-csrf',
+          )
+
+          receivedBody =
+            await request.json()
+
+          return HttpResponse.json(
+            completedContextualSession(),
+          )
+        },
+      ),
+    )
+
+    renderSessionPage()
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'When you are trying to make sense of an important issue, which approach more often helps your thoughts become clear?',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.queryByLabelText(
+        /questionnaire evidence/,
+      ),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByLabelText(
+        'I first spend some time thinking it through privately, then share my thoughts once they have taken shape.',
+      ),
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Review tie-break decision',
+      }),
+    )
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Confirm answer',
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Confirm answer',
+      }),
+    )
+
+    await waitFor(() => {
+      expect(receivedBody).toEqual({
+        questionId: 'TB-EI-1',
+        selectedOptionId:
+          'TB-EI-02',
+      })
+    })
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Assessment complete',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText('INTJ'),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText(
+        'Tie-break question',
+      ),
+    ).toBeInTheDocument()
   })
 })
