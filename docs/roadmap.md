@@ -162,7 +162,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-**Current status:** Frontend **F1-F6, post-F6 UI optimization, DefinitionVersion 1.1 compatibility through F7-B, F7-C Result interpretation/content, and F7-D Landing hero integration are complete**. The browser supports both retained 1.0 and staged 1.1 Tie-break semantics, completed results include versioned presentation content plus one optimized illustration per type, and the public Landing page now uses the optimized four-profile hero artwork. The next work is F7-E final frontend regression/documentation/release review before activation.
+**Current status:** Frontend **F1-F6, post-F6 UI optimization, DefinitionVersion 1.1 compatibility through F7-B, F7-C Result interpretation/content, and F7-D Landing hero integration are complete**. The browser supports both retained 1.0 and staged 1.1 Tie-break semantics, completed results include versioned presentation content plus one optimized illustration per type, and the public Landing page now uses the optimized four-profile hero artwork. The F7-A–F7-E compatibility/presentation batch is review-complete. The next release step is compatibility deployment + automatic CD verification, followed by a separate DefinitionVersion 1.1 activation change.
 
 - [x] F0 — React + TypeScript architecture/integration baseline.
 - [x] F1 — React + TypeScript/Vite foundation and test infrastructure.
@@ -175,7 +175,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 - [x] F7-B — contextual Tie-break GET/render/confirm/PUT flow; 1.0 intentionally avoids the new GET dependency during parallel rollout.
 - [x] F7-C — 8 preference-letter descriptions + 16 personality-type descriptions + strengths/blind spots + optimized result imagery, while preserving evidence and Decision trace.
 - [x] F7-D — Landing hero visual integration with optimized WebP, responsive layout, accessible image text, intrinsic sizing and LCP-oriented loading metadata.
-- [ ] F7-E — final frontend regression/documentation/release review.
+- [x] F7-E — final frontend regression/documentation/release review; compatibility release ready, activation intentionally separated.
 - [x] Post-F6 UI optimization — design tokens, App Shells, reusable UI primitives, public/auth/dashboard/workflow redesign, responsive/error/empty/404 polish.
 - [x] Loading/error/retry UX for implemented Identity + deterministic Assessment flows.
 - [x] Vitest / React Testing Library / MSW coverage plus repeated real-browser integration verification.
