@@ -62,7 +62,9 @@ export function TieBreakStage({ session, dimensionCode }: TieBreakStageProps) {
   async function confirmTieBreak() {
     if (!selectedPole || mutation.isPending) return
     try {
-      await mutation.mutateAsync(selectedPole)
+      await mutation.mutateAsync({
+        selectedPole,
+      })
     } catch {
       // Keep selection for a safe retry.
     }
