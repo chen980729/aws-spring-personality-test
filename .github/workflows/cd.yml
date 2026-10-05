@@ -70,7 +70,7 @@ jobs:
           set -euo pipefail
 
           ECR_REGISTRY="${ECR_REPOSITORY_URL%%/*}"
-          IMAGE_TAG="${DEPLOY_SHA}-${GITHUB_RUN_ATTEMPT}"
+          IMAGE_TAG="${DEPLOY_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           IMAGE_URI="${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
 
           echo "registry=${ECR_REGISTRY}" >> "$GITHUB_OUTPUT"
@@ -218,7 +218,7 @@ jobs:
           {
             echo "### Backend deployment"
             echo "- Task definition: \`${DEPLOYED_TASK_DEFINITION}\`"
-            echo "- Image tag: \`${DEPLOY_SHA}-${GITHUB_RUN_ATTEMPT}\`"
+            echo "- Image tag: \`${DEPLOY_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-frontend:
