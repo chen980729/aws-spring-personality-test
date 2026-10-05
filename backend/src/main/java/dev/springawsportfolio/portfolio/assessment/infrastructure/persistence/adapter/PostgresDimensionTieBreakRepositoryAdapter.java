@@ -57,7 +57,7 @@ public class PostgresDimensionTieBreakRepositoryAdapter
                 selected_pole,
                 decided_at
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -91,48 +91,8 @@ public class PostgresDimensionTieBreakRepositoryAdapter
                 jdbcTemplate.query(
                         FIND_ONE_SQL,
                         (resultSet, rowNumber) ->
-                                new DimensionTieBreak(
-                                        new AssessmentSessionId(
-                                                resultSet.getObject(
-                                                        "session_id",
-                                                        java.util.UUID.class
-                                                )
-                                        ),
-                                        new DimensionCode(
-                                                resultSet.getString(
-                                                        "dimension_code"
-                                                )
-                                        ),
-                                        nullableQuestionId(
-                                                resultSet.getString(
-                                                        "question_id"
-                                                )
-                                        ),
-                                        nullableOptionId(
-                                                resultSet.getString(
-                                                        "selected_option_id"
-                                                )
-                                        ),
-                                        nullableQuestionId(
-                                                resultSet.getString(
-                                                        "question_id"
-                                                )
-                                        ),
-                                        nullableOptionId(
-                                                resultSet.getString(
-                                                        "selected_option_id"
-                                                )
-                                        ),
-                                        new PoleCode(
-                                                resultSet.getString(
-                                                        "selected_pole"
-                                                )
-                                        ),
+                                mapTieBreak(
                                         resultSet
-                                                .getTimestamp(
-                                                        "decided_at"
-                                                )
-                                                .toInstant()
                                 ),
                         sessionId.value(),
                         dimension.value()
@@ -155,28 +115,8 @@ public class PostgresDimensionTieBreakRepositoryAdapter
         return jdbcTemplate.query(
                 FIND_ALL_SQL,
                 (resultSet, rowNumber) ->
-                        new DimensionTieBreak(
-                                new AssessmentSessionId(
-                                        resultSet.getObject(
-                                                "session_id",
-                                                java.util.UUID.class
-                                        )
-                                ),
-                                new DimensionCode(
-                                        resultSet.getString(
-                                                "dimension_code"
-                                        )
-                                ),
-                                new PoleCode(
-                                        resultSet.getString(
-                                                "selected_pole"
-                                        )
-                                ),
+                        mapTieBreak(
                                 resultSet
-                                        .getTimestamp(
-                                                "decided_at"
-                                        )
-                                        .toInstant()
                         ),
                 sessionId.value()
         );
@@ -207,6 +147,45 @@ public class PostgresDimensionTieBreakRepositoryAdapter
                 )
         );
     }
+
+    private static DimensionTieBreak mapTieBreak(
+            java.sql.ResultSet resultSet
+    ) throws java.sql.SQLException {
+        return new DimensionTieBreak(
+                new AssessmentSessionId(
+                        resultSet.getObject(
+                                "session_id",
+                                java.util.UUID.class
+                        )
+                ),
+                new DimensionCode(
+                        resultSet.getString(
+                                "dimension_code"
+                        )
+                ),
+                nullableQuestionId(
+                        resultSet.getString(
+                                "question_id"
+                        )
+                ),
+                nullableOptionId(
+                        resultSet.getString(
+                                "selected_option_id"
+                        )
+                ),
+                new PoleCode(
+                        resultSet.getString(
+                                "selected_pole"
+                        )
+                ),
+                resultSet
+                        .getTimestamp(
+                                "decided_at"
+                        )
+                        .toInstant()
+        );
+    }
+
     private static TieBreakQuestionId nullableQuestionId(
             String value
     ) {
@@ -226,5 +205,4 @@ public class PostgresDimensionTieBreakRepositoryAdapter
                         value
                 );
     }
-
 }
