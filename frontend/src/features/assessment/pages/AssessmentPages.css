@@ -1421,8 +1421,8 @@
   position: relative;
   z-index: 1;
   display: block;
-  width: min(100%, 31rem);
-  max-height: 30rem;
+  width: min(100%, 22rem);
+  max-height: 24rem;
   object-fit: contain;
   object-position: bottom center;
 }
