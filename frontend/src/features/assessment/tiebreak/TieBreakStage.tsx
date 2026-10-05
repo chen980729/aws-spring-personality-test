@@ -65,10 +65,17 @@ export function TieBreakStage({
       dimensionCode,
     )
 
+  const usesLegacyDirectTieBreak =
+    session.assessment.version === '1.0'
+
+  const usesContextualTieBreak =
+    session.assessment.version === '1.1'
+
   const interactionQuery =
     useDimensionTieBreakInteractionQuery(
       session.id,
       dimensionCode,
+      usesContextualTieBreak,
     )
 
   const mutation =
@@ -91,7 +98,27 @@ export function TieBreakStage({
     )
   }
 
-  if (interactionQuery.isPending) {
+  if (
+    !usesLegacyDirectTieBreak &&
+    !usesContextualTieBreak
+  ) {
+    return (
+      <section className="assessment-stage">
+        <h2>Tie-break</h2>
+        <p
+          className="assessment-inline-alert"
+          role="alert"
+        >
+          This frontend does not support the tie-break contract for assessment version {session.assessment.version}.
+        </p>
+      </section>
+    )
+  }
+
+  if (
+    usesContextualTieBreak &&
+    interactionQuery.isPending
+  ) {
     return (
       <section className="assessment-stage tie-break-stage">
         <h2>Tie-break</h2>
@@ -100,7 +127,10 @@ export function TieBreakStage({
     )
   }
 
-  if (interactionQuery.isError) {
+  if (
+    usesContextualTieBreak &&
+    interactionQuery.isError
+  ) {
     return (
       <section className="assessment-stage tie-break-stage">
         <h2>Tie-break</h2>
@@ -126,7 +156,32 @@ export function TieBreakStage({
   }
 
   const interaction =
-    interactionQuery.data
+    usesLegacyDirectTieBreak
+      ? {
+          interactionType:
+            'DIRECT_POLE_SELECTION' as const,
+          dimensionCode,
+          allowedPoles:
+            readModel.options.map(
+              (option) =>
+                option.pole,
+            ),
+        }
+      : interactionQuery.data
+
+  if (!interaction) {
+    return (
+      <section className="assessment-stage">
+        <h2>Tie-break</h2>
+        <p
+          className="assessment-inline-alert"
+          role="alert"
+        >
+          Unable to resolve the tie-break interaction for this assessment version.
+        </p>
+      </section>
+    )
+  }
 
   if (
     interaction.dimensionCode !==
