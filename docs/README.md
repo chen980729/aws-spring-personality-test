@@ -20,13 +20,14 @@ Use these documents as the main entry points:
 - `backend/README.md` — backend design + implementation-checkpoint index.
 - `frontend/README.md` — frontend documentation index, current F6 + UI optimization checkpoint and deferred boundaries.
 - `frontend/05-implementation-checkpoint-f1-f6.md` — accepted F1-F6 implementation checkpoint, post-F6 UI optimization checkpoint and cloud handoff.
-- `api/openapi.yaml` — OpenAPI **v0.4.0** HTTP contract.
+- `api/openapi.yaml` — OpenAPI **v0.5.0** design contract; DefinitionVersion 1.1 contextual tie-break is accepted but not yet implemented.
 - `roadmap.md` — current implementation progress and remaining workstreams.
 - `deployment/aws-deployment.md` — as-built AWS topology, networking, cost/security trade-offs and rollout tuning.
 - `deployment/ci-cd.md` — CI/CD flow, OIDC security, least-privilege deployment and release ownership.
 - `future-work.md` — explicit future options and deferred hardening/product work.
 - `adr/` — Architecture Decision Records, including superseded decisions where implementation feedback changed the design.
 - `adr/ADR-0017-terraform-cd-ownership.md` — Terraform infrastructure ownership vs application CD revision ownership.
+- `adr/ADR-0018-contextual-tie-break-definition-version.md` — immutable 1.0 compatibility and DefinitionVersion 1.1 contextual tie-break decision.
 
 Detailed backend/database/API/AWS design should refine this baseline rather than silently contradict it. When implementation feedback changes a major architectural decision, record the change explicitly in an ADR.
 
@@ -34,7 +35,7 @@ Detailed backend/database/API/AWS design should refine this baseline rather than
 
 - `backend/06-rest-api-contract.md` — REST resource/action semantics and recovery rules.
 - `backend/08-authentication-security.md` — accepted MVP Authentication & Security design.
-- `api/openapi.yaml` — OpenAPI v0.4.0 design-first HTTP DTO/security contract.
+- `api/openapi.yaml` — OpenAPI v0.5.0 design-first HTTP DTO/security contract; runtime implementation remains aligned through the Step 7 legacy subset until 1.1 is implemented.
 - `api/README.md` — API contract ownership and version rationale.
 
 ## Frontend architecture and implementation
