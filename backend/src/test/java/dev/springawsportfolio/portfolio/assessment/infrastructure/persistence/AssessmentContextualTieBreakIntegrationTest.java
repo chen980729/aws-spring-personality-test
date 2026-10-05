@@ -9,6 +9,7 @@ import dev.springawsportfolio.portfolio.assessment.application.command.clarifica
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipRemainingClarificationsService;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.StartDimensionClarificationCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.StartDimensionClarificationService;
+import dev.springawsportfolio.portfolio.assessment.application.command.start.StartAssessmentService;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakCommand;
@@ -74,6 +75,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AssessmentContextualTieBreakIntegrationTest {
 
     private static final AssessmentDefinitionVersionId
+            VERSION_1_0_ID =
+            new AssessmentDefinitionVersionId(
+                    UUID.fromString(
+                            "9e2b641f-7600-4a4c-8f56-2d74c9b03e11"
+                    )
+            );
+
+    private static final AssessmentDefinitionVersionId
             VERSION_1_1_ID =
             new AssessmentDefinitionVersionId(
                     UUID.fromString(
@@ -85,6 +94,10 @@ class AssessmentContextualTieBreakIntegrationTest {
     @ServiceConnection
     static final PostgreSQLContainer postgres =
             new PostgreSQLContainer("postgres:18");
+
+    @Autowired
+    StartAssessmentService
+            startAssessmentService;
 
     @Autowired
     SubmitQuestionnaireService
@@ -139,6 +152,29 @@ class AssessmentContextualTieBreakIntegrationTest {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+
+    @Test
+    void newSessionsBindActivatedVersionOnePointOne() {
+        UserId userId =
+                createUser();
+
+        var result =
+                startAssessmentService.execute(
+                        userId,
+                        "SIXTEEN_PERSONALITY"
+                );
+
+        assertTrue(
+                result.created()
+        );
+
+        assertEquals(
+                "1.1",
+                result
+                        .session()
+                        .assessmentVersion()
+        );
+    }
 
     @Test
     void contextualInteractionUsesBoundVersionAndPersistsOptionProvenance() {
@@ -463,7 +499,7 @@ class AssessmentContextualTieBreakIntegrationTest {
                         )
                         .orElseThrow();
 
-        AssessmentDefinitionVersion available =
+        AssessmentDefinitionVersion version =
                 versionRepository
                         .findAvailableByDefinitionId(
                                 definition.id()
@@ -471,16 +507,9 @@ class AssessmentContextualTieBreakIntegrationTest {
                         .orElseThrow();
 
         assertEquals(
-                "1.0",
-                available.versionCode()
+                "1.1",
+                version.versionCode()
         );
-
-        AssessmentDefinitionVersion version =
-                versionRepository
-                        .findById(
-                                VERSION_1_1_ID
-                        )
-                        .orElseThrow();
 
         AssessmentSession session =
                 createSession(
@@ -782,7 +811,7 @@ class AssessmentContextualTieBreakIntegrationTest {
     }
 
     @Test
-    void legacyAvailableVersionStillExposesDirectPoleInteraction() {
+    void retiredVersionOneSessionStillExposesDirectPoleInteraction() {
         UserId userId =
                 createUser();
 
@@ -795,8 +824,8 @@ class AssessmentContextualTieBreakIntegrationTest {
 
         AssessmentDefinitionVersion version =
                 versionRepository
-                        .findAvailableByDefinitionId(
-                                definition.id()
+                        .findById(
+                                VERSION_1_0_ID
                         )
                         .orElseThrow();
 
