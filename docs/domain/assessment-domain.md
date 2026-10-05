@@ -1,6 +1,6 @@
 # Assessment Domain Model
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility is implemented and acceptance-tested, and Frontend dual-version integration is complete through F7-D. 1.1 remains DRAFT; activation stays separate until the compatibility release is deployed and old ECS tasks have drained. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility and Frontend dual-version integration are complete. The separate activation release adds V8 to make 1.1 AVAILABLE and retire 1.0 for new Session binding; retained 1.0 Sessions remain immutable and supported.
 
 > **Status:** Accepted Assessment Domain Baseline — Step 7 legacy behavior plus implemented dual-version tie-break semantics
 > **Last updated:** 2026-10-06
@@ -361,7 +361,7 @@ Implementation refactors, performance improvements, or SQL changes that preserve
 
 `SIXTEEN_PERSONALITY` 1.1 reuses exactly the same 48 questionnaire questions as 1.0. `ScoringPolicy`, `AmbiguityPolicy`, and clarification behavior (including the expected/default clarification policy revision) remain unchanged. Only `FinalizationPolicy` advances to revision `v2`, with immutable contextual tie-break definitions added to the specification.
 
-When implementation and migration are published, 1.0 becomes `RETIRED` and 1.1 becomes the sole `AVAILABLE` version. Retirement prevents new bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs. This documentation change does not publish or activate 1.1.
+Flyway V8 performs the publication transition: 1.0 becomes `RETIRED` and 1.1 becomes the sole `AVAILABLE` version. Retirement prevents new bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs.
 
 See [ADR-0018](../adr/ADR-0018-contextual-tie-break-definition-version.md). Both decision sources remain valid history; `USER_TIE_BREAK` must not be renamed or removed.
 
