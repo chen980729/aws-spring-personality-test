@@ -217,7 +217,7 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ Implemented for current Backend + Frontend scope |
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
 | Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow through F6 |
-| AI integration | External LLM behind an adapter boundary | ⏸ Deferred until after Cloud/CI-CD |
+| AI integration | External LLM behind an adapter boundary | ⏳ Next product milestone after the completed cloud foundation |
 | Containerization | Multi-stage Docker backend image | ✅ Implemented and deployed |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ Deployed in ap-northeast-1 |
 | CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ Manual CD verified; automatic trigger pending final live verification |
@@ -240,9 +240,9 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
 | Clarification + Tie-break mutation | ✅ Complete |
-| External AI adapter / runtime context | ⏸ Deferred until after Cloud/CI-CD |
+| External AI adapter / runtime context | ⏳ Planned next after the cloud foundation |
 | Historical assessment deletion | ⏸ Deferred until Group sharing backend exists |
-| Group / Membership / Sharing implementation | ⏳ Planned after current Cloud/CI-CD work |
+| Group / Membership / Sharing implementation | ⏳ Planned product milestone |
 | React frontend | ✅ F1-F6 complete for current executable Auth + deterministic Assessment scope |
 | Docker application image | ✅ Implemented and deployed via ECR/ECS |
 | AWS deployment | ✅ Full-stack production deployment verified |
