@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-10-05. Documentation-only decision; implementation, migration and publication of 1.1 remain pending.
+Accepted, 2026-10-05. Backend compatibility implementation and pre-activation acceptance are complete. DefinitionVersion 1.1 is seeded as DRAFT; activation and Frontend integration remain pending.
 
 ## Context
 
@@ -40,6 +40,8 @@ The same questionnaire retains reproducible scoring, while version identity expl
 
 Backend must support two semantics simultaneously even though only one version is AVAILABLE for new Sessions. Definition loading, request validation, finalization and persistence/recovery must dispatch from the Session binding. Frontend must handle both interaction variants without obtaining mappings. Persistence keeps `selected_pole` as the resolved business outcome and adds nullable `question_id` / `selected_option_id` provenance. The database requires the contextual IDs to be both null or both populated; bound-version Domain/Application validation decides whether a legacy or contextual fact is semantically legal. Both final source values must remain readable.
 
-Future tests must cover both versions, retirement/resume, immutable question content, definition validation, DTO mapping exclusion, retries and concurrent finalization. Existing technical-failure/clarification behavior and Session consistency boundaries remain intact. See [planned testing](../backend/10-backend-testing-strategy.md#14-planned-definitionversion-11-acceptance-coverage-not-implemented).
+Automated pre-activation acceptance now covers both version semantics, exact immutable questionnaire/specification equivalence, accepted contextual wording/IDs, definition validation, legacy JSON loading, DTO mapping exclusion, wrong-version/wrong-option rejection, UNCLEAR and SKIPPED exact-tie paths, 50/50 evidence preservation, completed retry/conflict behavior, persisted history projection, and a real PostgreSQL race at the final Session-lock boundary. Existing technical-failure/clarification and stale-execution protections remain intact.
 
-No Java, TypeScript, Flyway migration or test changes are part of this decision. Historical checkpoint documents remain unchanged.
+Activation-specific acceptance remains separate because the staged rollout deliberately keeps 1.0 AVAILABLE and 1.1 DRAFT at this checkpoint. The activation change must prove that existing 1.0 Sessions still resume/complete with legacy semantics while newly started Sessions bind 1.1 after promotion. See [current testing coverage](../backend/10-backend-testing-strategy.md#14-definitionversion-11-acceptance-coverage).
+
+Historical Step 6/7 checkpoint documents remain unchanged; the implemented compatibility work is recorded in the Step 2E contextual tie-break checkpoint.
