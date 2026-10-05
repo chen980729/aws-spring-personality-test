@@ -7,6 +7,8 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.Assessm
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidDimensionTieBreakException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakAlreadyDecidedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakInteractionUnavailableException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakNotRequiredException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidAssessmentHistoryPageException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidQuestionnaireResponseException;
@@ -377,6 +379,70 @@ public class AssessmentExceptionHandler {
     }
 
     @ExceptionHandler(
+            TieBreakAlreadyDecidedException.class
+    )
+    ProblemDetail handleTieBreakAlreadyDecided() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.CONFLICT
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/tie-break-already-decided"
+                )
+        );
+
+        problem.setTitle(
+                "Tie-break already decided"
+        );
+
+        problem.setDetail(
+                "The accepted tie-break decision is immutable and "
+                        + "cannot be replaced with a different selection."
+        );
+
+        problem.setProperty(
+                "code",
+                "TIE_BREAK_ALREADY_DECIDED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            TieBreakInteractionUnavailableException.class
+    )
+    ProblemDetail handleTieBreakInteractionUnavailable() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.CONFLICT
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/tie-break-interaction-unavailable"
+                )
+        );
+
+        problem.setTitle(
+                "Tie-break interaction unavailable"
+        );
+
+        problem.setDetail(
+                "The assessment lifecycle no longer permits reading "
+                        + "a pending tie-break interaction."
+        );
+
+        problem.setProperty(
+                "code",
+                "TIE_BREAK_INTERACTION_UNAVAILABLE"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
             InvalidDimensionTieBreakException.class
     )
     ProblemDetail handleInvalidDimensionTieBreak() {
@@ -396,8 +462,8 @@ public class AssessmentExceptionHandler {
         );
 
         problem.setDetail(
-                "The selected pole is not valid for the target "
-                        + "dimension in the bound assessment version."
+                "The submitted tie-break selection is not valid for "
+                        + "the target dimension and bound assessment version."
         );
 
         problem.setProperty(

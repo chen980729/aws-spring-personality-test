@@ -425,15 +425,20 @@ public final class AssessmentFinalizationService {
 
         requireValidPole(
                 dimension,
-                tieBreak.selectedPole(),
-                "tie-break selected pole"
+                tieBreak.resolvedPole(),
+                "tie-break resolved pole"
         );
+
+        FinalDecisionSource decisionSource =
+                tieBreak.isContextualQuestionSelection()
+                        ? FinalDecisionSource.TIE_BREAK_QUESTION
+                        : FinalDecisionSource.USER_TIE_BREAK;
 
         return Optional.of(
                 new FinalDimensionConclusion(
                         dimension.code(),
-                        tieBreak.selectedPole(),
-                        FinalDecisionSource.USER_TIE_BREAK
+                        tieBreak.resolvedPole(),
+                        decisionSource
                 )
         );
     }
@@ -648,8 +653,8 @@ public final class AssessmentFinalizationService {
 
             requireValidPole(
                     definition,
-                    tieBreak.selectedPole(),
-                    "tie-break selected pole"
+                    tieBreak.resolvedPole(),
+                    "tie-break resolved pole"
             );
 
             if (

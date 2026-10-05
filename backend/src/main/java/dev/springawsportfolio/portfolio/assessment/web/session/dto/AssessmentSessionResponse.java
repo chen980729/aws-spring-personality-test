@@ -92,11 +92,28 @@ public record AssessmentSessionResponse(
     ) implements ClarificationResultResponse {
     }
 
-    public record TieBreakStateResponse(
+    public sealed interface TieBreakStateResponse
+            permits LegacyTieBreakStateResponse,
+            ContextualTieBreakStateResponse {
+
+        String dimensionCode();
+
+        Instant decidedAt();
+    }
+
+    public record LegacyTieBreakStateResponse(
             String dimensionCode,
             String selectedPole,
             Instant decidedAt
-    ) {
+    ) implements TieBreakStateResponse {
+    }
+
+    public record ContextualTieBreakStateResponse(
+            String dimensionCode,
+            String questionId,
+            String selectedOptionId,
+            Instant decidedAt
+    ) implements TieBreakStateResponse {
     }
 
     public record FinalAssessmentResultResponse(

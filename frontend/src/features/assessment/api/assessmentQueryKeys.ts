@@ -31,6 +31,17 @@ export const assessmentQueryKeys = {
       'questionnaire',
     ] as const,
 
+  tieBreakInteraction: (
+    sessionId: string,
+    dimensionCode: string,
+  ) =>
+    [
+      'assessment-session',
+      sessionId,
+      'tie-break',
+      dimensionCode,
+    ] as const,
+
   historyRoot: () =>
     ['assessment-history'] as const,
 

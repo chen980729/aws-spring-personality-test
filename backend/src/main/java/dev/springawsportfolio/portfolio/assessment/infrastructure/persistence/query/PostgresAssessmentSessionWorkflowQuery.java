@@ -36,6 +36,8 @@ public class PostgresAssessmentSessionWorkflowQuery
             """
             SELECT
                 dimension_code,
+                question_id,
+                selected_option_id,
                 selected_pole,
                 decided_at
             FROM assessment_dimension_tie_breaks
@@ -124,6 +126,12 @@ public class PostgresAssessmentSessionWorkflowQuery
                                         .TieBreakSnapshot(
                                         resultSet.getString(
                                                 "dimension_code"
+                                        ),
+                                        resultSet.getString(
+                                                "question_id"
+                                        ),
+                                        resultSet.getString(
+                                                "selected_option_id"
                                         ),
                                         resultSet.getString(
                                                 "selected_pole"

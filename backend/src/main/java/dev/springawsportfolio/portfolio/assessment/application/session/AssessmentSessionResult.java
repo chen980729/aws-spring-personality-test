@@ -352,6 +352,8 @@ public record AssessmentSessionResult(
                 .map(tieBreak ->
                         new TieBreakStateResult(
                                 tieBreak.dimensionCode(),
+                                tieBreak.questionId(),
+                                tieBreak.selectedOptionId(),
                                 tieBreak.selectedPole(),
                                 tieBreak.decidedAt()
                         )
@@ -571,9 +573,29 @@ public record AssessmentSessionResult(
 
     public record TieBreakStateResult(
             String dimensionCode,
+            String questionId,
+            String selectedOptionId,
             String selectedPole,
             Instant decidedAt
     ) {
+
+        public TieBreakStateResult(
+                String dimensionCode,
+                String selectedPole,
+                Instant decidedAt
+        ) {
+            this(
+                    dimensionCode,
+                    null,
+                    null,
+                    selectedPole,
+                    decidedAt
+            );
+        }
+
+        public boolean contextual() {
+            return questionId != null;
+        }
     }
 
     public record WorkflowResult(

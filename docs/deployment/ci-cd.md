@@ -138,6 +138,25 @@ Deployment behavior:
 
 The frontend and backend jobs can run in parallel.
 
+Because those jobs run in parallel, application releases must tolerate a short **mixed-version window**. A new frontend may be published before the new ECS deployment has fully drained old tasks, or the new Backend may become available before the new static bundle reaches every client.
+
+For DefinitionVersion 1.1 Tie-break rollout, this requirement is handled explicitly:
+
+```text
+new Frontend + old Backend task
+  -> retained 1.0 Session uses the pre-existing direct-pole path
+  -> no dependency on the new GET /tie-breaks/{dimensionCode}
+
+new Frontend + compatibility Backend
+  -> 1.0 still works
+  -> staged 1.1 can use contextual GET/PUT
+
+1.1 activation
+  -> remains a later step after compatible Backend + Frontend are deployed
+```
+
+This is preferred over relying on deployment timing between the two parallel jobs.
+
 ## 8. Public smoke test
 
 The smoke job runs only after both deployment jobs succeed.

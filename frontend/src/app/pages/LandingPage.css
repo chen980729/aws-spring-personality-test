@@ -128,188 +128,33 @@
 
 .landing-visual {
   position: relative;
+  display: grid;
   min-width: 0;
   min-height: 31rem;
+  place-items: center;
+  margin: 0;
   isolation: isolate;
 }
 
-.landing-visual__glow {
-  position: absolute;
-  z-index: -2;
-  top: 12%;
-  right: 8%;
-  bottom: 4%;
-  left: 4%;
-  border-radius: 45% 55% 46% 54%;
-  background:
-    radial-gradient(circle at 35% 30%, rgb(165 180 252 / 0.72), transparent 28%),
-    radial-gradient(circle at 70% 70%, rgb(191 219 254 / 0.7), transparent 28%),
-    linear-gradient(145deg, rgb(238 242 255 / 0.9), rgb(239 246 255 / 0.58));
-  filter: blur(1px);
-  transform: rotate(-6deg);
-}
-
-.landing-visual__orbit {
+.landing-visual__backdrop {
   position: absolute;
   z-index: -1;
-  top: 50%;
-  left: 50%;
-  border: 1px solid rgb(99 102 241 / 0.16);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.landing-visual__orbit--outer {
-  width: 25rem;
-  height: 25rem;
-}
-
-.landing-visual__orbit--inner {
-  width: 18rem;
-  height: 18rem;
-  border-style: dashed;
-}
-
-.landing-visual__profile {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 15.5rem;
-  height: 18rem;
-  border: 1px solid rgb(255 255 255 / 0.86);
-  border-radius: 48% 52% 42% 58% / 48% 44% 56% 52%;
+  inset: 8% 2% 2% 6%;
+  border-radius: 42% 58% 48% 52%;
   background:
-    radial-gradient(circle at 48% 24%, rgb(255 255 255 / 0.5), transparent 2.2rem),
-    linear-gradient(145deg, #8b8cf8 0%, #5365dc 48%, #3346b0 100%);
-  box-shadow: 0 28px 60px rgb(60 72 150 / 0.26);
-  transform: translate(-50%, -50%) rotate(4deg);
-  overflow: hidden;
+    radial-gradient(circle at 24% 22%, rgb(237 233 254 / 0.76), transparent 31%),
+    radial-gradient(circle at 77% 24%, rgb(220 252 231 / 0.7), transparent 30%),
+    radial-gradient(circle at 25% 78%, rgb(219 234 254 / 0.72), transparent 31%),
+    radial-gradient(circle at 77% 78%, rgb(254 243 199 / 0.72), transparent 31%);
+  filter: blur(14px);
 }
 
-.landing-visual__profile::before,
-.landing-visual__profile::after {
-  position: absolute;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.08);
-  content: '';
-}
-
-.landing-visual__profile::before {
-  width: 9rem;
-  height: 9rem;
-  right: -3.5rem;
-  bottom: 1.5rem;
-}
-
-.landing-visual__profile::after {
-  width: 5rem;
-  height: 5rem;
-  top: 1rem;
-  left: -1.5rem;
-}
-
-.landing-visual__profile-head {
-  position: absolute;
-  z-index: 2;
-  top: 3.75rem;
-  left: 50%;
-  width: 5.2rem;
-  height: 6.4rem;
-  border-radius: 52% 48% 42% 58%;
-  background: #f4f6ff;
-  transform: translateX(-48%) rotate(-5deg);
-}
-
-.landing-visual__profile-head::after {
-  position: absolute;
-  right: -0.7rem;
-  bottom: 1.4rem;
-  width: 1.7rem;
-  height: 2.1rem;
-  border-radius: 50%;
-  background: #f4f6ff;
-  content: '';
-  transform: rotate(18deg);
-}
-
-.landing-visual__profile-body {
-  position: absolute;
-  z-index: 1;
-  right: 2rem;
-  bottom: -4.8rem;
-  left: 2rem;
-  height: 11rem;
-  border-radius: 48% 52% 0 0;
-  background: #dfe5ff;
-}
-
-.landing-visual__star {
-  position: absolute;
-  z-index: 4;
-  color: #ffffff;
-  text-shadow: 0 2px 8px rgb(18 29 94 / 0.28);
-}
-
-.landing-visual__star--one {
-  top: 2.4rem;
-  right: 4.1rem;
-  font-size: 1.2rem;
-}
-
-.landing-visual__star--two {
-  top: 7.4rem;
-  left: 2.7rem;
-  font-size: 0.75rem;
-}
-
-.landing-visual__star--three {
-  top: 4.7rem;
-  left: 3.6rem;
-  font-size: 1.2rem;
-}
-
-.landing-visual__dimension {
-  position: absolute;
-  display: grid;
-  gap: 0.1rem;
-  min-width: 5.7rem;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid rgb(223 229 236 / 0.86);
-  border-radius: var(--radius-lg);
-  background: rgb(255 255 255 / 0.88);
-  box-shadow: 0 12px 28px rgb(15 23 42 / 0.1);
-  backdrop-filter: blur(10px);
-}
-
-.landing-visual__dimension strong {
-  color: var(--color-primary);
-  font-size: 0.82rem;
-}
-
-.landing-visual__dimension span {
-  color: var(--color-text-muted);
-  font-size: 0.66rem;
-  font-weight: 600;
-}
-
-.landing-visual__dimension--ei {
-  top: 10%;
-  left: 4%;
-}
-
-.landing-visual__dimension--sn {
-  top: 14%;
-  right: 0;
-}
-
-.landing-visual__dimension--tf {
-  right: 2%;
-  bottom: 10%;
-}
-
-.landing-visual__dimension--jp {
-  bottom: 5%;
-  left: 2%;
+.landing-visual img {
+  display: block;
+  width: min(100%, 39rem);
+  max-height: 34rem;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 32px rgb(30 41 59 / 0.09));
 }
 
 .landing-features {
@@ -405,9 +250,13 @@
   }
 
   .landing-visual {
-    width: min(100%, 36rem);
-    min-height: 28rem;
+    width: min(100%, 38rem);
+    min-height: 27rem;
     justify-self: center;
+  }
+
+  .landing-visual img {
+    max-height: 31rem;
   }
 
   .landing-features__grid {
@@ -444,46 +293,17 @@
   }
 
   .landing-visual {
-    min-height: 23rem;
+    min-height: 21rem;
   }
 
-  .landing-visual__orbit--outer {
-    width: min(20rem, calc(100vw - 2.5rem));
-    height: min(20rem, calc(100vw - 2.5rem));
+  .landing-visual img {
+    width: min(100%, 32rem);
+    max-height: 27rem;
   }
 
-  .landing-visual__orbit--inner {
-    width: min(14rem, calc(100vw - 8rem));
-    height: min(14rem, calc(100vw - 8rem));
-  }
-
-  .landing-visual__profile {
-    width: min(12rem, calc(100vw - 7rem));
-    height: min(14.4rem, calc(100vw - 4.5rem));
-  }
-
-  .landing-visual__profile-head {
-    top: 3rem;
-    width: 4.2rem;
-    height: 5.2rem;
-  }
-
-  .landing-visual__profile-body {
-    right: 1.3rem;
-    left: 1.3rem;
-  }
-
-  .landing-visual__dimension {
-    min-width: 5rem;
-    padding: 0.55rem 0.65rem;
-  }
-
-  .landing-visual__dimension--ei {
-    left: 0;
-  }
-
-  .landing-visual__dimension--sn {
-    right: 0;
+  .landing-visual__backdrop {
+    inset: 8% 0 3%;
+    filter: blur(10px);
   }
 
   .landing-feature-card:hover {
@@ -493,16 +313,11 @@
 
 @media (max-width: 28rem) {
   .landing-visual {
-    min-height: 20rem;
+    min-height: 18rem;
   }
 
-  .landing-visual__dimension {
-    min-width: 4.5rem;
-    padding: 0.45rem 0.55rem;
-  }
-
-  .landing-visual__dimension span {
-    display: none;
+  .landing-visual img {
+    max-height: 22rem;
   }
 
   .landing-features__heading {

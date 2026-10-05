@@ -1,8 +1,8 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F6 + post-F6 UI optimization complete — deterministic Assessment flow, Result/History integration, and portfolio-ready presentation layer
-> **Last updated:** 2026-10-04
-> **Project next focus:** AWS deployment, containerization, Terraform and CI/CD
+> **Current checkpoint:** Frontend F7-E — final regression/documentation/release-readiness review complete; compatibility release is ready
+> **Last updated:** 2026-10-06
+> **Project next focus:** deploy the compatibility release, verify automatic CD, then activate DefinitionVersion 1.1 in a separate release
 > **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
 
 This directory contains the accepted frontend architecture baseline plus the implementation checkpoint for the currently executable browser application.
@@ -16,6 +16,9 @@ The frontend is not treated as a second source of business truth. It expresses u
 - [`03-auth-session-csrf.md`](03-auth-session-csrf.md) — browser Session/CSRF protocol, same-origin development topology, login/logout rotation behavior and authentication recovery.
 - [`04-testing-strategy.md`](04-testing-strategy.md) — Vitest/RTL/MSW/Playwright responsibilities, cross-stack browser testing boundaries and presentation-regression lessons.
 - [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md) — implemented React stack, accepted F1-F6 behavior, post-F6 UI optimization checkpoint, integration findings, remaining boundaries and cloud handoff.
+- [`06-result-content-checkpoint-f7c.md`](06-result-content-checkpoint-f7c.md) — F7-C content-version boundary, 8-letter / 16-type catalogs, result imagery, UI hierarchy, tests and acceptance checkpoint.
+- [`07-landing-hero-checkpoint-f7d.md`](07-landing-hero-checkpoint-f7d.md) — F7-D Landing hero asset integration, responsive/LCP/accessibility decisions and acceptance checkpoint.
+- [`08-final-review-checkpoint-f7e.md`](08-final-review-checkpoint-f7e.md) — F7-E final regression/documentation/release-readiness review, merge strategy and staged activation checklist.
 
 ## Current implementation summary
 
@@ -35,6 +38,9 @@ Backend-authoritative Workflow Resolver
 Clarification Read / Skip / Skip Remaining
         ↓
 Exact Tie-break when required
+        ↓
+Version-aware Tie-break contract
+(DIRECT_POLE_SELECTION / CONTEXTUAL_QUESTION)
         ↓
 Result Read Model / Decision Provenance
         ↓
@@ -76,4 +82,4 @@ Still deferred:
 - historical Assessment deletion until Group sharing exists, because deletion is a cross-domain operation that must end active shares before hard-deleting the Assessment Session;
 - dedicated Playwright E2E automation; the implemented flows are covered by Vitest/RTL/MSW and have also been exercised manually against the real Spring Boot + PostgreSQL stack.
 
-The next active project workstream is Cloud/Delivery rather than additional frontend feature development.
+Cloud/Delivery is now established. DefinitionVersion 1.1 frontend compatibility is implemented through F7-B, F7-C adds the presentation content layer required to make completed results understandable, and F7-D replaces the former CSS-generated Landing visual with the optimized four-profile hero artwork. The hero is responsive, uses intrinsic dimensions and high-priority eager loading for the first-screen image, and preserves the existing headline/CTA/features content. The next frontend step is F7-E final regression/documentation/release review; 1.1 activation remains deferred.

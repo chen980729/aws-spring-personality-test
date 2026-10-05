@@ -1,8 +1,10 @@
 # Four-Dimension Personality Assessment Specification
 
-> **File:** `docs/domain/sixteen-personality-spec.md`  
-> **Status:** MVP Baseline / Accepted  
-> **Last updated:** 2026-09-19  
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented. 1.1 remains DRAFT; activation and Frontend integration remain pending. Published 1.0 remains immutable and supported.
+
+> **File:** `docs/sixteen-personality-spec-aligned.md`\
+> **Status:** Immutable 1.0 baseline / Implemented 1.1 Backend specification, staged as DRAFT\
+> **Last updated:** 2026-10-05\
 > **Scope:** Personality assessment domain rules, scoring, AI clarification, finalization, result composition, and content/legal boundaries.
 
 ---
@@ -772,7 +774,8 @@ Clarification = SKIPPED
 必须进入：
 
 ```text
-USER_TIE_BREAK_REQUIRED
+1.0: USER_TIE_BREAK_REQUIRED (direct pole)
+1.1: contextual tie-break question required (FinalizationPolicy v2)
 ```
 
 ### 12.7 Case G — Exact Tie + Clarification Unclear / Skipped
@@ -788,14 +791,96 @@ Clarification = UNCLEAR | SKIPPED
 E always wins
 ```
 
-应要求用户完成一次明确的 final preference selection：
+按 Session 绑定的 immutable DefinitionVersion 区分：
 
-```text
-Final = user selected pole
-source = USER_TIE_BREAK
-```
+- **1.0 legacy:** 保留直接选择合法 pole 的既有行为，`source = USER_TIE_BREAK`；1.0 不包含 contextual tie-break questions。
+- **1.1 / FinalizationPolicy v2:** 每个 unresolved exact-tie dimension 使用一道 binary forced-choice contextual question，没有 Neutral option。Backend 根据绑定版本中的稳定 `selectedOptionId -> PoleCode` 映射生成 `source = TIE_BREAK_QUESTION`。
 
-User tie-break 是必须持久表达的业务事实，因为它直接参与 `FinalDimensionConclusion` 的形成。
+两种路径都持久保存 `DimensionTieBreak`，不改写 questionnaire raw score；问卷证据始终为 `50 / 50`。`RESOLVED` clarification 已提供合法 pole 时不需要 tie-break；technical failure 本身不会自动触发 tie-break。
+
+Frontend 不得接收或显示 option-to-pole mapping。可改变选项显示顺序，但必须提交稳定 option ID，不能以 A/B 显示位置解释结果。
+
+### 12.8 Accepted contextual questions — 1.1 only
+
+以下 instruction、prompt 与 option text 原样采用 accepted aligned English specification。映射表仅属于 Backend specification，不能序列化给 Frontend。
+
+Shared instruction:
+
+> **Both options may describe you in different situations. If you had to choose, select the one that feels more natural to you most of the time.**
+
+#### EI Tie-Break
+
+**Question**
+
+> When you are trying to make sense of an important issue, which approach more often helps your thoughts become clear?
+
+**Option A — maps to E**
+
+> I start discussing it with someone and often discover what I think while talking.
+
+**Option B — maps to I**
+
+> I first spend some time thinking it through privately, then share my thoughts once they have taken shape.
+
+#### SN Tie-Break
+
+**Question**
+
+> When you face an unfamiliar problem with incomplete instructions, which starting point feels more natural?
+
+**Option A — maps to S**
+
+> I first gather concrete facts, examples, and what has worked before, then build the solution from there.
+
+**Option B — maps to N**
+
+> I first form an overall picture of the patterns and possibilities, then use specific details to test or refine it.
+
+#### TF Tie-Break
+
+**Question**
+
+> When two solutions are both reasonable but you must choose one, which consideration is more likely to guide your final decision?
+
+**Option A — maps to T**
+
+> I prefer the option supported by the most consistent criteria and defensible trade-offs, even if not everyone likes the outcome.
+
+**Option B — maps to F**
+
+> I prefer the option that best accounts for the people involved and preserves trust, even if the rule is applied less uniformly.
+
+#### JP Tie-Break
+
+**Question**
+
+> You begin an important project whose requirements may still change. Which approach feels more comfortable?
+
+**Option A — maps to J**
+
+> I establish a provisional plan, milestones, and next steps early, then revise them if new information appears.
+
+**Option B — maps to P**
+
+> I keep the structure relatively open at first, gather more information, and commit to details when they become necessary.
+
+稳定标识（A/B 只表示上述文档顺序）：
+
+| Dimension | questionId | Option A optionId | Backend resolvedPole | Option B optionId | Backend resolvedPole |
+|---|---|---|---|---|---|
+| EI | TB-EI-1 | TB-EI-01 | E | TB-EI-02 | I |
+| SN | TB-SN-1 | TB-SN-01 | S | TB-SN-02 | N |
+| TF | TB-TF-1 | TB-TF-01 | T | TB-TF-02 | F |
+| JP | TB-JP-1 | TB-JP-01 | J | TB-JP-02 | P |
+
+### 12.9 Specification validation and persisted decision
+
+1.1 的 `AssessmentSpecification` conceptually adds `TieBreakQuestionDefinition[]`，每项包含 `questionId`、`dimension`、`instruction`、`prompt`、恰好两个 options；每个 option 包含 `optionId`、`text`、Backend-only `resolvedPole`。
+
+验证要求：referenced dimension 存在；v2 每个 dimension 恰好一道题；question IDs 在 specification 中唯一；每题恰好两个 options；option IDs 在题内唯一；两个 options 分别对应该 dimension 的两个不同 poles；每个 resolved pole 都属于引用的 `DimensionDefinition`。
+
+保留 `DimensionTieBreak`，不引入 `TieBreakResponse`。概念字段为 `sessionId`、`dimension`、`questionId`、`selectedOptionId`、`resolvedPole`、`decidedAt`。1.0 的 question/option IDs 为 null，不伪造历史题目；1.1 必须保存真实 IDs。Backend 始终根据 Session 绑定的 immutable DefinitionVersion 验证 question/option/dimension 并解析 pole。
+
 
 ---
 
@@ -941,7 +1026,7 @@ You are naturally...
 
 ### 15.1 Authoritative Version Snapshot
 
-MVP 的 authoritative specification identity 是：
+已发布 legacy specification identity 是（immutable，使用原有 direct-pole exact-tie 语义）：
 
 ```text
 AssessmentDefinitionVersion = "1.0"
@@ -961,6 +1046,10 @@ expected/default ClarificationPolicy revision
 `ScoringPolicy`、`AmbiguityPolicy`、`FinalizationPolicy` 在 Domain Model 中是 DefinitionVersion 内部的 VO，不建立独立的业务 version lifecycle。
 
 内部 revision 只作为 snapshot metadata，不能成为与 `AssessmentDefinitionVersion` 竞争的独立 source of truth。
+
+1.1 是 next specification，恰好复用 Appendix A 的同一份 48 道 questionnaire questions，不修改其 wording、顺序或 keyed poles；`ScoringPolicy`、`AmbiguityPolicy` 和 clarification behavior/revision 均保持不变。`FinalizationPolicy` 改为 revision `v2`，snapshot 新增 §12.8–12.9 的 `TieBreakQuestionDefinition[]`。
+
+实现和 migration 发布时，1.0 才转为 `RETIRED`，1.1 成为唯一 `AVAILABLE` 版本。已有 1.0 Sessions 永不自动升级，退休后仍须能按旧语义完成。此文档变更不表示 1.1 已实现或已部署。详见 [ADR-0018](adr/ADR-0018-contextual-tie-break-definition-version.md)。
 
 ### 15.2 Clarification Policy Provenance
 
@@ -1012,7 +1101,7 @@ AssessmentSession
 4. accepted `ClarificationResult` 与必要 `AIProvenance` 必须保存；
 5. technical retry history / raw provider request-response / complete conversation transcript 不属于 MVP core domain persistence requirement；
 6. `FinalAssessmentResult` 必须记录每个 dimension 的 decision source；
-7. exact tie 由用户解决时，user-selected pole / `USER_TIE_BREAK` source 必须持久表达；
+7. exact tie 的 `DimensionTieBreak` 必须持久表达：1.0 保留 direct pole / `USER_TIE_BREAK`，1.1 保存真实 question/option IDs、resolved pole / `TIE_BREAK_QUESTION`；
 8. 历史 assessment 结果不能因为新版本规则被自动重算覆盖；
 9. 删除历史 Assessment 时，是否 hard delete / soft delete 由统一 deletion policy 决定；immutability 约束修改，不意味着永远不可删除。
 
@@ -1319,7 +1408,10 @@ Final Type
 - [ ] Technical AI failure 不自动转换为 questionnaire fallback；用户需 Retry 或显式 Skip。
 - [ ] Skip / Decline AI + non-zero baseline 使用 questionnaire fallback。
 - [ ] Exact tie + `UNCLEAR` / `SKIPPED` 进入 explicit user tie-break。
-- [ ] User tie-break result 被持久保存，并记录 `source = USER_TIE_BREAK`。
+- [ ] `DimensionTieBreak` 被持久保存：1.0 source 为 `USER_TIE_BREAK`，1.1 source 为 `TIE_BREAK_QUESTION`。
+- [ ] 1.1 每维恰好一道 contextual question；文案与 §12.8 完全一致，满足 §12.9 所有 validation。
+- [ ] Frontend 不接收或显示 option-to-pole mappings；乱序显示不改变 Backend 按稳定 ID 的解析。
+- [ ] 1.0 retirement 后现有 Sessions 仍可完成，无自动升级或伪造 question/option IDs。
 - [ ] Final type 只能由四个 `FinalDimensionConclusion` 组合。
 
 ### Result Presentation
@@ -1339,7 +1431,7 @@ Final Type
 
 ---
 
-# Appendix A — MVP Question Bank v1.0
+# Appendix A — MVP Question Bank v1.0 (unchanged and reused by DefinitionVersion 1.1)
 
 > 当前题库用于实现 MVP。它满足工程需求，但没有经过专业 psychometric validation。  
 > 后续允许通过新的 `assessmentVersion` 修改 wording 或替换 items。
@@ -1419,7 +1511,7 @@ Final Type
 18. Technical AI failure 不直接 finalize；用户必须 Retry 或显式 Skip。
 19. Skip / Decline AI 时，non-zero baseline 使用 questionnaire fallback。
 20. Exact tie 且 clarification `UNCLEAR` / `SKIPPED` 时，由用户进行 explicit tie-break。
-21. User tie-break 作为持久业务事实参与 `FinalDimensionConclusion`。
+21. `DimensionTieBreak` 作为持久业务事实参与 `FinalDimensionConclusion`：1.0 direct pole / `USER_TIE_BREAK`；1.1 contextual option / `TIE_BREAK_QUESTION`。
 22. 四个 `FinalDimensionConclusion` deterministic 地组成最终四字母 type。
 23. Questionnaire percentage 永远来自 deterministic raw score；AI 不生成“调整后百分比”。
 24. `AssessmentDefinitionVersion` 是 authoritative specification snapshot；内部 Policy 为 VO。

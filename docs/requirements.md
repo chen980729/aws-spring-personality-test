@@ -1,5 +1,7 @@
 # Product Requirements
 
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented, and Frontend dual-version integration is complete through F7-D. 1.1 remains DRAFT; the compatibility release must be deployed and old ECS tasks drained before a separate activation release. Published 1.0 remains immutable and supported.
+
 ## 1. Product Goal
 
 Build a production-oriented personal full-stack cloud portfolio project that demonstrates modern web development, backend/domain design, cloud deployment, CI/CD, Infrastructure as Code, testing, and the ability to explain engineering trade-offs in interviews.
@@ -63,6 +65,16 @@ The final MVP includes both the core assessment vertical slice and the group/sha
 10. If an ambiguous dimension was an exact questionnaire tie and clarification finishes as `UNCLEAR` or is `SKIPPED`, the system must require an explicit user tie-break for that dimension; it must not silently choose a pole.
 11. After every ambiguous dimension is `CLARIFIED` or `SKIPPED`, and every exact-tie dimension that still lacks a final preference has an explicit persisted user tie-break, the backend creates the final result and completes the session.
 
+### 4.3.1 Accepted DefinitionVersion 1.1 transition
+
+`SIXTEEN_PERSONALITY` 1.1 reuses exactly the same 48 questionnaire questions as 1.0. `ScoringPolicy`, `AmbiguityPolicy`, and clarification behavior (including the expected/default clarification policy revision) remain unchanged. Only `FinalizationPolicy` advances to revision `v2`, with immutable contextual tie-break definitions added to the specification.
+
+The compatibility rollout is staged. The Backend and persistence expansion support both semantics while 1.0 remains `AVAILABLE` and 1.1 remains `DRAFT`. A separate activation migration will later retire 1.0 and promote 1.1 to the sole `AVAILABLE` version only after compatible application tasks are deployed. Retirement prevents new 1.0 bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs.
+
+For an exact questionnaire tie left unresolved after `UNCLEAR` / `SKIPPED`, 1.1 requires exactly one binary contextual tie-break question for that dimension, with no neutral option. The Frontend receives only question text and stable option IDs/text, never option-to-pole mappings. Backend owns resolution using the Session's bound immutable DefinitionVersion, regardless of display order or which version is currently AVAILABLE. Neither tie-break path changes raw scores or the `50 / 50` questionnaire evidence. A resolved clarification does not require a tie-break; a technical failure still requires Retry or explicit Skip.
+
+Question wording and specification validation are defined in [the aligned specification](sixteen-personality-spec-aligned.md) and [the domain model](domain/assessment-domain.md); rationale is in [ADR-0018](adr/ADR-0018-contextual-tie-break-definition-version.md).
+
 ### 4.4 AI-Assisted Clarification
 
 AI clarification is optional and non-clinical. It is intended to help the user reflect on ambiguous dimensions through examples, follow-up questions, and contextual discussion.
@@ -78,7 +90,7 @@ MVP requirements:
 - The full AI conversation transcript is not persisted in MVP.
 - Only an accepted `ClarificationResult`, required AI provenance, and an optional necessary summary become durable assessment history.
 - Technical AI failure enters `FAILED_RETRYABLE`; the user may explicitly retry that same clarification lifecycle or skip it.
-- AI clarification does not own exact-tie resolution. If an exact questionnaire tie remains unresolved because clarification is `UNCLEAR` or `SKIPPED`, the user must explicitly select one valid pole; that tie-break decision is persisted as a business fact.
+- AI clarification does not own exact-tie resolution. If an exact questionnaire tie remains unresolved because clarification is `UNCLEAR` or `SKIPPED`, the user must complete the version-bound interaction: direct selection of one valid pole for legacy 1.0, or one forced-choice contextual question for 1.1. The accepted decision is persisted as `DimensionTieBreak`.
 - If the temporary conversation context is lost before an accepted result is persisted, the user does not resume from the exact message turn. The affected clarification can restart from its clarification-ready/retryable state.
 - If the parent AssessmentSession is abandoned while an external AI call is in flight, any late result is discarded after reloading/revalidating the Session.
 
@@ -131,7 +143,7 @@ Joining a group must not automatically expose:
 - One logical clarification lifecycle exists per `Session + Dimension`.
 - At most one clarification lifecycle may be actively `IN_PROGRESS` in a Session at a time for MVP.
 - All ambiguous dimensions must be `CLARIFIED` or `SKIPPED` before completion. This is necessary but not always sufficient: if an exact-tie dimension still has no final preference after clarification/skip, an explicit persisted user tie-break is also required.
-- A user tie-break is allowed only when the bound dimension is an exact questionnaire tie that remains unresolved after clarification/skip; the selected pole must be valid for that bound `DimensionDefinition`, and the resulting final decision source is `USER_TIE_BREAK`.
+- A user tie-break is allowed only when the bound dimension is an exact questionnaire tie that remains unresolved after clarification/skip; legacy 1.0 validates the selected pole and records `USER_TIE_BREAK`, while 1.1 resolves a stable `selectedOptionId` through its bound immutable specification and records `TIE_BREAK_QUESTION`. The resolved pole must belong to the bound `DimensionDefinition`.
 - Completed assessment content is immutable, but the owner may delete the historical record.
 
 ## 6. Privacy and Data-Minimization Principles

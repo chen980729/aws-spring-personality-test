@@ -16,6 +16,10 @@ import dev.springawsportfolio.portfolio.assessment.domain.definition.specificati
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.QuestionnaireDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.ScoringPolicy;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.ScoringPolicyType;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakOptionDefinition;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakOptionId;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakQuestionDefinition;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakQuestionId;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson.AmbiguityPolicyJson;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson.AnswerOptionJson;
@@ -25,6 +29,8 @@ import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.js
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson.QuestionJson;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson.QuestionnaireJson;
 import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson.ScoringPolicyJson;
+import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson.TieBreakOptionJson;
+import dev.springawsportfolio.portfolio.assessment.infrastructure.persistence.json.AssessmentSpecificationJson.TieBreakQuestionJson;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -109,6 +115,9 @@ public final class AssessmentSpecificationPersistenceMapper {
                                 json.finalizationPolicy(),
                                 "finalizationPolicy"
                         )
+                ),
+                mapTieBreakQuestions(
+                        json.tieBreakQuestions()
                 )
         );
     }
@@ -147,6 +156,80 @@ public final class AssessmentSpecificationPersistenceMapper {
                         required(
                                 json.poleB(),
                                 "dimension.poleB"
+                        )
+                )
+        );
+    }
+
+    private List<TieBreakQuestionDefinition> mapTieBreakQuestions(
+            List<TieBreakQuestionJson> tieBreakQuestions
+    ) {
+        if (tieBreakQuestions == null) {
+            return List.of();
+        }
+
+        return tieBreakQuestions
+                .stream()
+                .map(this::mapTieBreakQuestion)
+                .toList();
+    }
+
+    private TieBreakQuestionDefinition mapTieBreakQuestion(
+            TieBreakQuestionJson json
+    ) {
+        required(json, "tieBreakQuestion");
+
+        return new TieBreakQuestionDefinition(
+                new TieBreakQuestionId(
+                        required(
+                                json.questionId(),
+                                "tieBreakQuestion.questionId"
+                        )
+                ),
+                new DimensionCode(
+                        required(
+                                json.dimension(),
+                                "tieBreakQuestion.dimension"
+                        )
+                ),
+                required(
+                        json.instruction(),
+                        "tieBreakQuestion.instruction"
+                ),
+                required(
+                        json.prompt(),
+                        "tieBreakQuestion.prompt"
+                ),
+                required(
+                        json.options(),
+                        "tieBreakQuestion.options"
+                )
+                        .stream()
+                        .map(this::mapTieBreakOption)
+                        .toList()
+        );
+    }
+
+    private TieBreakOptionDefinition mapTieBreakOption(
+            TieBreakOptionJson json
+    ) {
+        required(json, "tieBreakOption");
+
+        return new TieBreakOptionDefinition(
+                new TieBreakOptionId(
+                        required(
+                                json.optionId(),
+                                "tieBreakOption.optionId"
+                        )
+                ),
+                required(
+                        json.text(),
+                        "tieBreakOption.text"
+                ),
+                new PoleCode(
+                        required(
+                                json.resolvedPole(),
+                                "tieBreakOption.resolvedPole"
                         )
                 )
         );

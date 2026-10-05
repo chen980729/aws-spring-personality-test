@@ -1,8 +1,10 @@
 # Backend Testing Strategy & Current Coverage
 
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and the Step 2E pre-activation acceptance sweep are complete. 1.1 remains DRAFT while activation and Frontend integration are pending. Published 1.0 remains immutable and supported.
+
 > **Status:** Active implementation guidance
-> **Last reviewed:** 2026-09-30
-> **Current coverage checkpoint:** Assessment through deterministic Clarification/Tie-break HTTP boundary (Step 7)
+> **Last reviewed:** 2026-10-05
+> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 Backend compatibility/pre-activation acceptance through Step 2E
 
 ## 1. Testing principle
 
@@ -494,7 +496,7 @@ historical detail read-back
 
 ## 12. Step 7 Clarification / Tie-break coverage
 
-Step 7 now has automated coverage across Domain, Application, PostgreSQL and Web MVC boundaries.
+Step 7 now has automated coverage across Domain, Application, PostgreSQL and Web MVC boundaries for the existing legacy 1.0 behavior. This coverage does not establish implementation of 1.1 contextual questions.
 
 Verified behavior includes:
 
@@ -559,3 +561,87 @@ Because ADR-0016 makes `DimensionClarification` a separate Aggregate, these test
 The Identity/Security test infrastructure remains reusable for authenticated Assessment and future Group endpoint testing.
 
 Before production deployment is considered stable, add configuration-level verification for environment-driven datasource settings, secure production Session-cookie behavior, health/readiness expectations and any AWS-specific profile assumptions. CI should also run the existing backend suite together with the frontend test/build/lint gates rather than treating either build unit as optional.
+
+## 14. DefinitionVersion 1.1 acceptance coverage
+
+Step 2E completes the **pre-activation** Backend acceptance sweep. The purpose is to prove that one compatible Backend can safely understand both the retained 1.0 semantics and the staged 1.1 semantics before availability changes.
+
+Current CI checkpoint:
+
+```text
+Backend Maven verify: 263 tests
+Failures: 0
+Errors:   0
+Skipped:  0
+Frontend quality gates: success
+```
+
+### Immutable specification and content — implemented
+
+Automated PostgreSQL-backed checks now prove:
+
+- 1.1 dimensions are identical to 1.0.
+- all 48 questionnaire definitions are identical to 1.0, including IDs, order, wording, dimension/keyed-pole mapping and answer scale.
+- ScoringPolicy, AmbiguityPolicy and ClarificationPolicy are unchanged.
+- only FinalizationPolicy revision changes from v1 to v2.
+- 1.0 has no contextual definitions.
+- 1.1 contains exactly the accepted EI/SN/TF/JP question IDs, shared instruction, prompts, option IDs/text and Backend-only resolved-pole mappings.
+- retained 1.0 JSONB with no `tieBreakQuestions` field remains loadable.
+- v2 specification invariants reject missing/duplicate/invalid contextual definitions.
+
+### Domain/Application version matrix — implemented
+
+Automated coverage proves:
+
+- while 1.0 remains the current AVAILABLE version, a Session explicitly bound to staged 1.1 still uses its own contextual semantics; the current AVAILABLE version is never consulted to reinterpret an existing Session.
+- exact tie + SKIPPED produces the bound tie-break interaction.
+- exact tie + accepted UNCLEAR clarification also produces the bound tie-break interaction.
+- 1.0 exposes direct-pole interaction and retains `USER_TIE_BREAK`.
+- 1.1 exposes contextual interaction and produces `TIE_BREAK_QUESTION`.
+- wrong-version direct-pole submission to 1.1 is rejected.
+- wrong-dimension question IDs and unknown/wrong option IDs are rejected.
+- contextual option-to-pole resolution remains Backend-owned.
+- a neutral questionnaire remains rawScore = 0 with null questionnaire preference and 50/50 evidence after contextual finalization.
+- deterministic type composition remains stable; the full acceptance path choosing each first contextual option completes as `ESTJ`.
+
+### Persistence, REST, history and recovery — implemented
+
+Automated coverage proves:
+
+- legacy tie-break facts keep null contextual IDs; contextual facts round-trip questionId, selectedOptionId, resolvedPole and decidedAt.
+- GET returns DIRECT_POLE_SELECTION or CONTEXTUAL_QUESTION by the Session-bound version and never exposes contextual pole mappings.
+- PUT accepts only the exclusive legacy/contextual shapes and rejects mixed/extra fields.
+- accepted contextual facts appear in authoritative Session/history detail as questionId + selectedOptionId rather than leaking resolvedPole as a user-selected value.
+- an equivalent contextual PUT retry after Session completion is idempotent, preserves the original decidedAt and does not create a duplicate fact.
+- a conflicting retry is rejected and leaves the persisted fact unchanged.
+- final-result JSONB round-trips both `USER_TIE_BREAK` and `TIE_BREAK_QUESTION`.
+- the final contextual tie-break racing with `skip-remaining` is serialized by the Session row-lock boundary; the real PostgreSQL test ends with exactly one completed Session, one fact per dimension and one final result.
+- existing stale clarification execution / abandonment protections remain covered separately.
+
+### Activation-specific acceptance — intentionally pending
+
+At this checkpoint:
+
+```text
+1.0 = AVAILABLE
+1.1 = DRAFT
+```
+
+This is intentional and is itself verified by integration tests. Step 2E does **not** promote 1.1.
+
+The later activation migration must add a second acceptance gate:
+
+```text
+existing Session bound to 1.0
+  -> still resumes/completes with direct-pole semantics
+  -> still records USER_TIE_BREAK
+
+new Session started after activation
+  -> binds 1.1
+  -> receives contextual tie-break semantics
+  -> records TIE_BREAK_QUESTION
+```
+
+That post-activation matrix belongs to the activation step because it cannot be truthfully exercised while 1.1 remains DRAFT.
+
+Historical Step 6/7 checkpoint documents remain unchanged. DefinitionVersion 1.1 compatibility is recorded in `16-contextual-tie-break-compatibility-checkpoint.md`.

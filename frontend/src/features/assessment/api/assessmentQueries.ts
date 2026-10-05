@@ -11,6 +11,7 @@ import {
   getAssessmentDetails,
   getAssessmentHistory,
   getAssessmentSession,
+  getDimensionTieBreakInteraction,
   getSessionQuestionnaire,
   restartAssessmentSession,
   saveQuestionnaireProgress,
@@ -25,6 +26,7 @@ import type {
   AssessmentSession,
   QuestionAnswer,
   SessionQuestionnaire,
+  TieBreakRequest,
 } from './assessmentTypes'
 
 const catalogStaleTime = 5 * 60 * 1000
@@ -256,6 +258,26 @@ export function useSkipRemainingClarificationsMutation(
   })
 }
 
+export function useDimensionTieBreakInteractionQuery(
+  sessionId: string,
+  dimensionCode: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      assessmentQueryKeys.tieBreakInteraction(
+        sessionId,
+        dimensionCode,
+      ),
+    queryFn: () =>
+      getDimensionTieBreakInteraction(
+        sessionId,
+        dimensionCode,
+      ),
+    enabled,
+  })
+}
+
 export function useSubmitDimensionTieBreakMutation(
   sessionId: string,
   dimensionCode: string,
@@ -263,13 +285,11 @@ export function useSubmitDimensionTieBreakMutation(
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (selectedPole: string) =>
+    mutationFn: (request: TieBreakRequest) =>
       submitDimensionTieBreak(
         sessionId,
         dimensionCode,
-        {
-          selectedPole,
-        },
+        request,
       ),
 
     onSuccess: (session) => {
@@ -277,6 +297,15 @@ export function useSubmitDimensionTieBreakMutation(
         queryClient,
         session,
       )
+
+      queryClient.removeQueries({
+        queryKey:
+          assessmentQueryKeys.tieBreakInteraction(
+            sessionId,
+            dimensionCode,
+          ),
+        exact: true,
+      })
     },
   })
 }

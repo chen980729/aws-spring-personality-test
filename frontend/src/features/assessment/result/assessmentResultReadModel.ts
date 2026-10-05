@@ -68,6 +68,13 @@ function sourcePresentation(
         description:
           'The questionnaire was exactly tied, so the persisted user tie-break supplied the final preference.',
       }
+
+    case 'TIE_BREAK_QUESTION':
+      return {
+        label: 'Tie-break question',
+        description:
+          'The questionnaire was exactly tied, so a contextual tie-break question supplied the final preference.',
+      }
   }
 }
 

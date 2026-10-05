@@ -2,6 +2,9 @@ package dev.springawsportfolio.portfolio.assessment.web.clarification;
 
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakService;
+import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.TieBreakSelection;
+import dev.springawsportfolio.portfolio.assessment.application.query.tiebreak.DimensionTieBreakInteractionResult;
+import dev.springawsportfolio.portfolio.assessment.application.query.tiebreak.GetDimensionTieBreakInteractionService;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidDimensionTieBreakException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakNotRequiredException;
@@ -45,9 +48,11 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,6 +73,10 @@ class AssessmentTieBreakControllerTest {
 
     @Autowired
     MockMvc mockMvc;
+
+    @MockitoBean
+    GetDimensionTieBreakInteractionService
+            getDimensionTieBreakInteractionService;
 
     @MockitoBean
     SubmitDimensionTieBreakService
@@ -102,6 +111,137 @@ class AssessmentTieBreakControllerTest {
                         }
                     };
                 });
+    }
+
+    @Test
+    void returnsLegacyDirectPoleInteractionWithoutCsrf()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+
+        given(
+                getDimensionTieBreakInteractionService.execute(
+                        any(),
+                        any(),
+                        any()
+                )
+        )
+                .willReturn(
+                        new DimensionTieBreakInteractionResult
+                                .DirectPoleSelection(
+                                "EI",
+                                List.of(
+                                        "E",
+                                        "I"
+                                )
+                        )
+                );
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/assessment-sessions/"
+                                        + sessionId
+                                        + "/tie-breaks/EI"
+                        )
+                                .with(
+                                        authenticatedUser(
+                                                userId
+                                        )
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.interactionType")
+                                .value(
+                                        "DIRECT_POLE_SELECTION"
+                                )
+                )
+                .andExpect(
+                        jsonPath("$.dimensionCode")
+                                .value("EI")
+                )
+                .andExpect(
+                        jsonPath("$.allowedPoles[0]")
+                                .value("E")
+                )
+                .andExpect(
+                        jsonPath("$.allowedPoles[1]")
+                                .value("I")
+                );
+    }
+
+    @Test
+    void returnsContextualInteractionWithoutPoleMappings()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+
+        given(
+                getDimensionTieBreakInteractionService.execute(
+                        any(),
+                        any(),
+                        any()
+                )
+        )
+                .willReturn(
+                        new DimensionTieBreakInteractionResult
+                                .ContextualQuestion(
+                                "EI",
+                                "TB-EI-1",
+                                "Choose one.",
+                                "Which approach feels natural?",
+                                List.of(
+                                        new DimensionTieBreakInteractionResult
+                                                .Option(
+                                                "TB-EI-01",
+                                                "Talk it through."
+                                        ),
+                                        new DimensionTieBreakInteractionResult
+                                                .Option(
+                                                "TB-EI-02",
+                                                "Think privately."
+                                        )
+                                )
+                        )
+                );
+
+        mockMvc.perform(
+                        get(
+                                "/api/v1/assessment-sessions/"
+                                        + sessionId
+                                        + "/tie-breaks/EI"
+                        )
+                                .with(
+                                        authenticatedUser(
+                                                userId
+                                        )
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.interactionType")
+                                .value(
+                                        "CONTEXTUAL_QUESTION"
+                                )
+                )
+                .andExpect(
+                        jsonPath("$.questionId")
+                                .value("TB-EI-1")
+                )
+                .andExpect(
+                        jsonPath("$.options[0].optionId")
+                                .value("TB-EI-01")
+                )
+                .andExpect(
+                        jsonPath("$.options[0].text")
+                                .value("Talk it through.")
+                )
+                .andExpect(
+                        jsonPath("$.options[0].resolvedPole")
+                                .doesNotExist()
+                );
     }
 
     @Test
@@ -163,6 +303,201 @@ class AssessmentTieBreakControllerTest {
                         jsonPath("$.workflow.completed")
                                 .value(true)
                 );
+    }
+
+    @Test
+    void acceptsContextualTieBreakRequest()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+
+        given(
+                submitDimensionTieBreakService.execute(
+                        any()
+                )
+        )
+                .willReturn(
+                        contextualSessionResult(
+                                sessionId
+                        )
+                );
+
+        mockMvc.perform(
+                        put(
+                                "/api/v1/assessment-sessions/"
+                                        + sessionId
+                                        + "/tie-breaks/EI"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "questionId": "TB-EI-1",
+                                          "selectedOptionId": "TB-EI-02"
+                                        }
+                                        """
+                                )
+                                .with(
+                                        authenticatedUser(
+                                                userId
+                                        )
+                                )
+                                .with(
+                                        csrf().asHeader()
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].questionId"
+                        )
+                                .value("TB-EI-1")
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].selectedOptionId"
+                        )
+                                .value("TB-EI-02")
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].selectedPole"
+                        )
+                                .doesNotExist()
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.tieBreaks[0].resolvedPole"
+                        )
+                                .doesNotExist()
+                );
+
+        org.mockito.ArgumentCaptor
+                <SubmitDimensionTieBreakCommand>
+                captor =
+                org.mockito.ArgumentCaptor.forClass(
+                        SubmitDimensionTieBreakCommand.class
+                );
+
+        verify(
+                submitDimensionTieBreakService
+        )
+                .execute(
+                        captor.capture()
+                );
+
+        TieBreakSelection.ContextualOptionSelection
+                selection =
+                (TieBreakSelection.ContextualOptionSelection)
+                        captor
+                                .getValue()
+                                .selection();
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "TB-EI-1",
+                selection
+                        .questionId()
+                        .value()
+        );
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "TB-EI-02",
+                selection
+                        .selectedOptionId()
+                        .value()
+        );
+    }
+
+    @Test
+    void returns400ForMixedTieBreakRequestShapes()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+
+        mockMvc.perform(
+                        put(
+                                "/api/v1/assessment-sessions/"
+                                        + sessionId
+                                        + "/tie-breaks/EI"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "selectedPole": "I",
+                                          "questionId": "TB-EI-1",
+                                          "selectedOptionId": "TB-EI-02"
+                                        }
+                                        """
+                                )
+                                .with(
+                                        authenticatedUser(
+                                                userId
+                                        )
+                                )
+                                .with(
+                                        csrf().asHeader()
+                                )
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.code")
+                                .value("VALIDATION_FAILED")
+                );
+
+        verifyNoInteractions(
+                submitDimensionTieBreakService
+        );
+    }
+
+    @Test
+    void returns400WhenRequestContainsUnknownField()
+            throws Exception {
+
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+
+        mockMvc.perform(
+                        put(
+                                "/api/v1/assessment-sessions/"
+                                        + sessionId
+                                        + "/tie-breaks/EI"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "selectedPole": "I",
+                                          "unexpected": "value"
+                                        }
+                                        """
+                                )
+                                .with(
+                                        authenticatedUser(
+                                                userId
+                                        )
+                                )
+                                .with(
+                                        csrf().asHeader()
+                                )
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        jsonPath("$.code")
+                                .value("VALIDATION_FAILED")
+                );
+
+        verifyNoInteractions(
+                submitDimensionTieBreakService
+        );
     }
 
     @Test
@@ -374,6 +709,47 @@ class AssessmentTieBreakControllerTest {
 
         verifyNoInteractions(
                 submitDimensionTieBreakService
+        );
+    }
+
+    private AssessmentSessionResult contextualSessionResult(
+            UUID sessionId
+    ) {
+        return new AssessmentSessionResult(
+                sessionId,
+                "SIXTEEN_PERSONALITY",
+                "1.1",
+                AssessmentSessionStatus.AWAITING_CLARIFICATION,
+                List.of(),
+                Instant.parse(
+                        "2026-10-05T13:00:00Z"
+                ),
+                null,
+                List.of(),
+                List.of(),
+                List.of(
+                        new AssessmentSessionResult.TieBreakStateResult(
+                                "EI",
+                                "TB-EI-1",
+                                "TB-EI-02",
+                                "I",
+                                Instant.parse(
+                                        "2026-10-05T13:01:00Z"
+                                )
+                        )
+                ),
+                null,
+                new AssessmentSessionResult.WorkflowResult(
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        false
+                ),
+                Instant.parse(
+                        "2026-10-05T12:00:00Z"
+                ),
+                null,
+                null
         );
     }
 

@@ -186,20 +186,24 @@ class AssessmentSessionWebMapperTest {
                 response.tieBreaks().size()
         );
 
+        AssessmentSessionResponse.LegacyTieBreakStateResponse
+                tieBreak =
+                assertInstanceOf(
+                        AssessmentSessionResponse
+                                .LegacyTieBreakStateResponse.class,
+                        response
+                                .tieBreaks()
+                                .getFirst()
+                );
+
         assertEquals(
                 "X",
-                response
-                        .tieBreaks()
-                        .getFirst()
-                        .selectedPole()
+                tieBreak.selectedPole()
         );
 
         assertEquals(
                 decidedAt,
-                response
-                        .tieBreaks()
-                        .getFirst()
-                        .decidedAt()
+                tieBreak.decidedAt()
         );
     }
 

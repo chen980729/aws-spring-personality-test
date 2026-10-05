@@ -1,7 +1,7 @@
 # Frontend API Integration Baseline
 
 > **Original checkpoint:** Frontend F0
-> **Status:** Accepted baseline; implemented through Frontend F6 for the executable Identity + deterministic Assessment surface
+> **Status:** Accepted baseline; implemented through Frontend F7-B for dual-version Tie-break API + contextual interaction compatibility
 > **Original date:** 2026-09-30
 > **Implementation review:** 2026-10-03
 
@@ -64,7 +64,8 @@ Questionnaire autosave is a complete snapshot replacement contract, not incremen
 |---|---|---|
 | POST | `/api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/skip` | skip one unresolved clarification |
 | POST | `/api/v1/assessment-sessions/{sessionId}/clarifications/skip-remaining` | skip remaining unresolved clarifications |
-| PUT | `/api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}` | submit required exact-tie user choice |
+| GET | `/api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}` | read the Session-bound Tie-break interaction |
+| PUT | `/api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}` | submit either the legacy direct-pole request or the contextual question-option request |
 
 These operations return the updated authoritative `AssessmentSessionResponse`.
 
@@ -96,6 +97,7 @@ Recommended query-key families:
 ["assessments", assessmentCode, "active-session"]
 ["assessment-session", sessionId]
 ["assessment-session", sessionId, "questionnaire"]
+["assessment-session", sessionId, "tie-break", dimensionCode]
 ["assessment-history", page, size]
 ```
 
@@ -216,9 +218,41 @@ Read queries use limited retry for network/transient failures: the current Query
 
 ## 9. Current frontend integration alignment
 
-The F1-F6 implementation consumes the executable endpoints above through handwritten feature-local TypeScript DTO/API modules and the shared HTTP client.
+The F1-F6 implementation consumes the executable endpoints above through handwritten feature-local TypeScript DTO/API modules and the shared HTTP client. F7-A added the dual-version Tie-break DTO/API boundary; F7-B now renders and submits contextual Tie-break questions for a Session bound to DefinitionVersion 1.1 while preserving the legacy 1.0 browser flow.
 
 Important implemented rules:
+
+Tie-break contract compatibility in F7-A:
+
+```text
+GET interaction
+  -> DIRECT_POLE_SELECTION
+     or
+  -> CONTEXTUAL_QUESTION
+
+PUT request
+  -> { selectedPole }
+     or
+  -> { questionId, selectedOptionId }
+```
+
+The TypeScript request union is intentionally exclusive: fields from the other variant are typed as `never`. Contextual interaction DTOs contain only question/option presentation data; they do not contain `resolvedPole` or an option-to-pole mapping. The Session read model also distinguishes legacy `selectedPole` facts from contextual `questionId + selectedOptionId` facts.
+
+Runtime dispatch deliberately considers the Session's bound version:
+
+```text
+Session version 1.0
+  -> do not depend on the new GET interaction endpoint
+  -> render the existing direct-pole UI from persisted questionnaire evidence
+  -> PUT { selectedPole }
+
+Session version 1.1
+  -> GET the contextual interaction
+  -> render instruction + prompt + option text only
+  -> PUT { questionId, selectedOptionId }
+```
+
+This asymmetry is intentional. The production CD workflow deploys Backend and Frontend in parallel, so a new static frontend can become visible while an old ECS task is still draining. Keeping the 1.0 UI independent of the newly added GET endpoint means the new frontend remains compatible with those old tasks. The 1.1 path can safely depend on the new endpoint because 1.1 remains DRAFT until the compatibility-capable Backend and Frontend have both been deployed.
 
 - unsafe requests obtain CSRF state centrally;
 - `CSRF_VALIDATION_FAILED` refreshes CSRF and replays the request exactly once;

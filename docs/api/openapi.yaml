@@ -1,10 +1,14 @@
 openapi: 3.1.2
 info:
   title: Spring AWS Portfolio API
-  version: 0.4.0
+  version: 0.5.0
   summary: MVP HTTP contract for the Spring AWS Portfolio project.
   description: |
     Design-first API contract for the first-party React + Spring Boot application.
+    Version 0.5.0 records accepted DefinitionVersion 1.1 contextual tie-break design;
+    implementation/migration/publication remain pending (ADR-0018). This is not a
+    claim that 1.1 is deployed. HTTP paths remain /api/v1. Legacy 1.0 is immutable;
+    existing Sessions retain their original semantics after its eventual retirement.
 
     Authentication uses a server-side Spring Session persisted through JDBC. Production
     uses an HttpOnly/Secure `__Host-SESSION` cookie. Unsafe requests require the CSRF
@@ -635,10 +639,77 @@ paths:
     parameters:
       - $ref: '#/components/parameters/SessionIdPath'
       - $ref: '#/components/parameters/DimensionCodePath'
+    get:
+      tags: [Assessment Sessions]
+      operationId: getDimensionTieBreak
+      summary: Read the version-bound interaction for an exact questionnaire tie.
+      description: |
+        Accepted design, pending implementation. Requires ownership and a valid bound
+        dimension. Uses the Session's immutable DefinitionVersion, not the currently
+        AVAILABLE version: 1.0 returns DIRECT_POLE_SELECTION; 1.1 returns
+        CONTEXTUAL_QUESTION. Contextual options expose optionId/text only, never
+        resolvedPole or option-to-pole mappings. Eligible only while rawScore == 0,
+        clarification is UNCLEAR/SKIPPED, and no tie-break decision has yet been
+        accepted for that dimension. After acceptance, clients recover from the
+        authoritative Session/tieBreak/finalResult projection rather than re-fetching
+        the interaction. Already-resolved/completed dimensions return 422; abandoned
+        Sessions return 409. This read does not persist a decision.
+      responses:
+        '200':
+          description: Version-aware interaction without contextual pole mappings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TieBreakInteraction'
+              examples:
+                legacy:
+                  value:
+                    interactionType: DIRECT_POLE_SELECTION
+                    dimensionCode: EI
+                    allowedPoles: [E, I]
+                contextual:
+                  value:
+                    interactionType: CONTEXTUAL_QUESTION
+                    dimensionCode: EI
+                    questionId: TB-EI-1
+                    instruction: Both options may describe you in different situations. If you had to choose, select the one that feels more natural to you most of the time.
+                    prompt: When you are trying to make sense of an important issue, which approach more often helps your thoughts become clear?
+                    options:
+                      - optionId: TB-EI-01
+                        text: I start discussing it with someone and often discover what I think while talking.
+                      - optionId: TB-EI-02
+                        text: I first spend some time thinking it through privately, then share my thoughts once they have taken shape.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     put:
       tags: [Assessment Sessions]
       operationId: submitDimensionTieBreak
-      summary: Record the user's explicit final pole selection for a required exact tie.
+      summary: Record the version-bound user decision for a required exact tie.
+      description: |
+        Accepted contextual extension, pending implementation. The Session-bound
+        immutable DefinitionVersion selects the request branch: legacy 1.0 accepts
+        selectedPole (USER_TIE_BREAK); 1.1 accepts questionId/selectedOptionId
+        (TIE_BREAK_QUESTION). Backend validates question against the path dimension,
+        option within that question, and resolves its pole from the bound specification.
+        First decisions require rawScore == 0 and UNCLEAR/SKIPPED clarification.
+        Wrong-version requests, unknown/mismatched IDs, invalid poles or ineligible
+        dimensions return 422. Malformed/mixed request shapes return 400.
+        Equivalent retries return current Session state even after completion,
+        preserving the original fact and decidedAt; conflicting decisions return 409.
+        A retired 1.0 Session remains completable. Neither path changes raw scores.
+        Accepted facts use the existing DimensionTieBreak domain model.
       parameters:
         - $ref: '#/components/parameters/CsrfHeader'
       requestBody:
@@ -647,6 +718,14 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/TieBreakRequest'
+            examples:
+              legacy:
+                value:
+                  selectedPole: I
+              contextual:
+                value:
+                  questionId: TB-EI-1
+                  selectedOptionId: TB-EI-02
       responses:
         '200':
           description: Tie-break fact accepted and Session state updated.
@@ -1707,6 +1786,16 @@ components:
           description: Optional concise product/audit summary; never model private chain-of-thought.
 
     TieBreakState:
+      description: |
+        Public projection of the accepted DimensionTieBreak fact, selected by the
+        Session-bound DefinitionVersion. Legacy facts contain no fabricated IDs.
+        Contextual state omits resolvedPole mappings; final categorical preference
+        is presented separately in FinalDimensionConclusion.
+      oneOf:
+        - $ref: '#/components/schemas/LegacyTieBreakState'
+        - $ref: '#/components/schemas/ContextualTieBreakState'
+
+    LegacyTieBreakState:
       type: object
       additionalProperties: false
       required: [dimensionCode, selectedPole, decidedAt]
@@ -1715,6 +1804,23 @@ components:
           type: string
         selectedPole:
           type: string
+          description: Accepted direct-pole decision under immutable legacy 1.0.
+        decidedAt:
+          $ref: '#/components/schemas/Instant'
+
+    ContextualTieBreakState:
+      type: object
+      additionalProperties: false
+      required: [dimensionCode, questionId, selectedOptionId, decidedAt]
+      properties:
+        dimensionCode:
+          type: string
+        questionId:
+          type: string
+          minLength: 1
+        selectedOptionId:
+          type: string
+          minLength: 1
         decidedAt:
           $ref: '#/components/schemas/Instant'
 
@@ -1750,12 +1856,14 @@ components:
 
     FinalDecisionSource:
       type: string
+      description: USER_TIE_BREAK retains legacy 1.0 direct-pole history; TIE_BREAK_QUESTION identifies 1.1 contextual-question decisions.
       enum:
         - QUESTIONNAIRE
         - QUESTIONNAIRE_CONFIRMED_BY_CLARIFICATION
         - AI_CLARIFICATION
         - QUESTIONNAIRE_FALLBACK
         - USER_TIE_BREAK
+        - TIE_BREAK_QUESTION
 
     AssessmentWorkflow:
       type: object
@@ -1813,12 +1921,104 @@ components:
         workflow:
           $ref: '#/components/schemas/AssessmentWorkflow'
 
+    TieBreakInteraction:
+      oneOf:
+        - $ref: '#/components/schemas/DirectPoleSelectionInteraction'
+        - $ref: '#/components/schemas/ContextualQuestionInteraction'
+      discriminator:
+        propertyName: interactionType
+        mapping:
+          DIRECT_POLE_SELECTION: '#/components/schemas/DirectPoleSelectionInteraction'
+          CONTEXTUAL_QUESTION: '#/components/schemas/ContextualQuestionInteraction'
+
+    DirectPoleSelectionInteraction:
+      type: object
+      additionalProperties: false
+      required: [interactionType, dimensionCode, allowedPoles]
+      properties:
+        interactionType:
+          type: string
+          const: DIRECT_POLE_SELECTION
+        dimensionCode:
+          type: string
+        allowedPoles:
+          type: array
+          minItems: 2
+          maxItems: 2
+          uniqueItems: true
+          description: The two valid poles of the Session-bound legacy 1.0 dimension.
+          items:
+            type: string
+            minLength: 1
+
+    ContextualQuestionInteraction:
+      type: object
+      additionalProperties: false
+      required: [interactionType, dimensionCode, questionId, instruction, prompt, options]
+      properties:
+        interactionType:
+          type: string
+          const: CONTEXTUAL_QUESTION
+        dimensionCode:
+          type: string
+        questionId:
+          type: string
+          minLength: 1
+        instruction:
+          type: string
+          minLength: 1
+        prompt:
+          type: string
+          minLength: 1
+        options:
+          type: array
+          minItems: 2
+          maxItems: 2
+          description: Exactly two options with distinct stable optionIds; no pole mappings.
+          items:
+            $ref: '#/components/schemas/ContextualTieBreakOption'
+
+    ContextualTieBreakOption:
+      type: object
+      additionalProperties: false
+      required: [optionId, text]
+      properties:
+        optionId:
+          type: string
+          minLength: 1
+        text:
+          type: string
+          minLength: 1
+
     TieBreakRequest:
+      description: |
+        Exactly one shape, with no extra fields. Backend enforces the shape and
+        referenced IDs/poles against the Session's bound immutable DefinitionVersion;
+        schema validity alone does not authorize a branch for that Session.
+      oneOf:
+        - $ref: '#/components/schemas/LegacyTieBreakRequest'
+        - $ref: '#/components/schemas/ContextualTieBreakRequest'
+
+    LegacyTieBreakRequest:
       type: object
       additionalProperties: false
       required: [selectedPole]
       properties:
         selectedPole:
+          type: string
+          minLength: 1
+          pattern: '.*\S.*'
+
+    ContextualTieBreakRequest:
+      type: object
+      additionalProperties: false
+      required: [questionId, selectedOptionId]
+      properties:
+        questionId:
+          type: string
+          minLength: 1
+          pattern: '.*\S.*'
+        selectedOptionId:
           type: string
           minLength: 1
           pattern: '.*\S.*'

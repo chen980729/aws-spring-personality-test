@@ -246,14 +246,26 @@ public final class AssessmentSessionWebMapper {
         return session
                 .tieBreaks()
                 .stream()
-                .map(tieBreak ->
-                        new AssessmentSessionResponse
-                                .TieBreakStateResponse(
-                                tieBreak.dimensionCode(),
-                                tieBreak.selectedPole(),
-                                tieBreak.decidedAt()
-                        )
-                )
+                .map(tieBreak -> {
+                    if (tieBreak.contextual()) {
+                        return (AssessmentSessionResponse
+                                .TieBreakStateResponse)
+                                new AssessmentSessionResponse
+                                        .ContextualTieBreakStateResponse(
+                                        tieBreak.dimensionCode(),
+                                        tieBreak.questionId(),
+                                        tieBreak.selectedOptionId(),
+                                        tieBreak.decidedAt()
+                                );
+                    }
+
+                    return new AssessmentSessionResponse
+                            .LegacyTieBreakStateResponse(
+                            tieBreak.dimensionCode(),
+                            tieBreak.selectedPole(),
+                            tieBreak.decidedAt()
+                    );
+                })
                 .toList();
     }
 

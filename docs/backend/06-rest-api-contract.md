@@ -1,7 +1,9 @@
 # REST API & HTTP Contract Design
 
-> **Status:** Accepted REST Semantics — deterministic Clarification/Tie-break HTTP aligned through Assessment Step 7
-> **Last updated:** 2026-09-30
+> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 remains non-active (`DRAFT`) while rollout/activation is deferred. Published 1.0 remains immutable and supported.
+
+> **Status:** Version-aware Tie-break REST/Application + finalization provenance implemented; 1.1 activation and Frontend integration remain pending
+> **Last updated:** 2026-10-05
 > **Security transport:** server-side Session + Spring Session JDBC + Secure/HttpOnly cookie + CSRF
 
 ## 1. API style
@@ -66,6 +68,7 @@ POST   /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/re
 POST   /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/skip
 POST   /api/v1/assessment-sessions/{sessionId}/clarifications/skip-remaining
 
+GET    /api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}
 PUT    /api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}
 ```
 
@@ -163,7 +166,32 @@ When provider integration is enabled, technical AI failures become `FAILED_RETRY
 
 ### Tie-break
 
-`PUT .../tie-breaks/{dimensionCode}` sends only the selected pole. Backend validates that the bound dimension is an unresolved exact questionnaire tie and that the pole belongs to the bound `DimensionDefinition`.
+OpenAPI `info.version = 0.5.0` describes the accepted contract; HTTP paths remain `/api/v1`. The version-aware GET interaction and exclusive legacy/contextual PUT branches are now implemented. DefinitionVersion 1.1 remains `DRAFT`, so normal Start Assessment still binds 1.0 until the separate activation migration promotes 1.1 after compatible Backend deployment and pre-activation acceptance.
+
+`GET /api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}` returns the interaction for the Session's bound immutable DefinitionVersion:
+
+- 1.0: `interactionType = DIRECT_POLE_SELECTION`, `dimensionCode`, and `allowedPoles` from its bound dimension.
+- 1.1: `interactionType = CONTEXTUAL_QUESTION`, `dimensionCode`, `questionId`, `instruction`, `prompt`, and exactly two `options` containing only `optionId` / `text`. Never include `resolvedPole`, keyed-pole metadata, or option-to-pole mappings. Use the exact accepted wording in the aligned specification, not generated replacement wording.
+
+GET requires ownership and a valid bound dimension. It is read-only and returns an interaction only while that exact tie is currently unresolved and requires user input. After PUT accepts a decision, client recovery uses the authoritative `AssessmentSessionResponse` / persisted tie-break / final result rather than re-fetching the interaction. Already-resolved or completed dimensions therefore return 422 as ineligible interaction reads; an abandoned Session returns 409; inaccessible/missing Sessions return privacy-preserving 404. GET never resolves a tie or changes lifecycle state.
+
+`PUT` accepts exactly one of these request shapes (`oneOf`, no mixed/extra fields):
+
+```json
+{ "selectedPole": "I" }
+```
+
+```json
+{ "questionId": "TB-EI-1", "selectedOptionId": "TB-EI-02" }
+```
+
+Backend chooses the valid branch using the Session's bound DefinitionVersion, never the currently AVAILABLE version or the submitted shape alone. Legacy 1.0 accepts only a valid direct pole. Version 1.1 validates question ID against the path dimension, option ID within that question and the Backend-owned resolved pole against the bound dimension, then persists contextual `DimensionTieBreak` provenance. Finalization now derives the decision source from the persisted tie-break provenance: legacy direct-pole facts produce `USER_TIE_BREAK`, while contextual question/option facts produce `TIE_BREAK_QUESTION`. DefinitionVersion 1.1 still stays DRAFT until the later activation migration and Frontend support are completed. Wrong-version payloads, unknown/wrong-dimension questions/options or an ineligible non-zero/resolved dimension return 422; malformed/mixed shapes return 400. Ownership, CSRF, Session-state and concurrency checks remain in force.
+
+For a first decision, the dimension must have `rawScore == 0` and clarification `UNCLEAR` / `SKIPPED`; technical failure alone is insufficient. An equivalent accepted retry returns the authoritative Session (including after completion), retaining the original fact and `decidedAt`; a conflicting selection returns 409. PUT returns `AssessmentSessionResponse` and triggers deterministic readiness evaluation as before. Finalization does not change questionnaire evidence.
+
+Session/history `TieBreakState` is also a `oneOf`: legacy keeps `dimensionCode`, `selectedPole`, `decidedAt` with no fabricated IDs; contextual exposes `dimensionCode`, `questionId`, `selectedOptionId`, `decidedAt` without mappings. The domain fact retains `resolvedPole` internally; the final categorical outcome is presented separately in `FinalDimensionConclusion`. Both final decision sources remain in the public enum.
+
+When implementation is published, 1.0 is RETIRED and 1.1 becomes the sole AVAILABLE version. Existing 1.0 Sessions remain completable under legacy rules and never auto-upgrade.
 
 The same already-persisted tie-break value is retry/recovery friendly. A different value may not rewrite an accepted historical decision.
 
@@ -402,9 +430,9 @@ docs/api/openapi.yaml
 OpenAPI Specification: 3.1.2
 ```
 
-The design-first machine-readable contract is published as OpenAPI **v0.4.0**. The Step 7 update aligns deterministic Clarification/Tie-break HTTP behavior, including the `422` business-semantic response for `skip-remaining`. Runtime Start / Continue / Retry clarification routes remain design-frozen for Step 8 provider integration rather than being represented as already-implemented runtime AI behavior.
+The design-first machine-readable contract is OpenAPI **info.version 0.5.0** (OpenAPI format 3.1.2, HTTP prefix `/api/v1`). It adds the accepted, pending 1.1 contextual tie-break design while preserving the Step 7 legacy contract, including the `422` business-semantic response for `skip-remaining`. Runtime Start / Continue / Retry clarification routes remain design-frozen for Step 8 provider integration rather than being represented as already-implemented runtime AI behavior.
 
-The Step 5 Restart and Step 6 History contracts remain unchanged; the History item matches the implemented response exactly:
+The Step 5 Restart and Step 6 History list-item contracts remain unchanged; the History item matches the implemented response exactly. Session/history detail retains its legacy shape while the accepted design adds the contextual TieBreakState variant:
 
 ```text
 AssessmentHistoryItem
@@ -415,7 +443,7 @@ AssessmentHistoryItem
   - completedAt
 ```
 
-The earlier v0.3.0 bump captured the implemented History schema correction. The v0.4.0 bump records the Step 7 deterministic Clarification/Tie-break alignment rather than silently changing the published design contract.
+The earlier v0.3.0 bump captured the implemented History schema correction; v0.4.0 recorded Step 7 deterministic Clarification/Tie-break alignment. Version 0.5.0 adds the version-aware GET interaction, exclusive PUT request shapes, version-specific tie-break state projections and both final decision sources. It does not claim implementation or deployment of DefinitionVersion 1.1.
 
 It freezes:
 

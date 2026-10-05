@@ -9,6 +9,8 @@ import dev.springawsportfolio.portfolio.assessment.domain.clarification.Dimensio
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.PoleCode;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakOptionId;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakQuestionId;
 import dev.springawsportfolio.portfolio.assessment.domain.result.FinalAssessmentResult;
 import dev.springawsportfolio.portfolio.assessment.domain.result.FinalDecisionSource;
 import dev.springawsportfolio.portfolio.assessment.domain.result.InitialAssessmentResult;
@@ -631,6 +633,72 @@ class AssessmentFinalizationServiceTest {
 
         assertEquals(
                 FinalDecisionSource.USER_TIE_BREAK,
+                result
+                        .dimensions()
+                        .getFirst()
+                        .decisionSource()
+        );
+    }
+
+    @Test
+    void contextualTieBreakUsesTieBreakQuestionDecisionSource() {
+        DimensionCode dimension =
+                new DimensionCode("AB");
+
+        PoleCode poleA =
+                new PoleCode("A");
+
+        PoleCode poleB =
+                new PoleCode("B");
+
+        AssessmentSessionId sessionId =
+                AssessmentSessionId.newId();
+
+        FinalAssessmentResult result =
+                service.finalizeIfReady(
+                                List.of(
+                                        definition(
+                                                dimension,
+                                                poleA,
+                                                poleB
+                                        )
+                                ),
+                                exactTieResult(
+                                        dimension
+                                ),
+                                List.of(
+                                        skippedClarification(
+                                                sessionId,
+                                                dimension
+                                        )
+                                ),
+                                List.of(
+                                        new DimensionTieBreak(
+                                                sessionId,
+                                                dimension,
+                                                new TieBreakQuestionId(
+                                                        "TB-AB-1"
+                                                ),
+                                                new TieBreakOptionId(
+                                                        "TB-AB-02"
+                                                ),
+                                                poleB,
+                                                NOW.plusSeconds(30)
+                                        )
+                                )
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                poleB,
+                result
+                        .dimensions()
+                        .getFirst()
+                        .finalPreference()
+        );
+
+        assertEquals(
+                FinalDecisionSource.TIE_BREAK_QUESTION,
                 result
                         .dimensions()
                         .getFirst()

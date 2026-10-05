@@ -4,6 +4,7 @@ import java.util.List;
 
 public record AssessmentSpecificationJson(
         List<DimensionJson> dimensions,
+        List<TieBreakQuestionJson> tieBreakQuestions,
         QuestionnaireJson questionnaire,
         ScoringPolicyJson scoringPolicy,
         AmbiguityPolicyJson ambiguityPolicy,
@@ -16,6 +17,22 @@ public record AssessmentSpecificationJson(
             Integer position,
             String poleA,
             String poleB
+    ) {
+    }
+
+    public record TieBreakQuestionJson(
+            String questionId,
+            String dimension,
+            String instruction,
+            String prompt,
+            List<TieBreakOptionJson> options
+    ) {
+    }
+
+    public record TieBreakOptionJson(
+            String optionId,
+            String text,
+            String resolvedPole
     ) {
     }
 
