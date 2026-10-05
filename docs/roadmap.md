@@ -90,7 +90,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** the Step 7 runtime baseline remains intact, and DefinitionVersion 1.1 compatibility is implemented through **Step 2C — version-aware Tie-break Application/REST**. OpenAPI v0.5.0 now matches the implemented GET/PUT boundary and version-specific tie-break projections. DefinitionVersion 1.1 remains DRAFT while Step 2D finalization provenance and later activation are pending. Real provider-backed clarification interaction remains Step 8.
+**Current status:** the Step 7 runtime baseline remains intact, and DefinitionVersion 1.1 Backend compatibility is implemented through **Step 2D — provenance-aware finalization**. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific tie-break projections, and final decision-source semantics. DefinitionVersion 1.1 remains DRAFT while the final acceptance sweep, activation migration and Frontend integration are pending. Real provider-backed clarification interaction remains Step 8.
 
 ### Domain/Application
 
@@ -181,7 +181,7 @@ Accepted F0 baseline and the F1-F6 implementation checkpoint live under `docs/fr
 
 ## 9. Backend Implementation
 
-Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1 compatibility through Step 2C**.
+Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1 Backend compatibility through Step 2D**.
 
 - [x] Java 21 + Spring Boot implementation foundation.
 - [x] PostgreSQL persistence foundation with Flyway + JPA/Hibernate.
@@ -193,7 +193,9 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] Clarification + Tie-break mutation workflow (Step 7).
 - [x] DefinitionVersion 1.1 Specification Domain + persistence expansion.
 - [x] Version-aware Tie-break GET interaction + exclusive legacy/contextual PUT + contextual Session projection (Step 2C).
-- [ ] DefinitionVersion 1.1 finalization source compatibility + activation (Step 2D / activation migration).
+- [x] Provenance-aware finalization retaining `USER_TIE_BREAK` for 1.0 and producing `TIE_BREAK_QUESTION` for contextual facts (Step 2D).
+- [ ] DefinitionVersion 1.1 final acceptance sweep + activation migration.
+- [ ] Frontend contextual Tie-break integration.
 - [ ] real AI integration adapter / runtime context (Step 8).
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
