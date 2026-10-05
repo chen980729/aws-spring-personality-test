@@ -1,8 +1,8 @@
 # REST API & HTTP Contract Design
 
-> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 remains non-active (`DRAFT`) while its compatibility implementation is being completed. Published 1.0 remains immutable and supported.
+> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 remains non-active (`DRAFT`) while rollout/activation is deferred. Published 1.0 remains immutable and supported.
 
-> **Status:** Version-aware Tie-break REST/Application boundary implemented; 1.1 activation and v2 finalization provenance remain pending
+> **Status:** Version-aware Tie-break REST/Application + finalization provenance implemented; 1.1 activation and Frontend integration remain pending
 > **Last updated:** 2026-10-05
 > **Security transport:** server-side Session + Spring Session JDBC + Secure/HttpOnly cookie + CSRF
 
@@ -185,7 +185,7 @@ GET requires ownership and a valid bound dimension. It is read-only and returns 
 { "questionId": "TB-EI-1", "selectedOptionId": "TB-EI-02" }
 ```
 
-Backend chooses the valid branch using the Session's bound DefinitionVersion, never the currently AVAILABLE version or the submitted shape alone. Legacy 1.0 accepts only a valid direct pole. Version 1.1 validates question ID against the path dimension, option ID within that question and the Backend-owned resolved pole against the bound dimension, then persists contextual `DimensionTieBreak` provenance. The final decision-source switch to `TIE_BREAK_QUESTION` is the remaining Step 2D finalization change; until that is complete, 1.1 stays DRAFT and cannot be selected by normal Start Assessment. Wrong-version payloads, unknown/wrong-dimension questions/options or an ineligible non-zero/resolved dimension return 422; malformed/mixed shapes return 400. Ownership, CSRF, Session-state and concurrency checks remain in force.
+Backend chooses the valid branch using the Session's bound DefinitionVersion, never the currently AVAILABLE version or the submitted shape alone. Legacy 1.0 accepts only a valid direct pole. Version 1.1 validates question ID against the path dimension, option ID within that question and the Backend-owned resolved pole against the bound dimension, then persists contextual `DimensionTieBreak` provenance. Finalization now derives the decision source from the persisted tie-break provenance: legacy direct-pole facts produce `USER_TIE_BREAK`, while contextual question/option facts produce `TIE_BREAK_QUESTION`. DefinitionVersion 1.1 still stays DRAFT until the later activation migration and Frontend support are completed. Wrong-version payloads, unknown/wrong-dimension questions/options or an ineligible non-zero/resolved dimension return 422; malformed/mixed shapes return 400. Ownership, CSRF, Session-state and concurrency checks remain in force.
 
 For a first decision, the dimension must have `rawScore == 0` and clarification `UNCLEAR` / `SKIPPED`; technical failure alone is insufficient. An equivalent accepted retry returns the authoritative Session (including after completion), retaining the original fact and `decidedAt`; a conflicting selection returns 409. PUT returns `AssessmentSessionResponse` and triggers deterministic readiness evaluation as before. Finalization does not change questionnaire evidence.
 
