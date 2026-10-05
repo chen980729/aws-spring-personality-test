@@ -24,7 +24,7 @@ BEGIN
 
     UPDATE assessment_definition_versions
     SET status = 'AVAILABLE',
-        published_at = TIMESTAMPTZ '2026-10-06 00:00:00+00'
+        published_at = TIMESTAMPTZ '2026-10-05 23:00:00+00'
     WHERE definition_id = '6a0c8f0d-4f8a-4b8e-9d2d-7d5d0fa2b3c1'
       AND version_code = '1.1'
       AND status = 'DRAFT';
