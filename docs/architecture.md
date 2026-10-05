@@ -1,6 +1,6 @@
 # Architecture
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented, and Frontend dual-version integration is complete through F7-D. 1.1 remains DRAFT; the compatibility release must be deployed and old ECS tasks drained before a separate activation release. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend/Frontend dual-version compatibility is deployed, and the separate activation release adds V8 to retire 1.0 and promote 1.1 as the sole AVAILABLE version. Published 1.0 remains immutable and executable for Sessions already bound to it.
 
 ## 1. Purpose
 
@@ -657,7 +657,7 @@ Current AWS topology is no longer an open design question. Optional hardening an
 
 `SIXTEEN_PERSONALITY` 1.1 reuses exactly the same 48 questionnaire questions as 1.0. `ScoringPolicy`, `AmbiguityPolicy`, and clarification behavior (including the expected/default clarification policy revision) remain unchanged. Only `FinalizationPolicy` advances to revision `v2`, with immutable contextual tie-break definitions added to the specification.
 
-DefinitionVersion 1.1 uses a staged rollout. The compatibility/expand release adds the required persistence shape and seeds the complete 1.1 specification as `DRAFT` while 1.0 remains `AVAILABLE`. Backend support for both v1/v2 finalization semantics is deployed before availability changes. A later activation migration, after old ECS tasks have drained, retires 1.0 and promotes 1.1 to the sole `AVAILABLE` version. This avoids a rolling-deployment window where old code could bind a new Session to 1.1. Retirement prevents new bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs.
+DefinitionVersion 1.1 uses a staged rollout. The compatibility/expand release adds the required persistence shape and seeds the complete 1.1 specification as `DRAFT` while 1.0 remains `AVAILABLE`. Backend support for both v1/v2 finalization semantics is deployed before availability changes. V8 is the separate activation migration: after old ECS tasks have drained, it retires 1.0 and promotes 1.1 to the sole `AVAILABLE` version. This avoids a rolling-deployment window where old code could bind a new Session to 1.1. Retirement prevents new bindings; it does not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs.
 
 `AssessmentSpecification` conceptually adds `TieBreakQuestionDefinition[]` owned by the immutable `AssessmentDefinitionVersion`. Definitions contain question ID, dimension, instruction, prompt and exactly two stable options with Backend-only `resolvedPole` mappings. Version-aware loading is required: retained 1.0 / FinalizationPolicy v1 JSONB may omit this field (or normalize to empty) and still means legacy direct-pole semantics; v2 requires exactly one validated question per dimension. Full invariants and the evolved `DimensionTieBreak` fields are specified in [Assessment Domain](domain/assessment-domain.md).
 
