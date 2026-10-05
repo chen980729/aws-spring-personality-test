@@ -1,6 +1,6 @@
 # Architecture
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented. 1.1 remains DRAFT; activation and Frontend integration remain pending. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented, and Frontend dual-version integration is complete through F7-D. 1.1 remains DRAFT; the compatibility release must be deployed and old ECS tasks drained before a separate activation release. Published 1.0 remains immutable and supported.
 
 ## 1. Purpose
 
@@ -266,7 +266,7 @@ Owns:
 - Deterministic scoring and ambiguity evaluation.
 - `InitialAssessmentResult`.
 - `DimensionClarification` business lifecycle as a separate Assessment Aggregate coordinated with `AssessmentSession` (ADR-0016).
-- Explicit exact-tie user decisions (`DimensionTieBreak`) as persisted Assessment-owned business facts.
+- Version-aware exact-tie decisions (`DimensionTieBreak`) as persisted Assessment-owned business facts: retained 1.0 direct-pole provenance and staged 1.1 contextual-question provenance.
 - `FinalAssessmentResult`.
 - Assessment history as a query over persisted sessions.
 - Historical assessment deletion as an owner capability.
