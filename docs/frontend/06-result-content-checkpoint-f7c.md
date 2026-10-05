@@ -204,20 +204,34 @@ Repository resource verification at this checkpoint:
 ```text
 frontend/public/personality/*.webp
 count: 16
-combined size: ~309 KB
+combined size: 308,638 bytes (~309 KB)
 mapping coverage: 16 / 16
+missing mapped assets: 0
+unmapped extra assets: 0
+invalid WebP RIFF signatures: 0
 ```
 
-Frontend automated suite at the F7-C code checkpoint:
+The implementation content was also compared against the supplied Personality Content Version 1.0 source. After excluding the three schema-description bullets that explain the meaning of the fields themselves rather than user-facing copy, all source content items used by the 8-letter and 16-type catalogs matched the frontend catalog:
 
 ```text
-29 test files
-101 tests
-lint: success
-production build: success
+source content items checked: 223
+matched: 223
+missing: 0
 ```
 
-The final feature-branch CI is also required to keep Backend and Docker verification green after the binary assets and documentation are present.
+Final feature-branch CI at this checkpoint:
+
+```text
+Frontend:
+  29 test files
+  101 tests
+  lint: success
+  production build: success
+
+Backend: success
+Backend Docker Image: success
+CI: success
+```
 
 ## 10. Remaining frontend work
 
