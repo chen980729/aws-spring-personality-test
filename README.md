@@ -8,10 +8,11 @@ The application is designed to let users complete versioned personality assessme
 
 The project is intentionally developed as an end-to-end engineering exercise rather than a feature-only demo: **domain modeling → API design → persistence → security → testing → frontend → containerization → AWS → CI/CD → Infrastructure as Code**.
 
-> **Current application:** Authentication + deterministic Assessment flow through Result/History is implemented and deployed on AWS; this release branch also completes dual-version contextual Tie-break compatibility and the refreshed Result/Landing presentation layer.<br>
+> **Live application:** [https://dmvsj5bm8m29k.cloudfront.net/](https://dmvsj5bm8m29k.cloudfront.net/)<br>
+> **Current application:** Authentication + deterministic Assessment flow through Result/History is implemented and deployed on AWS; the current release also includes dual-version contextual Tie-break compatibility and the refreshed Result/Landing presentation layer.<br>
 > **Current cloud delivery:** Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, OIDC and least-privilege CD are implemented.<br>
-> **CD status:** Manual production CD and public smoke tests are verified. The automatic CI-success → CD trigger is prepared and will receive its final end-to-end verification with the next feature update.<br>
-> **Next product focus:** deploy this compatibility release, verify the automatic CI-success → CD path, then activate DefinitionVersion 1.1 in a separate release before returning to provider-backed LLM clarification and Group/Sharing work.
+> **CD status:** Manual deployment and the automatic CI-success → CD path are both verified end-to-end on `main`, including backend/frontend deployment and public smoke tests.<br>
+> **Next product focus:** activate DefinitionVersion 1.1, then return to provider-backed LLM clarification and Group/Sharing work.
 
 ---
 
@@ -129,7 +130,7 @@ flowchart LR
 
 The CD role uses GitHub OIDC and STS temporary credentials; no long-lived AWS access keys are stored in GitHub. The deploy role is intentionally limited to the ECR repository, ECS deployment actions, the frontend S3 bucket, CloudFront invalidation and exact ECS `iam:PassRole` needs.
 
-Manual CD has been verified end-to-end, including backend rolling deployment, frontend publication and public smoke tests. The automatic post-CI path is implemented behind `CD_ENABLED`; its final live verification is intentionally scheduled with the next real feature change rather than a synthetic no-op deployment.
+Both manual and automatic production CD have been verified end-to-end, including backend rolling deployment, frontend publication and public smoke tests. The automatic path is gated by `CD_ENABLED` and runs only after a successful CI workflow on a `main` push.
 
 ### Runtime ownership boundary
 
@@ -220,7 +221,7 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | AI integration | External LLM behind an adapter boundary | ⏳ Next product milestone after the completed cloud foundation |
 | Containerization | Multi-stage Docker backend image | ✅ Implemented and deployed |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ Deployed in ap-northeast-1 |
-| CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ Manual CD verified; automatic trigger pending final live verification |
+| CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ CI + automatic post-CI CD verified end-to-end |
 | Infrastructure as Code | Terraform with remote S3 state + native locking | ✅ Implemented for current AWS stack |
 
 ---
@@ -246,7 +247,7 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | React frontend | ✅ F1-F6 + F7-A–F7-D complete for current executable/staged Assessment scope |
 | Docker application image | ✅ Implemented and deployed via ECR/ECS |
 | AWS deployment | ✅ Full-stack production deployment verified |
-| GitHub Actions CI/CD | ✅ CI + OIDC + manual CD verified; automatic trigger awaiting final live verification |
+| GitHub Actions CI/CD | ✅ CI + OIDC + automatic post-CI CD verified end-to-end |
 | Terraform infrastructure | ✅ Current AWS infrastructure represented with remote state |
 
 The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
@@ -497,7 +498,7 @@ spring-aws-portfolio/
 └── README.md
 ```
 
-The deterministic full-stack Assessment slice is runnable locally and deployed on AWS. Terraform represents the current infrastructure baseline, while GitHub Actions provides CI plus OIDC-based application delivery.
+The deterministic full-stack Assessment slice is runnable locally and deployed on AWS. Terraform represents the current infrastructure baseline, while GitHub Actions provides CI plus verified OIDC-based automatic application delivery.
 
 ---
 
@@ -512,20 +513,3 @@ A few principles guide the project as it evolves:
 - **Architecture decisions should be explainable**; important trade-offs are recorded as ADRs.
 - **Avoid premature complexity**; the MVP uses a modular monolith instead of microservices.
 - **Implementation feedback may change the design**, but significant changes are documented instead of silently rewriting architectural history.
-
----
-
-## Project Goal
-
-This repository is a personal learning and career-transition portfolio project. The goal is not only to make the application work, but to be able to explain the engineering decisions behind it in an interview:
-
-- why the domain is modeled this way;
-- where transaction and concurrency boundaries belong;
-- why PostgreSQL is used as part of invariant enforcement;
-- why the project uses server-side sessions instead of JWT for the MVP;
-- how deterministic logic is separated from AI-assisted behavior;
-- how testing strategy changes with the type of risk being verified;
-- how the application is containerized, deployed to AWS, automated with GitHub Actions/OIDC, and provisioned with Terraform;
-- how Terraform infrastructure ownership is separated from CD-owned ECS release revisions.
-
-The final target is a runnable full-stack application with documented architecture, automated tests, CI/CD, AWS deployment, and reproducible infrastructure.
