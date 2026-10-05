@@ -645,7 +645,7 @@ The following are no longer open: `ABANDONED` source states, Group sharing-conse
 
 ## 16. Detailed Design Ownership
 
-This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (contract v0.5.0; the DefinitionVersion 1.1 contextual Backend extension is implemented and acceptance-tested, while activation/Frontend integration remain pending). Accepted frontend architecture/integration decisions live under `docs/frontend/`.
+This Architecture Baseline intentionally does not duplicate lower-level implementation specifications. The accepted backend decisions for SQL schema, PostgreSQL constraints/locking, JPA mapping, Spring package boundaries and REST resource/action semantics live under `docs/backend/`. Exact HTTP DTO/security schemas are published in `docs/api/openapi.yaml` (contract v0.5.0; the DefinitionVersion 1.1 contextual Backend extension, Frontend integration and activation regression coverage are implemented). Accepted frontend architecture/integration decisions live under `docs/frontend/`.
 
 Still deferred to specialist design:
 
@@ -663,4 +663,4 @@ DefinitionVersion 1.1 uses a staged rollout. The compatibility/expand release ad
 
 The REST adapter projects a version-aware interaction: `DIRECT_POLE_SELECTION` for 1.0 or `CONTEXTUAL_QUESTION` for 1.1. Contextual DTOs expose question ID/instruction/prompt and option ID/text only; the Frontend must neither receive nor display option-to-pole mappings. Application resolves submitted IDs through the Session's bound DefinitionVersion and persists the accepted `DimensionTieBreak` in the existing Session-locked consistency boundary. Domain finalization derives the final conclusion without changing questionnaire evidence. No competing `TieBreakResponse` domain type is introduced.
 
-The GET interaction and PUT request union are implemented for both bound-version semantics. Version-specific validation, finalization, persistence round-trip, recovery and Session-lock finalization concurrency are covered before activation. Legacy execution must remain available after retirement; that post-activation compatibility gate is intentionally deferred to the activation step. See [ADR-0018](adr/ADR-0018-contextual-tie-break-definition-version.md).
+The GET interaction and PUT request union are implemented for both bound-version semantics. Version-specific validation, finalization, persistence round-trip, recovery and Session-lock finalization concurrency are covered, and the activation release adds the post-promotion binding matrix. Legacy execution remains available after retirement, while new Sessions bind 1.1. See [ADR-0018](adr/ADR-0018-contextual-tie-break-definition-version.md).
