@@ -1,8 +1,8 @@
 # API Contract
 
 > **Status:** OpenAPI v0.5.0 — active accepted design contract
-> **Last updated:** 2026-10-05
-> **Implementation alignment:** Backend implements and pre-activation acceptance-tests the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence/history projection, v1/v2 finalization provenance and final Session-lock concurrency. DefinitionVersion 1.1 remains DRAFT; activation and Frontend support are still pending.
+> **Last updated:** 2026-10-06
+> **Implementation alignment:** Backend implements and pre-activation acceptance-tests the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence/history projection, v1/v2 finalization provenance and final Session-lock concurrency. Frontend F7-A/F7-B implements both retained 1.0 and staged 1.1 interaction contracts, while F7-C/F7-D completes the associated result/Landing presentation work. DefinitionVersion 1.1 remains DRAFT; activation is still pending.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -28,13 +28,13 @@ OpenAPI version `3.1.2` is used for the project contract. Although OpenAPI 3.2 e
 
 The OpenAPI document is the accepted **design-first MVP target**, not a claim that every path is executable in the current Spring runtime. In particular, Group, historical deletion and provider-backed clarification interaction can remain design-frozen before their Controllers are implemented.
 
-The React frontend therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. This rule has now been exercised through F6: the frontend calls only implemented Identity/Assessment endpoints and deliberately does not instantiate runtime dependencies on Group, historical deletion or provider-backed clarification paths merely because they exist in the design-first target. Full-client generation can be reconsidered once the target contract and executable surface converge.
+The React frontend therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. This rule has now been exercised through F7-D: the frontend calls only implemented Identity/Assessment endpoints and deliberately does not instantiate runtime dependencies on Group, historical deletion or provider-backed clarification paths merely because they exist in the design-first target. Full-client generation can be reconsidered once the target contract and executable surface converge.
 
 ## Contract version history
 
 ### v0.5.0 — 2026-10-05
 
-Records the DefinitionVersion 1.1 contextual tie-break contract. The Backend REST/Application and finalization compatibility paths are now implemented, while 1.1 remains non-active until activation and Frontend support are completed:
+Records the DefinitionVersion 1.1 contextual tie-break contract. Backend compatibility and Frontend dual-version support are now implemented, while 1.1 remains non-active until the separate activation release is completed:
 
 - preserves immutable 1.0 direct-pole semantics and `USER_TIE_BREAK`;
 - adds the version-aware tie-break interaction design for 1.1;
