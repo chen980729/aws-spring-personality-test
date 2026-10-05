@@ -2,7 +2,6 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import {
-  beforeEach,
   describe,
   expect,
   it,
@@ -77,26 +76,7 @@ function session(
   }
 }
 
-function installLegacyInteraction() {
-  server.use(
-    http.get(
-      interactionEndpoint,
-      () =>
-        HttpResponse.json({
-          interactionType:
-            'DIRECT_POLE_SELECTION',
-          dimensionCode: 'EI',
-          allowedPoles: ['E', 'I'],
-        }),
-    ),
-  )
-}
-
 describe('TieBreakStage', () => {
-  beforeEach(() => {
-    installLegacyInteraction()
-  })
-
   it('renders the backend-authorized direct poles with questionnaire evidence', async () => {
     renderWithProviders(
       <TieBreakStage
