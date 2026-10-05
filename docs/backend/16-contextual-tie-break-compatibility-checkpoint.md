@@ -302,3 +302,33 @@ Not completed by this checkpoint:
 - provider-backed Step 8 LLM clarification runtime.
 
 Historical Step 6/7 checkpoint documents are intentionally left unchanged.
+
+
+## 11. Post-checkpoint progress — 2026-10-06
+
+The Step 2E checkpoint above intentionally records the pre-activation Backend state as it existed on 2026-10-05. Subsequent Frontend work has now completed the previously listed browser-side compatibility items:
+
+```text
+F7-A -> dual-version TypeScript/API contract
+F7-B -> contextual Tie-break interaction + retained 1.0 rollout compatibility
+F7-C -> result interpretation/content + 16 result images
+F7-D -> Landing hero integration
+```
+
+The Frontend now understands `TIE_BREAK_QUESTION`, renders 1.1 contextual questions without receiving option-to-pole mappings, and keeps the legacy 1.0 direct-pole flow operational during mixed-version deployment windows.
+
+The remaining release boundary is therefore narrower than the historical Section 10 list:
+
+```text
+compatibility release deploy
+        ↓
+verify old ECS tasks drained
+        ↓
+separate activation migration/release
+        ↓
+1.0 RETIRED / 1.1 AVAILABLE
+        ↓
+post-activation retained-1.0 + new-1.1 production verification
+```
+
+Provider-backed Step 8 clarification remains a later product milestone and is unrelated to DefinitionVersion 1.1 activation.
