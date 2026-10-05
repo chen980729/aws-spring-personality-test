@@ -281,10 +281,10 @@ describe('TieBreakStage', () => {
     ).toBeInTheDocument()
 
     expect(
-      screen.getByText(
+      screen.getAllByText(
         'Think it through privately first.',
       ),
-    ).toBeInTheDocument()
+    ).toHaveLength(2)
 
     expect(
       screen.getByRole('button', {
