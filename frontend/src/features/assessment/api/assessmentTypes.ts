@@ -55,9 +55,12 @@ export interface QuestionnaireSnapshotRequest {
 
 export interface LegacyTieBreakRequest {
   selectedPole: string
+  questionId?: never
+  selectedOptionId?: never
 }
 
 export interface ContextualTieBreakRequest {
+  selectedPole?: never
   questionId: string
   selectedOptionId: string
 }
@@ -188,11 +191,14 @@ export interface ClarificationState {
 export interface LegacyTieBreakState {
   dimensionCode: string
   selectedPole: string
+  questionId?: never
+  selectedOptionId?: never
   decidedAt: string
 }
 
 export interface ContextualTieBreakState {
   dimensionCode: string
+  selectedPole?: never
   questionId: string
   selectedOptionId: string
   decidedAt: string
