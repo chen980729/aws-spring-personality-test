@@ -118,7 +118,7 @@ describe('AssessmentResultStage', () => {
       }),
     ).toHaveAttribute(
       'src',
-      '/personality/intj.png',
+      '/personality/intj.webp',
     )
 
     expect(
