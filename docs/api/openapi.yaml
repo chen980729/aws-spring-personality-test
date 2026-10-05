@@ -648,10 +648,12 @@ paths:
         dimension. Uses the Session's immutable DefinitionVersion, not the currently
         AVAILABLE version: 1.0 returns DIRECT_POLE_SELECTION; 1.1 returns
         CONTEXTUAL_QUESTION. Contextual options expose optionId/text only, never
-        resolvedPole or option-to-pole mappings. Eligible after rawScore == 0 and
-        UNCLEAR/SKIPPED clarification, or for recovery of an already accepted
-        tie-break (including completed history). Other ineligible dimensions return
-        422; abandoned Sessions return 409. This read does not persist a decision.
+        resolvedPole or option-to-pole mappings. Eligible only while rawScore == 0,
+        clarification is UNCLEAR/SKIPPED, and no tie-break decision has yet been
+        accepted for that dimension. After acceptance, clients recover from the
+        authoritative Session/tieBreak/finalResult projection rather than re-fetching
+        the interaction. Already-resolved/completed dimensions return 422; abandoned
+        Sessions return 409. This read does not persist a decision.
       responses:
         '200':
           description: Version-aware interaction without contextual pole mappings.
