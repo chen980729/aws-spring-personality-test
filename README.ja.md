@@ -8,10 +8,10 @@ React + TypeScript / Java + Spring Boot / PostgreSQL / AWS を中心に、**非�
 
 このプロジェクトでは、単に機能を作ることではなく、**Domain Modeling → API Design → Persistence → Security → Testing → Frontend → Containerization → AWS → CI/CD → Infrastructure as Code** までを一貫して設計・実装・説明できることを目標としています。
 
-> **現在の Application:** Authentication + deterministic Assessment flow を Result / History まで実装し、AWS 上で動作確認済みです。<br>
+> **現在の Application:** Authentication + deterministic Assessment flow を Result / History まで実装し、AWS 上で動作確認済みです。この release branch では dual-version contextual Tie-break compatibility と Result / Landing presentation の更新も完了しています。<br>
 > **現在の Cloud Delivery:** Docker、Terraform、RDS、ECR、ECS Fargate、ALB、private S3 + CloudFront、CloudWatch、Secrets Manager、GitHub Actions CI、OIDC、least-privilege CD を実装済みです。<br>
 > **CD status:** manual production CD と public smoke test は end-to-end で検証済みです。automatic CI-success → CD trigger は実装済みで、次回の実機能更新時に最終 live verification を行います。<br>
-> **次の Product focus:** provider-backed LLM clarification、Group / Sharing、historical deletion orchestration、および追加の product refinement。
+> **次の Product focus:** この compatibility release を deploy して automatic CI-success → CD path を検証し、その後 DefinitionVersion 1.1 を別 release で activate します。activation 後に provider-backed LLM clarification と Group / Sharing に戻ります。
 
 ---
 
@@ -231,10 +231,10 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | Security | Spring Security, Spring Session JDBC, CSRF | ✅ Implemented |
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
-| API | REST, OpenAPI 3.1 | ✅ Assessment Step 7 まで実装 |
+| API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + DefinitionVersion 1.1 compatibility を実装 |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ 現在の Backend + Frontend scope で実装 |
 | Local environment | Docker Compose | ✅ PostgreSQL 環境を実装 |
-| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow を F6 まで実装 |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow を F7-D まで実装 |
 | AI integration | External LLM behind an adapter boundary | ⏳ Cloud foundation 完了後の次期 product milestone |
 | Containerization | Multi-stage Docker backend image | ✅ 実装・AWS deployment 済み |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ ap-northeast-1 に deployment 済み |
@@ -261,7 +261,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | External AI adapter / runtime context | ⏳ Cloud foundation 完了後に実装予定 |
 | Historical assessment deletion | ⏸ Group sharing backend 実装後まで deferred |
 | Group / Membership / Sharing implementation | ⏳ 次期 product milestone |
-| React frontend | ✅ 現在 executable な Auth + deterministic Assessment scope を F1-F6 まで完了 |
+| React frontend | ✅ 現在の executable / staged Assessment scope を F1-F6 + F7-A–F7-D まで完了 |
 | Docker application image | ✅ ECR / ECS で deployment 済み |
 | AWS deployment | ✅ Full-stack deployment 検証済み |
 | GitHub Actions CI/CD | ✅ CI + OIDC + manual CD 検証済み / automatic CD 最終検証待ち |
@@ -297,7 +297,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 - clarification 不要時の immediate finalization
 - persisted Clarification lifecycle / stale external-result protection
 - Skip Current / Skip Remaining deterministic clarification mutation
-- explicit exact-tie user decision / deterministic post-clarification finalization
+- version-aware exact-tie finalization: retained 1.0 direct-pole semantics + staged 1.1 contextual question support
 - completed Assessment History
 - historical Assessment detail
 - PostgreSQL-backed read projection
@@ -316,8 +316,9 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 - debounced・serialized な full-snapshot autosave と save/error/retry state
 - in-flight autosave と coordination した final Submit / already-submitted recovery
 - deterministic Clarification read model / Skip Current / Skip Remaining
-- exact-tie Tie-break / deterministic finalization
-- per-dimension decision provenance を表示する Result read model
+- dual-version exact-tie UI: retained 1.0 direct-pole flow + staged 1.1 contextual-question flow（option-to-pole mapping は Frontend に公開しない）
+- 8 preference-letter description / 16 type profile / optimized artwork を含む enriched Result presentation と、既存 per-dimension decision provenance
+- optimized four-profile Landing hero artwork
 - completed Assessment History / URL pagination / canonical Session detail navigation
 - Vitest / React Testing Library / MSW と real-browser integration verification
 
@@ -344,7 +345,7 @@ docs/
 │   └── openapi.yaml          Machine-readable HTTP contract
 ├── adr/                      Architecture Decision Records
 ├── backend/                  Detailed backend design and implementation checkpoints
-└── frontend/                 Frontend architecture + F1-F6 implementation checkpoint
+└── frontend/                 Frontend architecture + F1-F7 implementation checkpoints
 ```
 
 主なドキュメント:
@@ -355,9 +356,11 @@ docs/
 - [`docs/domain/group-spec-aligned.md`](docs/domain/group-spec-aligned.md) — Group / Membership / Sharing rule
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — Current OpenAPI contract
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records
-- [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — Latest accepted backend checkpoint
+- [`docs/backend/16-contextual-tie-break-compatibility-checkpoint.md`](docs/backend/16-contextual-tie-break-compatibility-checkpoint.md) — Latest Backend compatibility / pre-activation checkpoint
 - [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend architecture / implementation index
 - [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — F1-F6 implementation checkpoint
+- [`docs/frontend/06-result-content-checkpoint-f7c.md`](docs/frontend/06-result-content-checkpoint-f7c.md) — F7-C Result content / image checkpoint
+- [`docs/frontend/07-landing-hero-checkpoint-f7d.md`](docs/frontend/07-landing-hero-checkpoint-f7d.md) — F7-D Landing hero checkpoint
 - [`docs/deployment/aws-deployment.md`](docs/deployment/aws-deployment.md) — deployed AWS topology / trade-off
 - [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md) — CI/CD / OIDC / deployment ownership
 - [`docs/future-work.md`](docs/future-work.md) — future architecture option / deferred work
