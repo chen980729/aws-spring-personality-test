@@ -945,6 +945,228 @@ class AssessmentContextualTieBreakIntegrationTest {
                                 )
                         )
         );
+
+        assertThrows(
+                InvalidDimensionTieBreakException.class,
+                () ->
+                        submitDimensionTieBreakService.execute(
+                                new SubmitDimensionTieBreakCommand(
+                                        userId,
+                                        session.id(),
+                                        dimension.code(),
+                                        new TieBreakSelection
+                                                .ContextualOptionSelection(
+                                                new TieBreakQuestionId(
+                                                        "TB-EI-1"
+                                                ),
+                                                new TieBreakOptionId(
+                                                        "TB-EI-99"
+                                                )
+                                        )
+                                )
+                        )
+        );
+    }
+
+    @Test
+    void lastContextualTieBreakSerializesWithSkipRemainingFinalization()
+            throws Exception {
+
+        UserId userId =
+                createUser();
+
+        AssessmentDefinition definition =
+                definitionRepository
+                        .findByCode(
+                                "SIXTEEN_PERSONALITY"
+                        )
+                        .orElseThrow();
+
+        AssessmentDefinitionVersion version =
+                versionRepository
+                        .findById(
+                                VERSION_1_1_ID
+                        )
+                        .orElseThrow();
+
+        AssessmentSession session =
+                createSession(
+                        userId,
+                        definition,
+                        version
+                );
+
+        submitQuestionnaireService.execute(
+                new SubmitQuestionnaireCommand(
+                        userId,
+                        session.id(),
+                        neutralAnswers(
+                                version
+                        )
+                )
+        );
+
+        skipRemainingClarificationsService.execute(
+                new SkipRemainingClarificationsCommand(
+                        userId,
+                        session.id()
+                )
+        );
+
+        var questions =
+                version
+                        .specification()
+                        .tieBreakQuestions();
+
+        for (int index = 0; index < 3; index++) {
+            var question =
+                    questions.get(index);
+
+            submitDimensionTieBreakService.execute(
+                    new SubmitDimensionTieBreakCommand(
+                            userId,
+                            session.id(),
+                            question.dimension(),
+                            new TieBreakSelection
+                                    .ContextualOptionSelection(
+                                    question.questionId(),
+                                    question
+                                            .options()
+                                            .getFirst()
+                                            .optionId()
+                            )
+                    )
+            );
+        }
+
+        var lastQuestion =
+                questions.getLast();
+
+        CountDownLatch ready =
+                new CountDownLatch(2);
+
+        CountDownLatch start =
+                new CountDownLatch(1);
+
+        ExecutorService executor =
+                Executors.newFixedThreadPool(2);
+
+        try {
+            Future<AssessmentSessionResult> tieBreakFuture =
+                    executor.submit(
+                            () -> {
+                                ready.countDown();
+                                start.await();
+
+                                return submitDimensionTieBreakService.execute(
+                                        new SubmitDimensionTieBreakCommand(
+                                                userId,
+                                                session.id(),
+                                                lastQuestion.dimension(),
+                                                new TieBreakSelection
+                                                        .ContextualOptionSelection(
+                                                        lastQuestion.questionId(),
+                                                        lastQuestion
+                                                                .options()
+                                                                .getFirst()
+                                                                .optionId()
+                                                )
+                                        )
+                                );
+                            }
+                    );
+
+            Future<Object> skipFuture =
+                    executor.submit(
+                            () -> {
+                                ready.countDown();
+                                start.await();
+
+                                try {
+                                    return skipRemainingClarificationsService
+                                            .execute(
+                                                    new SkipRemainingClarificationsCommand(
+                                                            userId,
+                                                            session.id()
+                                                    )
+                                            );
+                                } catch (
+                                        ClarificationNotAllowedException expected
+                                ) {
+                                    return expected;
+                                }
+                            }
+                    );
+
+            assertTrue(
+                    ready.await(
+                            5,
+                            TimeUnit.SECONDS
+                    )
+            );
+
+            start.countDown();
+
+            AssessmentSessionResult tieBreakResult =
+                    tieBreakFuture.get(
+                            10,
+                            TimeUnit.SECONDS
+                    );
+
+            Object skipResult =
+                    skipFuture.get(
+                            10,
+                            TimeUnit.SECONDS
+                    );
+
+            assertEquals(
+                    AssessmentSessionStatus.COMPLETED,
+                    tieBreakResult.status()
+            );
+
+            assertTrue(
+                    skipResult
+                            instanceof AssessmentSessionResult
+                            || skipResult
+                            instanceof ClarificationNotAllowedException
+            );
+        } finally {
+            executor.shutdownNow();
+        }
+
+        AssessmentSession persisted =
+                sessionRepository
+                        .findOwnedById(
+                                session.id(),
+                                userId
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                AssessmentSessionStatus.COMPLETED,
+                persisted.status()
+        );
+
+        assertEquals(
+                4,
+                tieBreakRepository
+                        .findBySessionId(
+                                session.id()
+                        )
+                        .size()
+        );
+
+        assertTrue(
+                persisted
+                        .finalResult()
+                        .dimensions()
+                        .stream()
+                        .allMatch(conclusion ->
+                                conclusion.decisionSource()
+                                        == FinalDecisionSource
+                                        .TIE_BREAK_QUESTION
+                        )
+        );
     }
 
     private List<SubmitQuestionnaireCommand.AnswerInput> neutralAnswers(
