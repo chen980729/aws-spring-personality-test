@@ -216,15 +216,18 @@ TieBreakQuestionDefinition[]
     resolvedPole
 ```
 
-Validation before a v2 specification can be executable:
+Version-aware loading/validation is required for backward compatibility:
 
-- The referenced dimension exists in `DimensionDefinition[]`.
-- Exactly one question exists for every dimension under `FinalizationPolicy` v2.
+- `FinalizationPolicy` v1 (published 1.0) may have no `tieBreakQuestions` field in persisted JSONB, or an empty collection if represented by newer code. That absence/emptiness means legacy direct-pole semantics and must remain loadable.
+- `FinalizationPolicy` v2 (1.1) requires `TieBreakQuestionDefinition[]` and exactly one valid question for every dimension.
+- A v2 question must reference an existing `DimensionDefinition`.
 - Question IDs are unique across the specification.
-- Each question contains exactly two options.
+- Each v2 question contains exactly two options.
 - Option IDs are unique within that question.
 - The two options resolve to the two different poles of that dimension.
 - Every `resolvedPole` belongs to the referenced `DimensionDefinition`.
+
+The persistence mapper must therefore not globally require `tieBreakQuestions` for every historical specification. Requirement is selected by the specification's finalization semantics, not by the presence of newer application code.
 
 `resolvedPole` is Backend-owned specification data, never a field in a public contextual option DTO. Resolving `selectedOptionId -> PoleCode` always uses the Session's bound immutable DefinitionVersion and the question for the requested dimension, never display position or the currently AVAILABLE version.
 
