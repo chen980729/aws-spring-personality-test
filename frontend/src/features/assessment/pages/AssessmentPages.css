@@ -1320,7 +1320,7 @@
   text-align: left;
 }
 
-.tie-break-option--contextual label::before {
+.tie-break-option.tie-break-option--contextual label::before {
   display: none;
 }
 
