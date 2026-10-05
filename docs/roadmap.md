@@ -77,7 +77,9 @@ User-visible behavior for the currently executable Identity + deterministic Asse
 - [ ] Provider-backed AI clarification conversation UX.
 - [x] Skip Current / Decline Remaining clarification UX.
 - [ ] Retry / temporary-runtime-loss UX for real AI clarification; deferred with Backend Step 8.
-- [x] Exact-tie user decision UX.
+- [x] Exact-tie legacy direct-pole user decision UX.
+- [x] Frontend F7-A dual-version Tie-break API/type compatibility (`DIRECT_POLE_SELECTION` / `CONTEXTUAL_QUESTION`, exclusive PUT union, `TIE_BREAK_QUESTION` source).
+- [ ] Frontend F7-B contextual Tie-break question interaction.
 - [x] Result UX with decision provenance.
 - [x] Completed History UX with pagination and canonical detail navigation.
 - [x] Responsive layout, focus/hover treatment, loading/error/empty states, reduced-motion support and styled 404 presentation for the implemented surface.
@@ -196,7 +198,7 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] Provenance-aware finalization retaining `USER_TIE_BREAK` for 1.0 and producing `TIE_BREAK_QUESTION` for contextual facts (Step 2D).
 - [x] DefinitionVersion 1.1 pre-activation acceptance sweep (Step 2E): immutable content equivalence, UNCLEAR/SKIPPED matrix, retries/conflicts, 50/50 evidence, persisted history and Session-lock finalization race.
 - [ ] DefinitionVersion 1.1 activation migration + post-activation retained-1.0/new-1.1 binding verification.
-- [ ] Frontend contextual Tie-break integration.
+- [ ] Frontend contextual Tie-break integration — F7-A contract compatibility complete; F7-B UI interaction pending.
 - [ ] real AI integration adapter / runtime context (Step 8).
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
