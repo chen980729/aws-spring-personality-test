@@ -13,6 +13,7 @@ import type {
   RestartAssessmentResponse,
   SessionQuestionnaire,
   StartAssessmentResponse,
+  TieBreakInteraction,
   TieBreakRequest,
 } from './assessmentTypes'
 
@@ -135,6 +136,15 @@ export function skipRemainingClarifications(
 ): Promise<AssessmentSession> {
   return postJson<AssessmentSession>(
     `/api/v1/assessment-sessions/${encodeURIComponent(sessionId)}/clarifications/skip-remaining`,
+  )
+}
+
+export function getDimensionTieBreakInteraction(
+  sessionId: string,
+  dimensionCode: string,
+): Promise<TieBreakInteraction> {
+  return getJson<TieBreakInteraction>(
+    `/api/v1/assessment-sessions/${encodeURIComponent(sessionId)}/tie-breaks/${encodeURIComponent(dimensionCode)}`,
   )
 }
 
