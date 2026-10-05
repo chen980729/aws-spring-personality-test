@@ -8,6 +8,7 @@ import dev.springawsportfolio.portfolio.assessment.application.command.submissio
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakService;
+import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakAlreadyDecidedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakNotRequiredException;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
@@ -342,7 +343,7 @@ class AssessmentClarificationFinalizationIntegrationTest {
         );
 
         assertThrows(
-                TieBreakNotRequiredException.class,
+                TieBreakAlreadyDecidedException.class,
                 () ->
                         submitDimensionTieBreakService.execute(
                                 new SubmitDimensionTieBreakCommand(
