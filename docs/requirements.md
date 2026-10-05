@@ -1,6 +1,6 @@
 # Product Requirements
 
-> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is a docs-only design, pending implementation and migration; it is not a deployment claim. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented. 1.1 remains DRAFT; activation and Frontend integration remain pending. Published 1.0 remains immutable and supported.
 
 ## 1. Product Goal
 
@@ -69,7 +69,7 @@ The final MVP includes both the core assessment vertical slice and the group/sha
 
 `SIXTEEN_PERSONALITY` 1.1 reuses exactly the same 48 questionnaire questions as 1.0. `ScoringPolicy`, `AmbiguityPolicy`, and clarification behavior (including the expected/default clarification policy revision) remain unchanged. Only `FinalizationPolicy` advances to revision `v2`, with immutable contextual tie-break definitions added to the specification.
 
-When implementation and migration are published, 1.0 becomes `RETIRED` and 1.1 becomes the sole `AVAILABLE` version. Retirement prevents new bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs. This documentation change does not publish or activate 1.1.
+The compatibility rollout is staged. The Backend and persistence expansion support both semantics while 1.0 remains `AVAILABLE` and 1.1 remains `DRAFT`. A separate activation migration will later retire 1.0 and promote 1.1 to the sole `AVAILABLE` version only after compatible application tasks are deployed. Retirement prevents new 1.0 bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs.
 
 For an exact questionnaire tie left unresolved after `UNCLEAR` / `SKIPPED`, 1.1 requires exactly one binary contextual tie-break question for that dimension, with no neutral option. The Frontend receives only question text and stable option IDs/text, never option-to-pole mappings. Backend owns resolution using the Session's bound immutable DefinitionVersion, regardless of display order or which version is currently AVAILABLE. Neither tie-break path changes raw scores or the `50 / 50` questionnaire evidence. A resolved clarification does not require a tie-break; a technical failure still requires Retry or explicit Skip.
 
