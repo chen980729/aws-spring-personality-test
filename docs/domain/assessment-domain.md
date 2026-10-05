@@ -1,7 +1,9 @@
 # Assessment Domain Model
 
-> **Status:** Accepted Assessment Domain Baseline — implementation-aligned through Step 7
-> **Last updated:** 2026-09-28
+> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is a docs-only design, pending implementation and migration; it is not a deployment claim. Published 1.0 remains immutable and supported.
+
+> **Status:** Accepted Assessment Domain Baseline — Step 7 legacy behavior plus pending 1.1 design
+> **Last updated:** 2026-10-05
 
 ## 1. Scope
 
@@ -18,7 +20,7 @@ This document records the accepted Assessment domain baseline. It contains final
 - **DimensionClarification** — one logical clarification lifecycle for one ambiguous dimension.
 - **ClarificationResult** — accepted immutable clarification conclusion.
 - **AIProvenance** — effective successful AI execution provenance for the accepted clarification result.
-- **DimensionTieBreak** — persisted explicit user decision selecting one valid pole for an exact-tie dimension that remains unresolved after clarification/skip.
+- **DimensionTieBreak** — persisted explicit user decision resolving an exact-tie dimension after `UNCLEAR` / `SKIPPED`: direct-pole selection in legacy 1.0 or contextual option selection in 1.1.
 - **FinalAssessmentResult** — immutable final assessment outcome.
 
 ## 3. AssessmentSession Lifecycle
@@ -128,6 +130,7 @@ The project is not Event Sourcing. A Domain Event does not imply a requirement t
 
 - `QuestionnaireDefinition`
 - `QuestionDefinition`
+- `TieBreakQuestionDefinition` (accepted 1.1 specification addition)
 - `DimensionDefinition`
 - `ScoringPolicy`
 - `AmbiguityPolicy`
@@ -185,6 +188,7 @@ AssessmentDefinitionVersion (Entity / Aggregate Root)
 ├── QuestionnaireDefinition (VO)
 │   └── QuestionDefinition[] (VO)
 ├── DimensionDefinition[] (VO)
+├── TieBreakQuestionDefinition[] (VO, 1.1 only)
 ├── ScoringPolicy (VO)
 ├── AmbiguityPolicy (VO)
 └── FinalizationPolicy (VO)
@@ -195,6 +199,49 @@ Once executable/available to users, this specification is immutable.
 ### 7.4 AssessmentDefinition Aggregate
 
 `AssessmentDefinition` remains a small provisional Aggregate Root representing the long-lived assessment identity and potential future version-governance boundary. It must not receive artificial behavior merely to justify Aggregate status.
+
+### 7.5 Accepted 1.1 specification and tie-break fact
+
+Conceptually, `AssessmentSpecification` adds:
+
+```text
+TieBreakQuestionDefinition[]
+  questionId
+  dimension
+  instruction
+  prompt
+  options[2]
+    optionId
+    text
+    resolvedPole
+```
+
+Validation before a v2 specification can be executable:
+
+- The referenced dimension exists in `DimensionDefinition[]`.
+- Exactly one question exists for every dimension under `FinalizationPolicy` v2.
+- Question IDs are unique across the specification.
+- Each question contains exactly two options.
+- Option IDs are unique within that question.
+- The two options resolve to the two different poles of that dimension.
+- Every `resolvedPole` belongs to the referenced `DimensionDefinition`.
+
+`resolvedPole` is Backend-owned specification data, never a field in a public contextual option DTO. Resolving `selectedOptionId -> PoleCode` always uses the Session's bound immutable DefinitionVersion and the question for the requested dimension, never display position or the currently AVAILABLE version.
+
+Preserve the existing `DimensionTieBreak` VO; its conceptual evolution is:
+
+```text
+sessionId
+dimension
+questionId        nullable for legacy 1.0; required for 1.1
+selectedOptionId  nullable for legacy 1.0; required for 1.1
+resolvedPole
+decidedAt
+```
+
+Legacy 1.0 facts retain the directly selected pole as their resolved outcome and contain no fabricated question/option IDs. `TieBreakResponse` is not a new Aggregate or Value Object. For 1.1, validate the submitted question ID against the bound dimension's question and the option ID within that question before deriving `resolvedPole`; a client-supplied pole is not contextual evidence. The fact retains the original `decidedAt` on equivalent retries. A conflicting second selection cannot rewrite accepted history.
+
+Both paths require `rawScore == 0` with clarification `UNCLEAR` / `SKIPPED`; neither changes the raw score or `50 / 50` evidence. A valid `RESOLVED` clarification already supplies the preference. Technical failure alone never qualifies as `UNCLEAR` or Skip.
 
 ## 8. Assessment Workflow Invariants
 
@@ -244,7 +291,7 @@ Finalization may proceed only when every dimension can produce exactly one `Fina
 
 ### AS-INV-10 Completion Consistency
 
-A legal completion transition produces exactly one `FinalAssessmentResult` and enters `COMPLETED`. When a final dimension conclusion comes from an explicit exact-tie decision, its decision source is `USER_TIE_BREAK`; the tie-break fact remains persisted separately from the derived final result. Completed assessment business content cannot be edited in place.
+A legal completion transition produces exactly one `FinalAssessmentResult` and enters `COMPLETED`. When a final dimension conclusion comes from an explicit exact-tie decision, its decision source is `USER_TIE_BREAK` for legacy 1.0 direct-pole decisions or `TIE_BREAK_QUESTION` for 1.1 contextual-question decisions; the tie-break fact remains persisted separately from the derived final result. Completed assessment business content cannot be edited in place.
 
 Deletion of the entire historical assessment record is a separate owner capability and does not contradict immutability.
 
@@ -306,6 +353,14 @@ Any semantic change to questionnaire content, dimensions, scoring, ambiguity rul
 ### VER-02 Technical Refactor Does Not Require a New Domain Version
 
 Implementation refactors, performance improvements, or SQL changes that preserve assessment semantics do not create a new assessment version.
+
+### VER-03 Accepted 1.0 to 1.1 transition
+
+`SIXTEEN_PERSONALITY` 1.1 reuses exactly the same 48 questionnaire questions as 1.0. `ScoringPolicy`, `AmbiguityPolicy`, and clarification behavior (including the expected/default clarification policy revision) remain unchanged. Only `FinalizationPolicy` advances to revision `v2`, with immutable contextual tie-break definitions added to the specification.
+
+When implementation and migration are published, 1.0 becomes `RETIRED` and 1.1 becomes the sole `AVAILABLE` version. Retirement prevents new bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs. This documentation change does not publish or activate 1.1.
+
+See [ADR-0018](../adr/ADR-0018-contextual-tie-break-definition-version.md). Both decision sources remain valid history; `USER_TIE_BREAK` must not be renamed or removed.
 
 ## 11. Provenance Semantics
 

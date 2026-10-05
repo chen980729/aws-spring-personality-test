@@ -1,7 +1,9 @@
 # Backend Testing Strategy & Current Coverage
 
+> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is a docs-only design, pending implementation and migration; it is not a deployment claim. Published 1.0 remains immutable and supported.
+
 > **Status:** Active implementation guidance
-> **Last reviewed:** 2026-09-30
+> **Last reviewed:** 2026-10-05
 > **Current coverage checkpoint:** Assessment through deterministic Clarification/Tie-break HTTP boundary (Step 7)
 
 ## 1. Testing principle
@@ -494,7 +496,7 @@ historical detail read-back
 
 ## 12. Step 7 Clarification / Tie-break coverage
 
-Step 7 now has automated coverage across Domain, Application, PostgreSQL and Web MVC boundaries.
+Step 7 now has automated coverage across Domain, Application, PostgreSQL and Web MVC boundaries for the existing legacy 1.0 behavior. This coverage does not establish implementation of 1.1 contextual questions.
 
 Verified behavior includes:
 
@@ -559,3 +561,32 @@ Because ADR-0016 makes `DimensionClarification` a separate Aggregate, these test
 The Identity/Security test infrastructure remains reusable for authenticated Assessment and future Group endpoint testing.
 
 Before production deployment is considered stable, add configuration-level verification for environment-driven datasource settings, secure production Session-cookie behavior, health/readiness expectations and any AWS-specific profile assumptions. CI should also run the existing backend suite together with the frontend test/build/lint gates rather than treating either build unit as optional.
+
+## 14. Planned DefinitionVersion 1.1 acceptance coverage (not implemented)
+
+This section specifies future tests only. The docs-only ADR-0018 change adds no tests, implementation or migration and makes no claim that the following coverage already exists.
+
+### Immutable specification and content
+
+- Compare 1.1's 48 questionnaire definitions with 1.0 exactly, including IDs, order, wording and keying; scoring, ambiguity and clarification policy behavior/revisions remain unchanged. Verify only finalization advances to v2 with contextual definitions.
+- Verify the shared instruction and EI/SN/TF/JP prompt and option texts exactly match the accepted aligned specification §12.8, including stable question/option IDs.
+- Reject nonexistent dimensions, missing/duplicate per-dimension questions under v2, duplicate question IDs, option counts other than two, duplicate option IDs within a question, same-pole option pairs, and poles outside the referenced DimensionDefinition.
+- Published 1.0 specification remains byte/semantically unchanged and has no contextual questions; publication of 1.1 retires 1.0 and leaves exactly one AVAILABLE version without rewriting existing Session bindings.
+
+### Domain and Application version matrix
+
+- For each dimension, exact tie + UNCLEAR and exact tie + SKIPPED require the bound interaction: direct pole / USER_TIE_BREAK for 1.0, contextual option / TIE_BREAK_QUESTION for 1.1.
+- RESOLVED clarification needs no tie-break; non-zero fallback and technical failure / Retry / explicit Skip remain unchanged.
+- Resolve stable option IDs through the Session-bound version; option display order and the current AVAILABLE version must not change resolution. Reject a question from another dimension/version, an option from another question, wrong-version payloads and client-supplied contextual poles.
+- Verify unchanged raw score and 50/50 evidence, one final conclusion per dimension, both retained sources, and deterministic type composition.
+
+### Persistence, REST and recovery
+
+- Round-trip evolved DimensionTieBreak fields: sessionId, dimension, nullable legacy questionId/selectedOptionId, resolvedPole, decidedAt. Never fabricate IDs for legacy facts; require genuine IDs for contextual facts.
+- Retired 1.0 Sessions can resume/complete with legacy semantics while new Sessions bind 1.1; retained history preserves both sources without automatic upgrade/recalculation.
+- GET returns the correct interaction discriminator; contextual option schemas and serialized DTOs expose only optionId/text, never resolvedPole or mappings. Inspect Session/history projections as well as the interaction DTO.
+- PUT validates the exclusive oneOf request shapes, preserves authentication/ownership/CSRF/privacy boundaries, and distinguishes 400 malformed shape, 422 semantic rejection and 409 conflict.
+- Equivalent retries, including recovery after completion, preserve the original fact/time; conflicting re-selection is rejected. GET is read-only and supports accepted-interaction recovery.
+- Race the last tie-break against Skip/finalization using the Session lock boundary; produce one immutable fact per Session/dimension and one final result. Existing abandonment/stale-provider-result protections remain valid.
+
+These are implementation acceptance gates to execute when feature work begins, not a reason to rewrite historical Step 6/7 checkpoint documents.

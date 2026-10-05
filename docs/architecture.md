@@ -1,5 +1,7 @@
 # Architecture
 
+> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is a docs-only design, pending implementation and migration; it is not a deployment claim. Published 1.0 remains immutable and supported.
+
 ## 1. Purpose
 
 This document is the source of truth for the system-level architecture baseline and current as-built cloud topology. It describes business/module boundaries, persistence requirements, major flows, deployment topology, delivery ownership and key operational trade-offs without duplicating lower-level SQL, REST, Spring or JPA implementation specifications.
@@ -498,7 +500,7 @@ Queries:
 
 Internal operations such as scoring, ambiguity detection, state mutation, and finalization are not directly controlled by frontend APIs.
 
-`Skip Remaining Clarifications` expresses one user intent: all unresolved ambiguous dimensions become skipped according to domain rules. Finalization may then produce `FinalAssessmentResult` only if every dimension has a final preference. If an exact questionnaire tie remains unresolved after `UNCLEAR` or `SKIPPED`, the backend requires an explicit `Submit Dimension Tie-break` command before completion. The tie-break selects one valid pole from the bound `DimensionDefinition`, is persisted as a business fact, and contributes a `FinalDimensionConclusion` with source `USER_TIE_BREAK`.
+`Skip Remaining Clarifications` expresses one user intent: all unresolved ambiguous dimensions become skipped according to domain rules. Finalization may then produce `FinalAssessmentResult` only if every dimension has a final preference. If an exact questionnaire tie remains unresolved after `UNCLEAR` or `SKIPPED`, the backend requires an explicit `Submit Dimension Tie-break` command before completion. The tie-break is persisted as `DimensionTieBreak`. Legacy 1.0 selects one valid pole directly and contributes source `USER_TIE_BREAK`. Under accepted 1.1 / FinalizationPolicy `v2`, it selects one stable option from a contextual question and contributes source `TIE_BREAK_QUESTION`. Backend resolves the option to a valid pole using the Session-bound immutable specification; the current AVAILABLE version must never determine an existing Session's semantics.
 
 ### 10.3 Group capabilities
 
@@ -650,3 +652,15 @@ Still deferred to specialist design:
 - temporary LLM streaming/session/cache/runtime-context implementation.
 
 Current AWS topology is no longer an open design question. Optional hardening and alternative infrastructure paths are tracked in `docs/future-work.md` and `docs/deployment/aws-deployment.md`.
+
+## Accepted contextual tie-break architecture (DefinitionVersion 1.1)
+
+`SIXTEEN_PERSONALITY` 1.1 reuses exactly the same 48 questionnaire questions as 1.0. `ScoringPolicy`, `AmbiguityPolicy`, and clarification behavior (including the expected/default clarification policy revision) remain unchanged. Only `FinalizationPolicy` advances to revision `v2`, with immutable contextual tie-break definitions added to the specification.
+
+When implementation and migration are published, 1.0 becomes `RETIRED` and 1.1 becomes the sole `AVAILABLE` version. Retirement prevents new bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs. This documentation change does not publish or activate 1.1.
+
+`AssessmentSpecification` conceptually adds `TieBreakQuestionDefinition[]` owned by the immutable `AssessmentDefinitionVersion`. Definitions contain question ID, dimension, instruction, prompt and exactly two stable options with Backend-only `resolvedPole` mappings. Under v2 there is exactly one validated question per dimension; full invariants and the evolved `DimensionTieBreak` fields are specified in [Assessment Domain](domain/assessment-domain.md).
+
+The REST adapter projects a version-aware interaction: `DIRECT_POLE_SELECTION` for 1.0 or `CONTEXTUAL_QUESTION` for 1.1. Contextual DTOs expose question ID/instruction/prompt and option ID/text only; the Frontend must neither receive nor display option-to-pole mappings. Application resolves submitted IDs through the Session's bound DefinitionVersion and persists the accepted `DimensionTieBreak` in the existing Session-locked consistency boundary. Domain finalization derives the final conclusion without changing questionnaire evidence. No competing `TieBreakResponse` domain type is introduced.
+
+The GET interaction and the PUT request union are accepted future REST design, not implemented endpoints for 1.1. Supporting both versions requires version-specific validation, finalization, persistence round-trip and recovery coverage; legacy execution must remain available after retirement. See [ADR-0018](adr/ADR-0018-contextual-tie-break-definition-version.md).
