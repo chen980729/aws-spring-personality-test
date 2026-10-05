@@ -22,6 +22,7 @@ Use these documents as the main entry points:
 - `frontend/05-implementation-checkpoint-f1-f6.md` — accepted F1-F6 implementation checkpoint, post-F6 UI optimization checkpoint and cloud handoff.
 - `frontend/06-result-content-checkpoint-f7c.md` — F7-C result interpretation/content/image checkpoint.
 - `frontend/07-landing-hero-checkpoint-f7d.md` — F7-D Landing hero visual/performance/accessibility checkpoint.
+- `frontend/08-final-review-checkpoint-f7e.md` — F7-E final review, compatibility-release decision and activation sequencing checkpoint.
 - `api/openapi.yaml` — OpenAPI **v0.5.0** contract; DefinitionVersion 1.1 Backend compatibility and Frontend dual-version support are implemented and pre-activation acceptance-tested, while activation remains pending.
 - `roadmap.md` — current implementation progress and remaining workstreams.
 - `deployment/aws-deployment.md` — as-built AWS topology, networking, cost/security trade-offs and rollout tuning.
