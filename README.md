@@ -8,9 +8,10 @@ The application is designed to let users complete versioned personality assessme
 
 The project is intentionally developed as an end-to-end engineering exercise rather than a feature-only demo: **domain modeling → API design → persistence → security → testing → frontend → containerization → AWS → CI/CD → Infrastructure as Code**.
 
-> **Current backend:** Assessment **Step 7 complete — deterministic Clarification + Tie-break workflow**<br>
-> **Current frontend:** **F1-F6 complete for Authentication + the deterministic Assessment flow through Result/History, with the portfolio UI redesign complete**<br>
-> **Next active focus:** **AWS deployment / containerization / Terraform / GitHub Actions CI/CD**. Provider-backed LLM interaction, Group/Sharing, and cross-domain historical deletion remain deferred.
+> **Current application:** Authentication + deterministic Assessment flow through Result/History is implemented and deployed on AWS.<br>
+> **Current cloud delivery:** Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, OIDC and least-privilege CD are implemented.<br>
+> **CD status:** Manual production CD and public smoke tests are verified. The automatic CI-success → CD trigger is prepared and will receive its final end-to-end verification with the next feature update.<br>
+> **Next product focus:** Provider-backed LLM clarification, Group/Sharing, historical deletion orchestration, and further product refinement.
 
 ---
 
@@ -51,72 +52,90 @@ The product itself is deliberately non-clinical. AI is treated as a constrained 
 
 ## Architecture
 
-The system is designed as a **modular monolith** for the MVP. Business modules remain isolated through package boundaries, narrow public contracts, architecture tests, and explicit Application/Domain/Infrastructure separation without introducing microservices prematurely.
+The MVP uses a **Spring Boot modular monolith** and is deployed as a real AWS full-stack application. CloudFront is the single browser-facing entry point: static React assets come from a private S3 bucket through OAC, while `/api/*` is routed to the Spring Boot backend through an Application Load Balancer.
+
+### Production architecture
 
 ```mermaid
-flowchart TD
-    Browser["React + TypeScript<br/>Frontend - Auth + Assessment F1-F6 implemented"]
+flowchart TB
+    Browser["Browser"]
 
-    subgraph Backend[Java 21 + Spring Boot Modular Monolith]
-        Identity[Identity]
-        Assessment[Assessment]
-        Group[Group - planned]
-        AI[AI Integration - planned]
+    subgraph GitHub["GitHub"]
+        Repo["Repository"]
+        Actions["GitHub Actions<br/>CI + CD"]
     end
 
-    DB[(PostgreSQL)]
-    Provider["External LLM Provider<br/>planned"]
-    AWS["AWS Deployment<br/>next active focus"]
+    subgraph AWS["AWS - ap-northeast-1"]
+        CF["CloudFront<br/>single public entry"]
+        S3["Private S3<br/>React/Vite build"]
+        IAM["IAM deploy role<br/>OIDC trust"]
+        ECR["ECR<br/>immutable backend images"]
+        SM["Secrets Manager<br/>RDS credentials"]
+        CW["CloudWatch Logs"]
 
-    Browser -->|REST / JSON| Backend
-    Identity --> DB
-    Assessment --> DB
-    Group --> DB
-    Assessment --> AI
-    AI --> Provider
-    Backend -. deploy .-> AWS
+        subgraph VPC["VPC 10.0.0.0/16"]
+            subgraph Public["Public app subnets - 2 AZs"]
+                ALB["Application Load Balancer"]
+                ECS["ECS Fargate<br/>Spring Boot"]
+            end
+
+            subgraph Private["Private DB subnets - 2 AZs"]
+                RDS[("RDS PostgreSQL<br/>Single-AZ")]
+            end
+        end
+    end
+
+    Browser -->|"HTTPS"| CF
+    CF -->|"/* via OAC"| S3
+    CF -->|"/api/*"| ALB
+    ALB -->|"HTTP :8080"| ECS
+    ECS -->|"JDBC :5432"| RDS
+    ECS -->|"read DB secret"| SM
+    ECS -->|"application logs"| CW
+    ECR -->|"container image"| ECS
+
+    Repo --> Actions
+    Actions -->|"AssumeRoleWithWebIdentity"| IAM
+    Actions -->|"push image"| ECR
+    Actions -->|"sync frontend"| S3
+    Actions -->|"invalidate cache"| CF
+    Actions -->|"register task definition + update service"| ECS
 ```
 
-### Current backend flow
+The initial production architecture intentionally avoids a NAT Gateway. ECS tasks run in the public app subnets with public IP assignment so they can reach ECR/AWS APIs, but inbound application traffic is restricted by Security Groups to the ALB. RDS stays private. The ALB accepts HTTP only from the AWS-managed CloudFront origin-facing prefix list. These are cost-conscious MVP trade-offs, not claims of maximum isolation.
 
-```text
-Register / Login / Session / CSRF
-                ↓
-        Assessment Catalog
-                ↓
-      Start / Resume / Restart
-                ↓
-   Session-bound Questionnaire
-                ↓
-             Autosave
-                ↓
-              Submit
-                ↓
- Deterministic Scoring + Ambiguity
-                ↓
-   ┌────────────┴─────────────┐
-   │                          │
-No ambiguity              Ambiguous
-   │                          │
-   ↓                          ↓
-Complete           Clarification lifecycle boundary
-                              ↓
-                     Skip current / remaining
-                              ↓
-                     Exact tie if unresolved?
-                              ↓
-                       User Tie-break
-                              ↓
-                           Complete
-                ↓
-History → Historical Detail
+### CI/CD flow
 
-Provider-backed AI conversation remains Backend Step 8.
+```mermaid
+flowchart LR
+    Dev["Feature change / PR"] --> Main["Merge to main"]
+    Main --> CI["GitHub Actions CI"]
+
+    CI --> BTest["Backend<br/>Maven verify"]
+    CI --> FTest["Frontend<br/>lint + test + build"]
+    BTest --> DockerCheck["Backend Docker<br/>build + runtime checks"]
+    FTest --> DockerCheck
+
+    DockerCheck -->|"CI success"| Gate{"CD_ENABLED<br/>production gate"}
+    Manual["workflow_dispatch<br/>manual deploy"] --> CD["CD workflow"]
+    Gate -->|"enabled"| CD
+
+    CD --> OIDC["GitHub OIDC<br/>temporary AWS credentials"]
+    OIDC --> BackendDeploy["Backend<br/>build → ECR → new ECS revision"]
+    OIDC --> FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
+    BackendDeploy --> Smoke["Public smoke test"]
+    FrontendDeploy --> Smoke
 ```
 
-The React frontend currently consumes this deterministic flow end-to-end through the browser, including Session/CSRF authentication, questionnaire autosave/submission, deterministic Skip/Tie-break interaction, Result provenance and completed History navigation.
+The CD role uses GitHub OIDC and STS temporary credentials; no long-lived AWS access keys are stored in GitHub. The deploy role is intentionally limited to the ECR repository, ECS deployment actions, the frontend S3 bucket, CloudFront invalidation and exact ECS `iam:PassRole` needs.
 
-For the detailed architecture baseline, see [`docs/architecture.md`](docs/architecture.md).
+Manual CD has been verified end-to-end, including backend rolling deployment, frontend publication and public smoke tests. The automatic post-CI path is implemented behind `CD_ENABLED`; its final live verification is intentionally scheduled with the next real feature change rather than a synthetic no-op deployment.
+
+### Runtime ownership boundary
+
+Terraform owns the infrastructure baseline: networking, ALB/target group, ECS service, RDS, ECR, S3/CloudFront, logging, IAM and OIDC trust. CD owns application releases: image tags, ECS task-definition revisions, frontend artifacts and CloudFront invalidations. The ECS service therefore treats the deployed task-definition revision as CD-owned drift.
+
+For detailed design and operational notes, see [`docs/architecture.md`](docs/architecture.md), [`docs/deployment/aws-deployment.md`](docs/deployment/aws-deployment.md) and [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md).
 
 ---
 
@@ -199,10 +218,10 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
 | Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow through F6 |
 | AI integration | External LLM behind an adapter boundary | ⏸ Deferred until after Cloud/CI-CD |
-| Containerization | Docker application image | 🚧 Next active focus |
-| Cloud | AWS | 🚧 Next active focus |
-| CI/CD | GitHub Actions | 🚧 Next active focus |
-| Infrastructure as Code | Terraform | 🚧 Next active focus |
+| Containerization | Multi-stage Docker backend image | ✅ Implemented and deployed |
+| Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ Deployed in ap-northeast-1 |
+| CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ Manual CD verified; automatic trigger pending final live verification |
+| Infrastructure as Code | Terraform with remote S3 state + native locking | ✅ Implemented for current AWS stack |
 
 ---
 
@@ -225,10 +244,10 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Historical assessment deletion | ⏸ Deferred until Group sharing backend exists |
 | Group / Membership / Sharing implementation | ⏳ Planned after current Cloud/CI-CD work |
 | React frontend | ✅ F1-F6 complete for current executable Auth + deterministic Assessment scope |
-| Docker application image | 🚧 Next active focus |
-| AWS deployment | 🚧 Next active focus |
-| GitHub Actions CI/CD | 🚧 Next active focus |
-| Terraform infrastructure | 🚧 Next active focus |
+| Docker application image | ✅ Implemented and deployed via ECR/ECS |
+| AWS deployment | ✅ Full-stack production deployment verified |
+| GitHub Actions CI/CD | ✅ CI + OIDC + manual CD verified; automatic trigger awaiting final live verification |
+| Terraform infrastructure | ✅ Current AWS infrastructure represented with remote state |
 
 The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
 
@@ -284,7 +303,7 @@ Not yet implemented in the executable backend are provider-backed LLM interactio
 - completed Assessment History, URL pagination and canonical Session detail navigation;
 - Vitest / React Testing Library / MSW coverage plus repeated real-browser integration verification.
 
-Still deferred in the frontend are real provider-backed clarification interaction, Group/Sharing UI and historical deletion UI. The project is now intentionally pausing frontend feature development while the AWS/CI-CD line is implemented.
+Still deferred in the frontend are real provider-backed clarification interaction, Group/Sharing UI and historical deletion UI. The AWS deployment and CI/CD foundation is now established, so subsequent feature work can use the deployed environment and delivery pipeline.
 
 ---
 
@@ -348,7 +367,7 @@ npm run build
 npm run lint
 ```
 
-Dedicated Playwright E2E automation remains deferred until CI/CD provides a stable repeatable full-stack environment.
+Dedicated browser E2E automation remains future work. CI/CD now provides a stable deployed environment, so a focused registration → assessment → result smoke scenario can be added when its maintenance cost is justified.
 
 ---
 
