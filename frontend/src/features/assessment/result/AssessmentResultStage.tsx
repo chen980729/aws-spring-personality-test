@@ -56,7 +56,9 @@ export function AssessmentResultStage({
       className="assessment-stage result-stage"
       aria-labelledby="assessment-result-heading"
     >
-      <div className="result-hero">
+      <div
+        className={`result-hero${imagePath ? '' : ' result-hero--text-only'}`}
+      >
         <div className="result-hero__copy">
           <p className="assessment-stage__eyebrow">
             Stage 4 of 4 · completed
