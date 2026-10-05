@@ -261,6 +261,7 @@ export function useSkipRemainingClarificationsMutation(
 export function useDimensionTieBreakInteractionQuery(
   sessionId: string,
   dimensionCode: string,
+  enabled = true,
 ) {
   return useQuery({
     queryKey:
@@ -273,6 +274,7 @@ export function useDimensionTieBreakInteractionQuery(
         sessionId,
         dimensionCode,
       ),
+    enabled,
   })
 }
 
