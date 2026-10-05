@@ -2,7 +2,7 @@
 
 > **Status:** OpenAPI v0.5.0 — active accepted design contract
 > **Last updated:** 2026-10-05
-> **Implementation alignment:** Backend now implements the v0.5.0 version-aware tie-break GET/PUT boundary and contextual persistence projection. DefinitionVersion 1.1 remains DRAFT; v2 finalization provenance, activation and Frontend support are still pending.
+> **Implementation alignment:** Backend now implements the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence projection, and v1/v2 finalization provenance. DefinitionVersion 1.1 remains DRAFT; activation and Frontend support are still pending.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -34,7 +34,7 @@ The React frontend therefore uses implemented **Controller + DTO + SecurityConfi
 
 ### v0.5.0 — 2026-10-05
 
-Records the DefinitionVersion 1.1 contextual tie-break contract. The Backend REST/Application boundary is now implemented, while 1.1 remains non-active until finalization compatibility and activation are completed:
+Records the DefinitionVersion 1.1 contextual tie-break contract. The Backend REST/Application and finalization compatibility paths are now implemented, while 1.1 remains non-active until activation and Frontend support are completed:
 
 - preserves immutable 1.0 direct-pole semantics and `USER_TIE_BREAK`;
 - adds the version-aware tie-break interaction design for 1.1;
