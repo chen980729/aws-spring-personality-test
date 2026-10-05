@@ -43,7 +43,7 @@ Records the DefinitionVersion 1.1 contextual tie-break contract. Backend compati
 - keeps HTTP paths under `/api/v1`;
 - requires existing 1.0 Sessions to remain completable after 1.0 is retired for new starts.
 
-The executable Backend now understands both tie-break request/interaction variants by Session-bound DefinitionVersion. Production/new-session behavior remains legacy 1.0 because 1.1 is still DRAFT and the activation migration has intentionally not been created yet.
+The executable Backend understands both tie-break request/interaction variants by Session-bound DefinitionVersion. V8 activates 1.1 for new Sessions, while Sessions already bound to retired 1.0 continue using the legacy request/interaction shape.
 
 ### v0.4.0 — 2026-09-30
 
