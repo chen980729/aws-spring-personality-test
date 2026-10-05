@@ -2,6 +2,8 @@ package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence;
 
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationService;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipRemainingClarificationsCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipRemainingClarificationsService;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
 import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakCommand;
@@ -23,8 +25,10 @@ import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentD
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionVersionRepository;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentSessionRepository;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.DimensionTieBreakRepository;
+import dev.springawsportfolio.portfolio.assessment.domain.result.FinalDecisionSource;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSession;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionId;
+import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.tiebreak.DimensionTieBreak;
 import dev.springawsportfolio.portfolio.assessment.web.session.AssessmentSessionWebMapper;
 import dev.springawsportfolio.portfolio.assessment.web.session.dto.AssessmentSessionResponse;
@@ -72,6 +76,10 @@ class AssessmentContextualTieBreakIntegrationTest {
     @Autowired
     SkipDimensionClarificationService
             skipDimensionClarificationService;
+
+    @Autowired
+    SkipRemainingClarificationsService
+            skipRemainingClarificationsService;
 
     @Autowired
     GetDimensionTieBreakInteractionService
@@ -290,6 +298,161 @@ class AssessmentContextualTieBreakIntegrationTest {
                                 userId,
                                 session.id(),
                                 dimension.code()
+                        )
+        );
+    }
+
+    @Test
+    void contextualTieBreaksCompleteSessionWithContextualDecisionSources() {
+        UserId userId =
+                createUser();
+
+        AssessmentDefinition definition =
+                definitionRepository
+                        .findByCode(
+                                "SIXTEEN_PERSONALITY"
+                        )
+                        .orElseThrow();
+
+        AssessmentDefinitionVersion version =
+                versionRepository
+                        .findById(
+                                VERSION_1_1_ID
+                        )
+                        .orElseThrow();
+
+        AssessmentSession session =
+                createSession(
+                        userId,
+                        definition,
+                        version
+                );
+
+        submitQuestionnaireService.execute(
+                new SubmitQuestionnaireCommand(
+                        userId,
+                        session.id(),
+                        neutralAnswers(
+                                version
+                        )
+                )
+        );
+
+        skipRemainingClarificationsService.execute(
+                new SkipRemainingClarificationsCommand(
+                        userId,
+                        session.id()
+                )
+        );
+
+        AssessmentSessionResult latest =
+                null;
+
+        for (
+                var question
+                : version
+                .specification()
+                .tieBreakQuestions()
+        ) {
+            var option =
+                    question
+                            .options()
+                            .getFirst();
+
+            latest =
+                    submitDimensionTieBreakService.execute(
+                            new SubmitDimensionTieBreakCommand(
+                                    userId,
+                                    session.id(),
+                                    question.dimension(),
+                                    new TieBreakSelection
+                                            .ContextualOptionSelection(
+                                            question.questionId(),
+                                            option.optionId()
+                                    )
+                            )
+                    );
+        }
+
+        AssessmentSessionResult completed =
+                java.util.Objects.requireNonNull(
+                        latest
+                );
+
+        assertEquals(
+                AssessmentSessionStatus.COMPLETED,
+                completed.status()
+        );
+
+        assertEquals(
+                "ESTJ",
+                completed
+                        .finalResult()
+                        .finalType()
+        );
+
+        assertEquals(
+                4,
+                completed
+                        .finalResult()
+                        .dimensions()
+                        .size()
+        );
+
+        assertTrue(
+                completed
+                        .finalResult()
+                        .dimensions()
+                        .stream()
+                        .allMatch(conclusion ->
+                                conclusion.decisionSource()
+                                        == FinalDecisionSource
+                                        .TIE_BREAK_QUESTION
+                        )
+        );
+
+        assertTrue(
+                completed
+                        .initialResult()
+                        .dimensions()
+                        .stream()
+                        .allMatch(dimension ->
+                                dimension.rawScore() == 0
+                                        && dimension
+                                        .questionnairePreference()
+                                        == null
+                        )
+        );
+
+        AssessmentSession reloaded =
+                sessionRepository
+                        .findOwnedById(
+                                session.id(),
+                                userId
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                AssessmentSessionStatus.COMPLETED,
+                reloaded.status()
+        );
+
+        assertEquals(
+                "ESTJ",
+                reloaded
+                        .finalResult()
+                        .finalType()
+        );
+
+        assertTrue(
+                reloaded
+                        .finalResult()
+                        .dimensions()
+                        .stream()
+                        .allMatch(conclusion ->
+                                conclusion.decisionSource()
+                                        == FinalDecisionSource
+                                        .TIE_BREAK_QUESTION
                         )
         );
     }
