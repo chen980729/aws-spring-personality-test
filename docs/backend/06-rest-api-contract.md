@@ -173,7 +173,7 @@ OpenAPI `info.version = 0.5.0` describes the accepted design; HTTP paths remain 
 - 1.0: `interactionType = DIRECT_POLE_SELECTION`, `dimensionCode`, and `allowedPoles` from its bound dimension.
 - 1.1: `interactionType = CONTEXTUAL_QUESTION`, `dimensionCode`, `questionId`, `instruction`, `prompt`, and exactly two `options` containing only `optionId` / `text`. Never include `resolvedPole`, keyed-pole metadata, or option-to-pole mappings. Use the exact accepted wording in the aligned specification, not generated replacement wording.
 
-GET requires ownership and a valid bound dimension. It is read-only and may recover an already accepted interaction while retained Session history exists. An ineligible dimension returns 422; an abandoned Session returns 409; inaccessible/missing Sessions return privacy-preserving 404. It never resolves a tie or changes lifecycle state.
+GET requires ownership and a valid bound dimension. It is read-only and returns an interaction only while that exact tie is currently unresolved and requires user input. After PUT accepts a decision, client recovery uses the authoritative `AssessmentSessionResponse` / persisted tie-break / final result rather than re-fetching the interaction. Already-resolved or completed dimensions therefore return 422 as ineligible interaction reads; an abandoned Session returns 409; inaccessible/missing Sessions return privacy-preserving 404. GET never resolves a tie or changes lifecycle state.
 
 `PUT` accepts exactly one of these request shapes (`oneOf`, no mixed/extra fields):
 
