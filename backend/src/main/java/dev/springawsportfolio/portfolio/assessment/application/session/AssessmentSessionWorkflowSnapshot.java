@@ -117,7 +117,13 @@ public record AssessmentSessionWorkflowSnapshot(
 
                             return new TieBreakSnapshot(
                                     tieBreak.dimension().value(),
-                                    tieBreak.selectedPole().value(),
+                                    tieBreak.questionId() == null
+                                            ? null
+                                            : tieBreak.questionId().value(),
+                                    tieBreak.selectedOptionId() == null
+                                            ? null
+                                            : tieBreak.selectedOptionId().value(),
+                                    tieBreak.resolvedPole().value(),
                                     tieBreak.decidedAt()
                             );
                         })
@@ -259,9 +265,25 @@ public record AssessmentSessionWorkflowSnapshot(
 
     public record TieBreakSnapshot(
             String dimensionCode,
+            String questionId,
+            String selectedOptionId,
             String selectedPole,
             Instant decidedAt
     ) {
+
+        public TieBreakSnapshot(
+                String dimensionCode,
+                String selectedPole,
+                Instant decidedAt
+        ) {
+            this(
+                    dimensionCode,
+                    null,
+                    null,
+                    selectedPole,
+                    decidedAt
+            );
+        }
 
         public TieBreakSnapshot {
             Objects.requireNonNull(
@@ -286,10 +308,24 @@ public record AssessmentSessionWorkflowSnapshot(
                 );
             }
 
+            if (
+                    (questionId == null)
+                            != (selectedOptionId == null)
+            ) {
+                throw new IllegalArgumentException(
+                        "questionId and selectedOptionId must both "
+                                + "be present or both be absent"
+                );
+            }
+
             Objects.requireNonNull(
                     decidedAt,
                     "decidedAt must not be null"
             );
+        }
+
+        public boolean contextual() {
+            return questionId != null;
         }
     }
 }
