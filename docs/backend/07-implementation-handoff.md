@@ -1,6 +1,6 @@
 # Backend Design Status & Implementation Handoff
 
-> **Status:** Architecture handoff + current implementation routing reference; Backend is implemented through Assessment Step 7 and Frontend through F6
+> **Status:** Architecture handoff + current implementation routing reference; Backend includes Assessment Step 7 plus DefinitionVersion 1.1 compatibility through Step 2E, Frontend remains through F6
 > **Last updated:** 2026-10-05
 > **Current project workstream:** containerization / AWS deployment / Terraform / GitHub Actions CI/CD
 > **Deferred feature work:** Group/Sharing; historical Assessment deletion after Group sharing exists; provider-backed Step 8 LLM runtime after the Cloud/CI-CD line
@@ -47,7 +47,7 @@ Assessment and Group Domain Models are the business source of truth.
 - RFC 9457 Problem Details + stable application `code`.
 - explicit client recovery for lost Submit/Restart responses.
 - owner-vs-shared Assessment privacy representations.
-- exact DTO/security schemas are published in `docs/api/openapi.yaml` (current accepted design contract v0.5.0; the DefinitionVersion 1.1 contextual tie-break extension remains pending implementation/migration).
+- exact DTO/security schemas are published in `docs/api/openapi.yaml` (current accepted contract v0.5.0; the DefinitionVersion 1.1 contextual Backend extension is implemented and pre-activation acceptance-tested, while activation/Frontend integration remain pending).
 
 ## 2. Final review + intentionally deferred slice decisions
 
@@ -57,7 +57,7 @@ Assessment and Group Domain Models are the business source of truth.
 
 ### Current execution-order note
 
-The original implementation phases below remain useful as a dependency map, but they are no longer a literal statement of the immediate project schedule. The repository has already completed the Identity/Security foundation, Backend Assessment Steps 1-7, and Frontend F1-F6 for the executable deterministic slice.
+The original implementation phases below remain useful as a dependency map, but they are no longer a literal statement of the immediate project schedule. The repository has already completed the Identity/Security foundation, Backend Assessment Steps 1-7 plus DefinitionVersion 1.1 compatibility/pre-activation acceptance through Step 2E, and Frontend F1-F6 for the currently executable browser slice.
 
 The active project sequence is now:
 
