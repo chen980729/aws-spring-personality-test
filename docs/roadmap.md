@@ -160,7 +160,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-**Current status:** Frontend **F1-F6 plus the post-F6 UI optimization checkpoint are complete for the executable Authentication + deterministic Assessment slice**. The browser application covers Session/CSRF authentication, Assessment entry, questionnaire/autosave/submit, deterministic clarification Skip/Tie-break, Result, completed History and canonical navigation, with a consistent responsive presentation layer. Frontend feature/UI work is intentionally paused before deletion/Group/real-LLM work while the project moves to AWS/CI/CD.
+**Current status:** Frontend **F1-F6 plus the post-F6 UI optimization checkpoint are complete for the executable Authentication + deterministic Assessment slice**. The browser application covers Session/CSRF authentication, Assessment entry, questionnaire/autosave/submit, deterministic clarification Skip/Tie-break, Result, completed History and canonical navigation, with a consistent responsive presentation layer. The AWS/CI-CD foundation is now established, so frontend work can resume when the next product capability has an executable backend boundary.
 
 - [x] F0 — React + TypeScript architecture/integration baseline.
 - [x] F1 — React + TypeScript/Vite foundation and test infrastructure.
