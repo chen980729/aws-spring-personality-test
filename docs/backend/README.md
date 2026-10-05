@@ -2,7 +2,7 @@
 
 > **Status:** Active backend design + implementation record
 > **Last updated:** 2026-10-05
-> **Current implementation checkpoint:** Assessment Step 7 — deterministic Clarification/Tie-break workflow boundaries complete
+> **Current implementation checkpoint:** DefinitionVersion 1.1 Step 2C — version-aware Tie-break Application/REST boundary implemented; finalization compatibility pending
 > **Current project focus:** AWS deployment / containerization / Terraform / CI/CD
 > **Deferred backend feature work:** Group/Sharing; historical deletion after Group sharing; provider-backed Step 8 LLM runtime after the Cloud/CI-CD line
 
@@ -31,7 +31,7 @@ Domain truth remains primarily in:
 8. `08-authentication-security.md` — server-side Session/JDBC, cookie, CSRF, password and Spring Security boundary design.
 10. `10-backend-testing-strategy.md` — active testing strategy and coverage through Assessment Step 7.
 
-Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.5.0**). The runtime remains aligned through the Step 7 legacy subset; DefinitionVersion 1.1 contextual tie-break behavior is accepted design pending implementation/migration.
+Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.5.0**). Backend GET/PUT and Session tie-break projections now implement the version-aware 1.0/1.1 contract. DefinitionVersion 1.1 remains DRAFT until Step 2D finalization compatibility and later activation.
 
 ## Implementation checkpoints
 
@@ -73,7 +73,7 @@ Authentication & Security is implemented around:
 - Argon2id password hashing behind an Infrastructure adapter.
 - Spring Security establishes identity; Application/Domain owns business authorization.
 
-Assessment is implemented through Step 7:
+Assessment includes the completed Step 7 baseline plus the in-progress DefinitionVersion 1.1 compatibility slice:
 
 ```text
 Catalog
@@ -91,6 +91,9 @@ Catalog
 -> deterministic post-clarification Finalization
 -> durable external-execution boundary with stale-result protection
 -> deterministic Clarification/Tie-break HTTP endpoints
+-> version-bound Tie-break GET interaction
+-> exclusive legacy/contextual Tie-break PUT validation
+-> contextual question/option provenance persistence and Session projection
 ```
 
 `ADR-0016` supersedes the original in-memory Aggregate choice from `ADR-0007`: `DimensionClarification` is a separate Assessment Aggregate coordinated with `AssessmentSession` using short Session locks, local transactions, durable uniqueness constraints and an opaque active-execution correlation token while external work is in flight.
