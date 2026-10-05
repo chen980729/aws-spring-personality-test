@@ -162,7 +162,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-**Current status:** Frontend **F1-F6, post-F6 UI optimization, and DefinitionVersion 1.1 compatibility through F7-B are complete**. The browser now supports both the retained 1.0 direct-pole flow and the staged 1.1 contextual Tie-break flow. The next work is Result interpretation content/imagery and Landing visual integration before activation.
+**Current status:** Frontend **F1-F6, post-F6 UI optimization, DefinitionVersion 1.1 compatibility through F7-B, and F7-C Result interpretation/content are complete**. The browser supports both retained 1.0 and staged 1.1 Tie-break semantics, and completed results now include versioned presentation content plus one optimized illustration per personality type. The next work is F7-D Landing visual integration before final frontend review and activation.
 
 - [x] F0 — React + TypeScript architecture/integration baseline.
 - [x] F1 — React + TypeScript/Vite foundation and test infrastructure.
@@ -173,7 +173,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 - [x] F6 — Result read model + completed History + canonical detail/navigation integration.
 - [x] F7-A — dual-version Tie-break TypeScript/API contract and `TIE_BREAK_QUESTION` source support.
 - [x] F7-B — contextual Tie-break GET/render/confirm/PUT flow; 1.0 intentionally avoids the new GET dependency during parallel rollout.
-- [ ] F7-C — 8 pole descriptions + 16 personality-type descriptions + result imagery.
+- [x] F7-C — 8 preference-letter descriptions + 16 personality-type descriptions + strengths/blind spots + optimized result imagery, while preserving evidence and Decision trace.
 - [ ] F7-D — Landing hero visual integration.
 - [ ] F7-E — final frontend regression/documentation/release review.
 - [x] Post-F6 UI optimization — design tokens, App Shells, reusable UI primitives, public/auth/dashboard/workflow redesign, responsive/error/empty/404 polish.
