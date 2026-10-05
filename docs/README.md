@@ -4,7 +4,7 @@ This directory contains the Architecture/Domain baselines, implementation-facing
 
 ## Current status
 
-The backend implementation is aligned through **Assessment Step 7 — Clarification + Tie-break workflow boundaries**. Identity/Security, the deterministic Assessment core/read side, Clarification lifecycle persistence, Skip/Tie-break finalization, stale external-result protection, and deterministic Clarification/Tie-break HTTP endpoints are implemented.
+The backend implementation is aligned through **Assessment Step 7 plus DefinitionVersion 1.1 compatibility/pre-activation Step 2E**. Identity/Security, the deterministic Assessment core/read side, Clarification lifecycle persistence, version-aware Tie-break interaction/finalization, stale external-result protection, contextual provenance persistence/history, and the v0.5.0 HTTP boundary are implemented.
 
 Frontend **F1-F6 plus F7-A/F7-B/F7-C/F7-D** is implemented for the executable Authentication + deterministic Assessment slice: Register/Login/Session/CSRF, Assessment entry, questionnaire/autosave/submit, deterministic clarification, dual-version Tie-break compatibility, enriched Result interpretation, completed History and canonical Session navigation. The Result page keeps backend-authoritative evidence/decision provenance while adding a separate Content Version 1.0 catalog and optimized per-type illustrations; the public Landing page now uses the optimized four-profile hero artwork. Provider-backed LLM interaction, Group UI and historical deletion remain intentionally deferred because their executable backend boundaries are not complete.
 
