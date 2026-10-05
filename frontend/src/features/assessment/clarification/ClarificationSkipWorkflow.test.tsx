@@ -394,6 +394,19 @@ describe('clarification skip workflow', () => {
             tieBreakSession,
           ),
       ),
+      http.get(
+        `${sessionEndpoint}/tie-breaks/EI`,
+        () =>
+          HttpResponse.json({
+            interactionType:
+              'DIRECT_POLE_SELECTION',
+            dimensionCode: 'EI',
+            allowedPoles: [
+              'E',
+              'I',
+            ],
+          }),
+      ),
     )
 
     renderSessionPage()
@@ -419,28 +432,22 @@ describe('clarification skip workflow', () => {
       }),
     ).toBeInTheDocument()
 
-      expect(
-          await screen.findByRole('heading', {
-              name: 'Tie-break required',
-          }),
-      ).toBeInTheDocument()
+    expect(
+      screen.getByRole('group', {
+        name: 'Choose one preference for EI',
+      }),
+    ).toBeInTheDocument()
 
-      expect(
-          screen.getByRole('group', {
-              name: 'Choose one preference for EI',
-          }),
-      ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText(
+        'E — questionnaire evidence 50.0%',
+      ),
+    ).toBeInTheDocument()
 
-      expect(
-          screen.getByLabelText(
-              'E — questionnaire evidence 50.0%',
-          ),
-      ).toBeInTheDocument()
-
-      expect(
-          screen.getByLabelText(
-              'I — questionnaire evidence 50.0%',
-          ),
-      ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText(
+        'I — questionnaire evidence 50.0%',
+      ),
+    ).toBeInTheDocument()
   })
 })
