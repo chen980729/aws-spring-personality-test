@@ -162,6 +162,42 @@ describe('buildAssessmentResultReadModel', () => {
     })
   })
 
+  it('presents contextual tie-break finalization separately from legacy direct selection', () => {
+    const session =
+      completedSession()
+
+    session.assessment.version = '1.1'
+
+    session.tieBreaks = [
+      {
+        dimensionCode: 'EI',
+        questionId: 'TB-EI-1',
+        selectedOptionId: 'TB-EI-02',
+        decidedAt:
+          '2026-10-05T07:00:00Z',
+      },
+    ]
+
+    session.finalResult!.dimensions[0] = {
+      dimensionCode: 'EI',
+      questionnairePreference: null,
+      finalPreference: 'I',
+      source: 'TIE_BREAK_QUESTION',
+      overrodeBaseline: false,
+    }
+
+    const result =
+      buildAssessmentResultReadModel(
+        session,
+      )
+
+    expect(result?.dimensions[0]).toMatchObject({
+      source: 'TIE_BREAK_QUESTION',
+      sourceLabel: 'Tie-break question',
+      baselineRelation: 'no-baseline',
+    })
+  })
+
   it('returns null when final and initial questionnaire preferences disagree', () => {
     const session =
       completedSession()
