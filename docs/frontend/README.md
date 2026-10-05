@@ -1,6 +1,6 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F7-A — dual-version Tie-break API/type compatibility implemented; contextual Tie-break UI is next
+> **Current checkpoint:** Frontend F7-B — contextual Tie-break interaction implemented with rolling-deploy compatibility; Result content enrichment is next
 > **Last updated:** 2026-10-05
 > **Project next focus:** DefinitionVersion 1.1 Frontend compatibility, presentation content, and staged rollout
 > **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
@@ -79,4 +79,4 @@ Still deferred:
 - historical Assessment deletion until Group sharing exists, because deletion is a cross-domain operation that must end active shares before hard-deleting the Assessment Session;
 - dedicated Playwright E2E automation; the implemented flows are covered by Vitest/RTL/MSW and have also been exercised manually against the real Spring Boot + PostgreSQL stack.
 
-Cloud/Delivery is now established. The active frontend workstream is DefinitionVersion 1.1 compatibility: F7-A has completed the API/type boundary, while F7-B will render and submit contextual Tie-break questions before 1.1 activation.
+Cloud/Delivery is now established. DefinitionVersion 1.1 frontend compatibility is implemented through F7-B: the browser understands the dual-version contract and renders/submits contextual Tie-break questions for 1.1 while preserving a no-new-GET dependency path for legacy 1.0 Sessions during parallel Backend/Frontend deployment. The next frontend step is Result interpretation content and imagery; 1.1 activation remains deferred.
