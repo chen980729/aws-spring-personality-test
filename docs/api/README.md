@@ -2,7 +2,7 @@
 
 > **Status:** OpenAPI v0.5.0 — active accepted design contract
 > **Last updated:** 2026-10-05
-> **Implementation alignment:** Runtime remains aligned through deterministic Assessment Step 7 / Frontend F6; v0.5.0 additionally records the accepted, pending DefinitionVersion 1.1 contextual tie-break design.
+> **Implementation alignment:** Backend now implements the v0.5.0 version-aware tie-break GET/PUT boundary and contextual persistence projection. DefinitionVersion 1.1 remains DRAFT; v2 finalization provenance, activation and Frontend support are still pending.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -34,7 +34,7 @@ The React frontend therefore uses implemented **Controller + DTO + SecurityConfi
 
 ### v0.5.0 — 2026-10-05
 
-Records the accepted DefinitionVersion 1.1 contextual tie-break contract without claiming runtime implementation:
+Records the DefinitionVersion 1.1 contextual tie-break contract. The Backend REST/Application boundary is now implemented, while 1.1 remains non-active until finalization compatibility and activation are completed:
 
 - preserves immutable 1.0 direct-pole semantics and `USER_TIE_BREAK`;
 - adds the version-aware tie-break interaction design for 1.1;
@@ -43,7 +43,7 @@ Records the accepted DefinitionVersion 1.1 contextual tie-break contract without
 - keeps HTTP paths under `/api/v1`;
 - requires existing 1.0 Sessions to remain completable after 1.0 is retired for new starts.
 
-The executable runtime remains aligned through Step 7 legacy behavior until the 1.1 implementation/migration is completed.
+The executable Backend now understands both tie-break request/interaction variants by Session-bound DefinitionVersion. Production/new-session behavior remains legacy 1.0 because 1.1 is still DRAFT and the activation migration has intentionally not been created yet.
 
 ### v0.4.0 — 2026-09-30
 
