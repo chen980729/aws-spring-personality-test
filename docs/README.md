@@ -23,7 +23,7 @@ Use these documents as the main entry points:
 - `frontend/06-result-content-checkpoint-f7c.md` — F7-C result interpretation/content/image checkpoint.
 - `frontend/07-landing-hero-checkpoint-f7d.md` — F7-D Landing hero visual/performance/accessibility checkpoint.
 - `frontend/08-final-review-checkpoint-f7e.md` — F7-E final review, compatibility-release decision and activation sequencing checkpoint.
-- `api/openapi.yaml` — OpenAPI **v0.5.0** contract; DefinitionVersion 1.1 Backend compatibility and Frontend dual-version support are implemented and pre-activation acceptance-tested, while activation remains pending.
+- `api/openapi.yaml` — OpenAPI **v0.5.0** contract; DefinitionVersion 1.1 Backend/Frontend dual-version support and activation regression coverage are implemented, with V8 promoting 1.1 for new Sessions.
 - `roadmap.md` — current implementation progress and remaining workstreams.
 - `deployment/aws-deployment.md` — as-built AWS topology, networking, cost/security trade-offs and rollout tuning.
 - `deployment/ci-cd.md` — CI/CD flow, OIDC security, least-privilege deployment and release ownership.
@@ -38,7 +38,7 @@ Detailed backend/database/API/AWS design should refine this baseline rather than
 
 - `backend/06-rest-api-contract.md` — REST resource/action semantics and recovery rules.
 - `backend/08-authentication-security.md` — accepted MVP Authentication & Security design.
-- `api/openapi.yaml` — OpenAPI v0.5.0 design-first HTTP DTO/security contract; Backend runtime now implements both 1.0/1.1 tie-break semantics, with 1.1 still DRAFT until activation.
+- `api/openapi.yaml` — OpenAPI v0.5.0 design-first HTTP DTO/security contract; Backend runtime implements both 1.0/1.1 tie-break semantics, and V8 makes 1.1 the version used for new Sessions.
 - `api/README.md` — API contract ownership and version rationale.
 
 ## Frontend architecture and implementation
