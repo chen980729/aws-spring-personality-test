@@ -112,13 +112,22 @@ describe('AssessmentResultStage', () => {
       screen.getByText('INTJ'),
     ).toBeInTheDocument()
 
-    expect(
+    const personalityImage =
       screen.getByRole('img', {
         name: 'INTJ personality illustration',
-      }),
-    ).toHaveAttribute(
+      })
+
+    expect(personalityImage).toHaveAttribute(
       'src',
       '/personality/intj.webp',
+    )
+    expect(personalityImage).toHaveAttribute(
+      'width',
+      '320',
+    )
+    expect(personalityImage).toHaveAttribute(
+      'height',
+      '320',
     )
 
     expect(
@@ -240,6 +249,50 @@ describe('AssessmentResultStage', () => {
     ).toHaveTextContent(
         /S\s+45\.0\s*%\s*·\s*N\s+55\.0\s*%/,
     )
+  })
+
+  it('keeps the authoritative result and decision trace visible when presentation content is unavailable', () => {
+    const session =
+      completedSession()
+
+    session.finalResult!.finalType =
+      'ABCD'
+
+    renderWithProviders(
+      <AssessmentResultStage
+        session={session}
+      />,
+    )
+
+    expect(
+      screen.getByText('ABCD'),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('status'),
+    ).toHaveTextContent(
+      'Explanatory content is not available',
+    )
+
+    expect(
+      screen.queryByRole('img'),
+    ).not.toBeInTheDocument()
+
+    expect(
+      screen.queryByRole('heading', {
+        name: 'What your letters mean',
+      }),
+    ).not.toBeInTheDocument()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'How this result was decided',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByText('User tie-break'),
+    ).toBeInTheDocument()
   })
 
   it('shows a recoverable result error when completed response details are inconsistent', () => {
