@@ -1,10 +1,10 @@
 # Backend Testing Strategy & Current Coverage
 
-> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is a docs-only design, pending implementation and migration; it is not a deployment claim. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Specification Domain, persistence expansion, and version-aware Tie-break Application/REST are implemented. 1.1 remains DRAFT while finalization compatibility and activation are pending. Published 1.0 remains immutable and supported.
 
 > **Status:** Active implementation guidance
 > **Last reviewed:** 2026-10-05
-> **Current coverage checkpoint:** Assessment through deterministic Clarification/Tie-break HTTP boundary (Step 7)
+> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 compatibility through Step 2C
 
 ## 1. Testing principle
 
@@ -562,9 +562,9 @@ The Identity/Security test infrastructure remains reusable for authenticated Ass
 
 Before production deployment is considered stable, add configuration-level verification for environment-driven datasource settings, secure production Session-cookie behavior, health/readiness expectations and any AWS-specific profile assumptions. CI should also run the existing backend suite together with the frontend test/build/lint gates rather than treating either build unit as optional.
 
-## 14. Planned DefinitionVersion 1.1 acceptance coverage (not implemented)
+## 14. DefinitionVersion 1.1 acceptance coverage
 
-This section specifies future tests only. The docs-only ADR-0018 change adds no tests, implementation or migration and makes no claim that the following coverage already exists.
+Coverage is being implemented incrementally. Steps 2A-2C now exercise specification invariants, legacy JSON compatibility, staged Flyway persistence, version-aware interaction/query behavior, contextual submission/persistence, request-shape validation, and legacy compatibility. Step 2D finalization-source behavior and the final Step 2E acceptance sweep remain pending.
 
 ### Immutable specification and content
 
@@ -584,9 +584,9 @@ This section specifies future tests only. The docs-only ADR-0018 change adds no 
 ### Persistence, REST and recovery
 
 - Round-trip evolved DimensionTieBreak fields: sessionId, dimension, nullable legacy questionId/selectedOptionId, resolvedPole, decidedAt. Never fabricate IDs for legacy facts; require genuine IDs for contextual facts.
-- Retired 1.0 Sessions can resume/complete with legacy semantics while new Sessions bind 1.1; retained history preserves both sources without automatic upgrade/recalculation.
-- GET returns the correct interaction discriminator; contextual option schemas and serialized DTOs expose only optionId/text, never resolvedPole or mappings. Inspect Session/history projections as well as the interaction DTO.
-- PUT validates the exclusive oneOf request shapes, preserves authentication/ownership/CSRF/privacy boundaries, and distinguishes 400 malformed shape, 422 semantic rejection and 409 conflict.
+- [partially implemented] 1.0 remains AVAILABLE and legacy direct-pole behavior remains covered while 1.1 is DRAFT. Retired-1.0 resume plus new-1.1 binding is deferred until the later activation migration and Step 2E acceptance sweep.
+- [implemented through Step 2C] GET returns the correct interaction discriminator; contextual options expose only optionId/text, never resolvedPole or mappings. Session projection uses legacy selectedPole or contextual questionId/selectedOptionId shape.
+- [implemented through Step 2C] PUT validates exclusive request shapes (including mixed/extra-field rejection), preserves authentication/ownership/CSRF/privacy boundaries, and distinguishes 400 malformed shape, 422 semantic rejection and 409 conflicting immutable decision.
 - Equivalent PUT retries, including recovery after completion, preserve the original fact/time; conflicting re-selection is rejected.
 - GET is read-only and returns an interaction only while that exact tie still requires user input. After a decision has been accepted, clients recover from the authoritative Session/tieBreak/finalResult projection rather than re-fetching the interaction; completed or already-resolved dimensions are not treated as GET-interaction recovery cases.
 - Race the last tie-break against Skip/finalization using the Session lock boundary; produce one immutable fact per Session/dimension and one final result. Existing abandonment/stale-provider-result protections remain valid.
