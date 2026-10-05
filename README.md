@@ -315,8 +315,12 @@ The repository treats architecture and implementation decisions as first-class p
 docs/
 ├── README.md                 Documentation entry point
 ├── requirements.md           Product goals, MVP scope and privacy rules
-├── architecture.md           System and module architecture baseline
+├── architecture.md           As-built system/cloud architecture + module boundaries
 ├── roadmap.md                Current progress and remaining work
+├── future-work.md            Deferred options and hardening backlog
+├── deployment/
+│   ├── aws-deployment.md     Current AWS topology and trade-offs
+│   └── ci-cd.md              CI/CD, OIDC and release flow
 ├── domain/                   Assessment and Group domain design
 ├── api/
 │   └── openapi.yaml          Machine-readable HTTP contract
@@ -335,7 +339,10 @@ Recommended starting points:
 - [`docs/adr/`](docs/adr/) — major design decisions and trade-offs;
 - [`docs/backend/15-assessment-clarification-workflow-checkpoint.md`](docs/backend/15-assessment-clarification-workflow-checkpoint.md) — latest accepted backend checkpoint;
 - [`docs/frontend/README.md`](docs/frontend/README.md) — frontend architecture/implementation index.
-- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — current F1-F6 implementation checkpoint and Cloud handoff.
+- [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — current F1-F6 implementation checkpoint;
+- [`docs/deployment/aws-deployment.md`](docs/deployment/aws-deployment.md) — deployed AWS topology and trade-offs;
+- [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md) — CI/CD, OIDC and deployment ownership;
+- [`docs/future-work.md`](docs/future-work.md) — future architecture options and deferred work.
 
 ---
 
@@ -481,13 +488,13 @@ spring-aws-portfolio/
 ├── frontend/                 React + TypeScript + Vite application
 ├── docs/                     Requirements, architecture, ADRs and checkpoints
 ├── infra/
-│   └── terraform/            Terraform workspace for the current AWS phase
+│   └── terraform/            Terraform for the deployed AWS infrastructure
 ├── compose.yaml              Local PostgreSQL environment
 ├── .env.example              Local configuration example
 └── README.md
 ```
 
-The deterministic full-stack Assessment slice is runnable locally. The current delivery phase is turning that local application into a reproducible containerized AWS deployment with Terraform and GitHub Actions.
+The deterministic full-stack Assessment slice is runnable locally and deployed on AWS. Terraform represents the current infrastructure baseline, while GitHub Actions provides CI plus OIDC-based application delivery.
 
 ---
 
@@ -515,6 +522,7 @@ This repository is a personal learning and career-transition portfolio project. 
 - why the project uses server-side sessions instead of JWT for the MVP;
 - how deterministic logic is separated from AI-assisted behavior;
 - how testing strategy changes with the type of risk being verified;
-- how the already-runnable application is containerized, deployed to AWS, automated with GitHub Actions, and provisioned with Terraform.
+- how the application is containerized, deployed to AWS, automated with GitHub Actions/OIDC, and provisioned with Terraform;
+- how Terraform infrastructure ownership is separated from CD-owned ECS release revisions.
 
 The final target is a runnable full-stack application with documented architecture, automated tests, CI/CD, AWS deployment, and reproducible infrastructure.
