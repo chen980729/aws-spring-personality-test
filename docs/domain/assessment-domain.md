@@ -1,9 +1,9 @@
 # Assessment Domain Model
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility is implemented and acceptance-tested. 1.1 remains DRAFT; activation and Frontend integration remain pending. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility is implemented and acceptance-tested, and Frontend dual-version integration is complete through F7-D. 1.1 remains DRAFT; activation stays separate until the compatibility release is deployed and old ECS tasks have drained. Published 1.0 remains immutable and supported.
 
 > **Status:** Accepted Assessment Domain Baseline — Step 7 legacy behavior plus implemented dual-version tie-break semantics
-> **Last updated:** 2026-10-05
+> **Last updated:** 2026-10-06
 
 ## 1. Scope
 
