@@ -1,8 +1,8 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F7-C — personality result interpretation/content/image integration implemented and acceptance-tested; Landing hero is next
-> **Last updated:** 2026-10-05
-> **Project next focus:** DefinitionVersion 1.1 Frontend compatibility, presentation content, and staged rollout
+> **Current checkpoint:** Frontend F7-D — Landing hero artwork integration implemented and acceptance-tested; final frontend release review is next
+> **Last updated:** 2026-10-06
+> **Project next focus:** Frontend F7-E final regression/documentation/release review, then DefinitionVersion 1.1 activation
 > **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
 
 This directory contains the accepted frontend architecture baseline plus the implementation checkpoint for the currently executable browser application.
@@ -17,6 +17,7 @@ The frontend is not treated as a second source of business truth. It expresses u
 - [`04-testing-strategy.md`](04-testing-strategy.md) — Vitest/RTL/MSW/Playwright responsibilities, cross-stack browser testing boundaries and presentation-regression lessons.
 - [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md) — implemented React stack, accepted F1-F6 behavior, post-F6 UI optimization checkpoint, integration findings, remaining boundaries and cloud handoff.
 - [`06-result-content-checkpoint-f7c.md`](06-result-content-checkpoint-f7c.md) — F7-C content-version boundary, 8-letter / 16-type catalogs, result imagery, UI hierarchy, tests and acceptance checkpoint.
+- [`07-landing-hero-checkpoint-f7d.md`](07-landing-hero-checkpoint-f7d.md) — F7-D Landing hero asset integration, responsive/LCP/accessibility decisions and acceptance checkpoint.
 
 ## Current implementation summary
 
@@ -80,4 +81,4 @@ Still deferred:
 - historical Assessment deletion until Group sharing exists, because deletion is a cross-domain operation that must end active shares before hard-deleting the Assessment Session;
 - dedicated Playwright E2E automation; the implemented flows are covered by Vitest/RTL/MSW and have also been exercised manually against the real Spring Boot + PostgreSQL stack.
 
-Cloud/Delivery is now established. DefinitionVersion 1.1 frontend compatibility is implemented through F7-B, and F7-C adds the presentation content layer required to make completed results understandable: eight preference-letter explanations, sixteen type summaries, strengths/blind spots, a non-clinical/non-affiliation disclaimer, and one optimized illustration per type. Decision provenance and questionnaire evidence remain visible after the interpretive content. The next frontend step is the Landing hero visual; 1.1 activation remains deferred.
+Cloud/Delivery is now established. DefinitionVersion 1.1 frontend compatibility is implemented through F7-B, F7-C adds the presentation content layer required to make completed results understandable, and F7-D replaces the former CSS-generated Landing visual with the optimized four-profile hero artwork. The hero is responsive, uses intrinsic dimensions and high-priority eager loading for the first-screen image, and preserves the existing headline/CTA/features content. The next frontend step is F7-E final regression/documentation/release review; 1.1 activation remains deferred.
