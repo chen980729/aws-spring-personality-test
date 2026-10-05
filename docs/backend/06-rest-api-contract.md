@@ -166,7 +166,7 @@ When provider integration is enabled, technical AI failures become `FAILED_RETRY
 
 ### Tie-break
 
-OpenAPI `info.version = 0.5.0` describes the accepted contract; HTTP paths remain `/api/v1`. The version-aware GET interaction and exclusive legacy/contextual PUT branches are now implemented. DefinitionVersion 1.1 remains `DRAFT`, so normal Start Assessment still binds 1.0 until the compatible finalization path is completed and the later activation migration promotes 1.1.
+OpenAPI `info.version = 0.5.0` describes the accepted contract; HTTP paths remain `/api/v1`. The version-aware GET interaction and exclusive legacy/contextual PUT branches are now implemented. DefinitionVersion 1.1 remains `DRAFT`, so normal Start Assessment still binds 1.0 until the separate activation migration promotes 1.1 after compatible Backend deployment and pre-activation acceptance.
 
 `GET /api/v1/assessment-sessions/{sessionId}/tie-breaks/{dimensionCode}` returns the interaction for the Session's bound immutable DefinitionVersion:
 
