@@ -6,7 +6,7 @@ This directory contains the Architecture/Domain baselines, implementation-facing
 
 The backend implementation is aligned through **Assessment Step 7 — Clarification + Tie-break workflow boundaries**. Identity/Security, the deterministic Assessment core/read side, Clarification lifecycle persistence, Skip/Tie-break finalization, stale external-result protection, and deterministic Clarification/Tie-break HTTP endpoints are implemented.
 
-Frontend **F1-F6** is implemented for the executable Authentication + deterministic Assessment slice: Register/Login/Session/CSRF, Assessment entry, questionnaire/autosave/submit, deterministic clarification Skip/Tie-break, Result, completed History and canonical Session navigation. A post-F6 UI optimization milestone is also complete, adding the lightweight design-token/App-Shell/shared-UI presentation layer, responsive behavior and polished loading/error/empty/404 states without changing feature contracts. Provider-backed LLM interaction, Group UI and historical deletion remain intentionally deferred because their executable backend boundaries are not complete.
+Frontend **F1-F6 plus F7-A/F7-B/F7-C** is implemented for the executable Authentication + deterministic Assessment slice: Register/Login/Session/CSRF, Assessment entry, questionnaire/autosave/submit, deterministic clarification, dual-version Tie-break compatibility, enriched Result interpretation, completed History and canonical Session navigation. The Result page now keeps backend-authoritative evidence/decision provenance while adding a separate Content Version 1.0 catalog for eight preference letters, sixteen type summaries/strengths/blind spots, and optimized per-type illustrations. Provider-backed LLM interaction, Group UI and historical deletion remain intentionally deferred because their executable backend boundaries are not complete.
 
 The project has now completed its first AWS deployment and delivery foundation: Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, GitHub OIDC and least-privilege CD are implemented. Manual production CD and public smoke tests are verified. The automatic post-CI CD path is prepared and will receive its final live verification during the next real feature update. Historical Assessment deletion still waits for the Group sharing boundary; provider-backed LLM Step 8 remains a later product milestone.
 
@@ -20,6 +20,7 @@ Use these documents as the main entry points:
 - `backend/README.md` — backend design + implementation-checkpoint index.
 - `frontend/README.md` — frontend documentation index, current F6 + UI optimization checkpoint and deferred boundaries.
 - `frontend/05-implementation-checkpoint-f1-f6.md` — accepted F1-F6 implementation checkpoint, post-F6 UI optimization checkpoint and cloud handoff.
+- `frontend/06-result-content-checkpoint-f7c.md` — F7-C result interpretation/content/image checkpoint.
 - `api/openapi.yaml` — OpenAPI **v0.5.0** contract; DefinitionVersion 1.1 contextual tie-break Backend compatibility is implemented and pre-activation acceptance-tested, while activation/Frontend integration remain pending.
 - `roadmap.md` — current implementation progress and remaining workstreams.
 - `deployment/aws-deployment.md` — as-built AWS topology, networking, cost/security trade-offs and rollout tuning.
