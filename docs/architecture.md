@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document is the source of truth for the system-level architecture baseline. It describes business/module boundaries, persistence requirements, major flows, and backend capability boundaries without fixing SQL tables, REST endpoints, Spring classes, JPA mappings, or detailed AWS topology.
+This document is the source of truth for the system-level architecture baseline and current as-built cloud topology. It describes business/module boundaries, persistence requirements, major flows, deployment topology, delivery ownership and key operational trade-offs without duplicating lower-level SQL, REST, Spring or JPA implementation specifications.
 
 ## 2. As-Built Production Architecture
 
@@ -648,4 +648,5 @@ This Architecture Baseline intentionally does not duplicate lower-level implemen
 Still deferred to specialist design:
 
 - temporary LLM streaming/session/cache/runtime-context implementation.
-- no longer open: the current AWS architecture is implemented and documented; future hardening options are tracked separately.
+
+Current AWS topology is no longer an open design question. Optional hardening and alternative infrastructure paths are tracked in `docs/future-work.md` and `docs/deployment/aws-deployment.md`.
