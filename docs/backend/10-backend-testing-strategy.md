@@ -1,10 +1,10 @@
 # Backend Testing Strategy & Current Coverage
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Specification Domain, persistence expansion, version-aware Tie-break Application/REST, and provenance-aware finalization are implemented. 1.1 remains DRAFT while the final acceptance sweep, activation and Frontend integration are pending. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and the Step 2E pre-activation acceptance sweep are complete. 1.1 remains DRAFT while activation and Frontend integration are pending. Published 1.0 remains immutable and supported.
 
 > **Status:** Active implementation guidance
 > **Last reviewed:** 2026-10-05
-> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 Backend compatibility through Step 2D
+> **Current coverage checkpoint:** Step 7 baseline + DefinitionVersion 1.1 Backend compatibility/pre-activation acceptance through Step 2E
 
 ## 1. Testing principle
 
@@ -564,31 +564,84 @@ Before production deployment is considered stable, add configuration-level verif
 
 ## 14. DefinitionVersion 1.1 acceptance coverage
 
-Coverage is being implemented incrementally. Steps 2A-2D now exercise specification invariants, legacy JSON compatibility, staged Flyway persistence, version-aware interaction/query behavior, contextual submission/persistence, request-shape validation, legacy compatibility, and provenance-aware finalization. The final Step 2E acceptance sweep, activation and Frontend integration remain pending.
+Step 2E completes the **pre-activation** Backend acceptance sweep. The purpose is to prove that one compatible Backend can safely understand both the retained 1.0 semantics and the staged 1.1 semantics before availability changes.
 
-### Immutable specification and content
+Current CI checkpoint:
 
-- Compare 1.1's 48 questionnaire definitions with 1.0 exactly, including IDs, order, wording and keying; scoring, ambiguity and clarification policy behavior/revisions remain unchanged. Verify only finalization advances to v2 with contextual definitions.
-- Verify the shared instruction and EI/SN/TF/JP prompt and option texts exactly match the accepted aligned specification §12.8, including stable question/option IDs.
-- Reject nonexistent dimensions, missing/duplicate per-dimension questions under v2, duplicate question IDs, option counts other than two, duplicate option IDs within a question, same-pole option pairs, and poles outside the referenced DimensionDefinition.
-- Published 1.0 specification remains byte/semantically unchanged and has no contextual questions; publication of 1.1 retires 1.0 and leaves exactly one AVAILABLE version without rewriting existing Session bindings.
-- Load the real retained 1.0 JSONB shape where `tieBreakQuestions` is absent and verify it still maps successfully to legacy FinalizationPolicy v1 semantics. Newer in-memory representation may normalize it to an empty collection, but must never require/backfill contextual definitions. Conversely, reject FinalizationPolicy v2 specifications with missing/empty/incomplete contextual definitions.
+```text
+Backend Maven verify: 263 tests
+Failures: 0
+Errors:   0
+Skipped:  0
+Frontend quality gates: success
+```
 
-### Domain and Application version matrix
+### Immutable specification and content — implemented
 
-- For each dimension, exact tie + UNCLEAR and exact tie + SKIPPED require the bound interaction: direct pole / USER_TIE_BREAK for 1.0, contextual option / TIE_BREAK_QUESTION for 1.1.
-- RESOLVED clarification needs no tie-break; non-zero fallback and technical failure / Retry / explicit Skip remain unchanged.
-- Resolve stable option IDs through the Session-bound version; option display order and the current AVAILABLE version must not change resolution. Reject a question from another dimension/version, an option from another question, wrong-version payloads and client-supplied contextual poles.
-- Verify unchanged raw score and 50/50 evidence, one final conclusion per dimension, both retained sources, and deterministic type composition.
+Automated PostgreSQL-backed checks now prove:
 
-### Persistence, REST and recovery
+- 1.1 dimensions are identical to 1.0.
+- all 48 questionnaire definitions are identical to 1.0, including IDs, order, wording, dimension/keyed-pole mapping and answer scale.
+- ScoringPolicy, AmbiguityPolicy and ClarificationPolicy are unchanged.
+- only FinalizationPolicy revision changes from v1 to v2.
+- 1.0 has no contextual definitions.
+- 1.1 contains exactly the accepted EI/SN/TF/JP question IDs, shared instruction, prompts, option IDs/text and Backend-only resolved-pole mappings.
+- retained 1.0 JSONB with no `tieBreakQuestions` field remains loadable.
+- v2 specification invariants reject missing/duplicate/invalid contextual definitions.
 
-- Round-trip evolved DimensionTieBreak fields: sessionId, dimension, nullable legacy questionId/selectedOptionId, resolvedPole, decidedAt. Never fabricate IDs for legacy facts; require genuine IDs for contextual facts.
-- [partially implemented] 1.0 remains AVAILABLE and legacy direct-pole behavior remains covered while 1.1 is DRAFT. Retired-1.0 resume plus new-1.1 binding is deferred until the later activation migration and Step 2E acceptance sweep.
-- [implemented through Step 2C] GET returns the correct interaction discriminator; contextual options expose only optionId/text, never resolvedPole or mappings. Session projection uses legacy selectedPole or contextual questionId/selectedOptionId shape.
-- [implemented through Step 2C] PUT validates exclusive request shapes (including mixed/extra-field rejection), preserves authentication/ownership/CSRF/privacy boundaries, and distinguishes 400 malformed shape, 422 semantic rejection and 409 conflicting immutable decision.
-- Equivalent PUT retries, including recovery after completion, preserve the original fact/time; conflicting re-selection is rejected.
-- GET is read-only and returns an interaction only while that exact tie still requires user input. After a decision has been accepted, clients recover from the authoritative Session/tieBreak/finalResult projection rather than re-fetching the interaction; completed or already-resolved dimensions are not treated as GET-interaction recovery cases.
-- Race the last tie-break against Skip/finalization using the Session lock boundary; produce one immutable fact per Session/dimension and one final result. Existing abandonment/stale-provider-result protections remain valid.
+### Domain/Application version matrix — implemented
 
-These are implementation acceptance gates to execute when feature work begins, not a reason to rewrite historical Step 6/7 checkpoint documents.
+Automated coverage proves:
+
+- while 1.0 remains the current AVAILABLE version, a Session explicitly bound to staged 1.1 still uses its own contextual semantics; the current AVAILABLE version is never consulted to reinterpret an existing Session.
+- exact tie + SKIPPED produces the bound tie-break interaction.
+- exact tie + accepted UNCLEAR clarification also produces the bound tie-break interaction.
+- 1.0 exposes direct-pole interaction and retains `USER_TIE_BREAK`.
+- 1.1 exposes contextual interaction and produces `TIE_BREAK_QUESTION`.
+- wrong-version direct-pole submission to 1.1 is rejected.
+- wrong-dimension question IDs and unknown/wrong option IDs are rejected.
+- contextual option-to-pole resolution remains Backend-owned.
+- a neutral questionnaire remains rawScore = 0 with null questionnaire preference and 50/50 evidence after contextual finalization.
+- deterministic type composition remains stable; the full acceptance path choosing each first contextual option completes as `ESTJ`.
+
+### Persistence, REST, history and recovery — implemented
+
+Automated coverage proves:
+
+- legacy tie-break facts keep null contextual IDs; contextual facts round-trip questionId, selectedOptionId, resolvedPole and decidedAt.
+- GET returns DIRECT_POLE_SELECTION or CONTEXTUAL_QUESTION by the Session-bound version and never exposes contextual pole mappings.
+- PUT accepts only the exclusive legacy/contextual shapes and rejects mixed/extra fields.
+- accepted contextual facts appear in authoritative Session/history detail as questionId + selectedOptionId rather than leaking resolvedPole as a user-selected value.
+- an equivalent contextual PUT retry after Session completion is idempotent, preserves the original decidedAt and does not create a duplicate fact.
+- a conflicting retry is rejected and leaves the persisted fact unchanged.
+- final-result JSONB round-trips both `USER_TIE_BREAK` and `TIE_BREAK_QUESTION`.
+- the final contextual tie-break racing with `skip-remaining` is serialized by the Session row-lock boundary; the real PostgreSQL test ends with exactly one completed Session, one fact per dimension and one final result.
+- existing stale clarification execution / abandonment protections remain covered separately.
+
+### Activation-specific acceptance — intentionally pending
+
+At this checkpoint:
+
+```text
+1.0 = AVAILABLE
+1.1 = DRAFT
+```
+
+This is intentional and is itself verified by integration tests. Step 2E does **not** promote 1.1.
+
+The later activation migration must add a second acceptance gate:
+
+```text
+existing Session bound to 1.0
+  -> still resumes/completes with direct-pole semantics
+  -> still records USER_TIE_BREAK
+
+new Session started after activation
+  -> binds 1.1
+  -> receives contextual tie-break semantics
+  -> records TIE_BREAK_QUESTION
+```
+
+That post-activation matrix belongs to the activation step because it cannot be truthfully exercised while 1.1 remains DRAFT.
+
+Historical Step 6/7 checkpoint documents remain unchanged. DefinitionVersion 1.1 compatibility is recorded in `16-contextual-tie-break-compatibility-checkpoint.md`.
