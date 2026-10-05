@@ -1,0 +1,430 @@
+package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence;
+
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationService;
+import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
+import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.SubmitDimensionTieBreakService;
+import dev.springawsportfolio.portfolio.assessment.application.command.tiebreak.TieBreakSelection;
+import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidDimensionTieBreakException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakNotRequiredException;
+import dev.springawsportfolio.portfolio.assessment.application.query.tiebreak.DimensionTieBreakInteractionResult;
+import dev.springawsportfolio.portfolio.assessment.application.query.tiebreak.GetDimensionTieBreakInteractionService;
+import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionId;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionDefinition;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.PoleCode;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakOptionId;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.TieBreakQuestionId;
+import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
+import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionVersionRepository;
+import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentSessionRepository;
+import dev.springawsportfolio.portfolio.assessment.domain.repository.DimensionTieBreakRepository;
+import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSession;
+import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionId;
+import dev.springawsportfolio.portfolio.assessment.domain.tiebreak.DimensionTieBreak;
+import dev.springawsportfolio.portfolio.identity.api.UserId;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@SpringBootTest
+@Testcontainers
+class AssessmentContextualTieBreakIntegrationTest {
+
+    private static final AssessmentDefinitionVersionId
+            VERSION_1_1_ID =
+            new AssessmentDefinitionVersionId(
+                    UUID.fromString(
+                            "b7a63f1e-60f4-4b5e-a0e3-1c1b1a110001"
+                    )
+            );
+
+    @Container
+    @ServiceConnection
+    static final PostgreSQLContainer postgres =
+            new PostgreSQLContainer("postgres:18");
+
+    @Autowired
+    SubmitQuestionnaireService
+            submitQuestionnaireService;
+
+    @Autowired
+    SkipDimensionClarificationService
+            skipDimensionClarificationService;
+
+    @Autowired
+    GetDimensionTieBreakInteractionService
+            getDimensionTieBreakInteractionService;
+
+    @Autowired
+    SubmitDimensionTieBreakService
+            submitDimensionTieBreakService;
+
+    @Autowired
+    AssessmentDefinitionRepository
+            definitionRepository;
+
+    @Autowired
+    AssessmentDefinitionVersionRepository
+            versionRepository;
+
+    @Autowired
+    AssessmentSessionRepository
+            sessionRepository;
+
+    @Autowired
+    DimensionTieBreakRepository
+            tieBreakRepository;
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
+    @Test
+    void contextualInteractionUsesBoundVersionAndPersistsOptionProvenance() {
+        UserId userId =
+                createUser();
+
+        AssessmentDefinition definition =
+                definitionRepository
+                        .findByCode(
+                                "SIXTEEN_PERSONALITY"
+                        )
+                        .orElseThrow();
+
+        AssessmentDefinitionVersion version =
+                versionRepository
+                        .findById(
+                                VERSION_1_1_ID
+                        )
+                        .orElseThrow();
+
+        AssessmentSession session =
+                createSession(
+                        userId,
+                        definition,
+                        version
+                );
+
+        submitQuestionnaireService.execute(
+                new SubmitQuestionnaireCommand(
+                        userId,
+                        session.id(),
+                        neutralAnswers(
+                                version
+                        )
+                )
+        );
+
+        DimensionDefinition dimension =
+                version
+                        .specification()
+                        .dimensions()
+                        .getFirst();
+
+        skipDimensionClarificationService.execute(
+                new SkipDimensionClarificationCommand(
+                        userId,
+                        session.id(),
+                        dimension.code()
+                )
+        );
+
+        DimensionTieBreakInteractionResult interaction =
+                getDimensionTieBreakInteractionService.execute(
+                        userId,
+                        session.id(),
+                        dimension.code()
+                );
+
+        DimensionTieBreakInteractionResult.ContextualQuestion
+                contextual =
+                assertInstanceOf(
+                        DimensionTieBreakInteractionResult
+                                .ContextualQuestion.class,
+                        interaction
+                );
+
+        assertEquals(
+                "TB-EI-1",
+                contextual.questionId()
+        );
+
+        assertEquals(
+                2,
+                contextual.options().size()
+        );
+
+        assertEquals(
+                "TB-EI-02",
+                contextual
+                        .options()
+                        .get(1)
+                        .optionId()
+        );
+
+        AssessmentSessionResult afterTieBreak =
+                submitDimensionTieBreakService.execute(
+                        new SubmitDimensionTieBreakCommand(
+                                userId,
+                                session.id(),
+                                dimension.code(),
+                                new TieBreakSelection
+                                        .ContextualOptionSelection(
+                                        new TieBreakQuestionId(
+                                                "TB-EI-1"
+                                        ),
+                                        new TieBreakOptionId(
+                                                "TB-EI-02"
+                                        )
+                                )
+                        )
+                );
+
+        AssessmentSessionResult.TieBreakStateResult
+                state =
+                afterTieBreak
+                        .tieBreaks()
+                        .getFirst();
+
+        assertTrue(
+                state.contextual()
+        );
+
+        assertEquals(
+                "TB-EI-1",
+                state.questionId()
+        );
+
+        assertEquals(
+                "TB-EI-02",
+                state.selectedOptionId()
+        );
+
+        assertEquals(
+                "I",
+                state.selectedPole()
+        );
+
+        DimensionTieBreak persisted =
+                tieBreakRepository
+                        .findBySessionIdAndDimension(
+                                session.id(),
+                                dimension.code()
+                        )
+                        .orElseThrow();
+
+        assertEquals(
+                "TB-EI-1",
+                persisted
+                        .questionId()
+                        .value()
+        );
+
+        assertEquals(
+                "TB-EI-02",
+                persisted
+                        .selectedOptionId()
+                        .value()
+        );
+
+        assertEquals(
+                "I",
+                persisted
+                        .resolvedPole()
+                        .value()
+        );
+
+        assertThrows(
+                TieBreakNotRequiredException.class,
+                () ->
+                        getDimensionTieBreakInteractionService.execute(
+                                userId,
+                                session.id(),
+                                dimension.code()
+                        )
+        );
+    }
+
+    @Test
+    void contextualVersionRejectsLegacyOrMismatchedSelections() {
+        UserId userId =
+                createUser();
+
+        AssessmentDefinition definition =
+                definitionRepository
+                        .findByCode(
+                                "SIXTEEN_PERSONALITY"
+                        )
+                        .orElseThrow();
+
+        AssessmentDefinitionVersion version =
+                versionRepository
+                        .findById(
+                                VERSION_1_1_ID
+                        )
+                        .orElseThrow();
+
+        AssessmentSession session =
+                createSession(
+                        userId,
+                        definition,
+                        version
+                );
+
+        submitQuestionnaireService.execute(
+                new SubmitQuestionnaireCommand(
+                        userId,
+                        session.id(),
+                        neutralAnswers(
+                                version
+                        )
+                )
+        );
+
+        DimensionDefinition dimension =
+                version
+                        .specification()
+                        .dimensions()
+                        .getFirst();
+
+        skipDimensionClarificationService.execute(
+                new SkipDimensionClarificationCommand(
+                        userId,
+                        session.id(),
+                        dimension.code()
+                )
+        );
+
+        assertThrows(
+                InvalidDimensionTieBreakException.class,
+                () ->
+                        submitDimensionTieBreakService.execute(
+                                new SubmitDimensionTieBreakCommand(
+                                        userId,
+                                        session.id(),
+                                        dimension.code(),
+                                        new PoleCode(
+                                                "I"
+                                        )
+                                )
+                        )
+        );
+
+        assertThrows(
+                InvalidDimensionTieBreakException.class,
+                () ->
+                        submitDimensionTieBreakService.execute(
+                                new SubmitDimensionTieBreakCommand(
+                                        userId,
+                                        session.id(),
+                                        dimension.code(),
+                                        new TieBreakSelection
+                                                .ContextualOptionSelection(
+                                                new TieBreakQuestionId(
+                                                        "TB-SN-1"
+                                                ),
+                                                new TieBreakOptionId(
+                                                        "TB-SN-01"
+                                                )
+                                        )
+                                )
+                        )
+        );
+    }
+
+    private List<SubmitQuestionnaireCommand.AnswerInput> neutralAnswers(
+            AssessmentDefinitionVersion version
+    ) {
+        return version
+                .specification()
+                .questionnaire()
+                .questions()
+                .stream()
+                .map(question ->
+                        new SubmitQuestionnaireCommand.AnswerInput(
+                                question
+                                        .questionId()
+                                        .value(),
+                                version
+                                        .specification()
+                                        .scoringPolicy()
+                                        .answerCenter()
+                        )
+                )
+                .toList();
+    }
+
+    private AssessmentSession createSession(
+            UserId userId,
+            AssessmentDefinition definition,
+            AssessmentDefinitionVersion version
+    ) {
+        AssessmentSession session =
+                AssessmentSession.start(
+                        AssessmentSessionId.newId(),
+                        userId,
+                        definition.id(),
+                        version.id(),
+                        Instant.now()
+                );
+
+        assertTrue(
+                sessionRepository.tryCreateActive(
+                        session
+                )
+        );
+
+        return session;
+    }
+
+    private UserId createUser() {
+        UUID id =
+                UUID.randomUUID();
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO user_accounts (
+                    id,
+                    email,
+                    display_name,
+                    password_hash,
+                    created_at,
+                    version
+                )
+                VALUES (?, ?, ?, ?, ?, 0)
+                """,
+                id,
+                "contextual-tie-break-"
+                        + id
+                        + "@example.com",
+                "Contextual Tie Break User",
+                "test-password-hash",
+                Timestamp.from(
+                        Instant.now()
+                )
+        );
+
+        return new UserId(
+                id
+        );
+    }
+}
