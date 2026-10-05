@@ -73,7 +73,7 @@ output "ecs_service_name" {
 }
 
 output "backend_image_uri" {
-  description = "Backend container image deployed to ECS"
+  description = "Bootstrap backend image URI used by Terraform; current release revisions are managed by CD"
   value       = "${aws_ecr_repository.backend.repository_url}:${var.backend_image_tag}"
 }
 
