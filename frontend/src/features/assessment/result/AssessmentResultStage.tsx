@@ -92,7 +92,7 @@ export function AssessmentResultStage({
             className="result-hero__visual-fallback"
             aria-hidden="true"
           >
-            {result.finalType}
+            ✦
           </span>
           <img
             src={imagePath}
