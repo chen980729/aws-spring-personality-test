@@ -1,8 +1,8 @@
 # Assessment Domain Model
 
-> **Accepted next specification (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is a docs-only design, pending implementation and migration; it is not a deployment claim. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility is implemented and acceptance-tested. 1.1 remains DRAFT; activation and Frontend integration remain pending. Published 1.0 remains immutable and supported.
 
-> **Status:** Accepted Assessment Domain Baseline — Step 7 legacy behavior plus pending 1.1 design
+> **Status:** Accepted Assessment Domain Baseline — Step 7 legacy behavior plus implemented dual-version tie-break semantics
 > **Last updated:** 2026-10-05
 
 ## 1. Scope
