@@ -74,6 +74,10 @@ export function LandingPage() {
           <div className="landing-visual__backdrop" aria-hidden="true" />
           <img
             src="/landing-personality-groups.webp"
+            width="900"
+            height="859"
+            loading="eager"
+            fetchPriority="high"
             alt="Four illustrated personality profiles representing the assessment experience"
           />
         </figure>
