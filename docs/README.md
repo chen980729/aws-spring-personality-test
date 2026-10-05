@@ -20,7 +20,7 @@ Use these documents as the main entry points:
 - `backend/README.md` — backend design + implementation-checkpoint index.
 - `frontend/README.md` — frontend documentation index, current F6 + UI optimization checkpoint and deferred boundaries.
 - `frontend/05-implementation-checkpoint-f1-f6.md` — accepted F1-F6 implementation checkpoint, post-F6 UI optimization checkpoint and cloud handoff.
-- `api/openapi.yaml` — OpenAPI **v0.5.0** design contract; DefinitionVersion 1.1 contextual tie-break is accepted but not yet implemented.
+- `api/openapi.yaml` — OpenAPI **v0.5.0** contract; DefinitionVersion 1.1 contextual tie-break Backend compatibility is implemented and pre-activation acceptance-tested, while activation/Frontend integration remain pending.
 - `roadmap.md` — current implementation progress and remaining workstreams.
 - `deployment/aws-deployment.md` — as-built AWS topology, networking, cost/security trade-offs and rollout tuning.
 - `deployment/ci-cd.md` — CI/CD flow, OIDC security, least-privilege deployment and release ownership.
@@ -35,7 +35,7 @@ Detailed backend/database/API/AWS design should refine this baseline rather than
 
 - `backend/06-rest-api-contract.md` — REST resource/action semantics and recovery rules.
 - `backend/08-authentication-security.md` — accepted MVP Authentication & Security design.
-- `api/openapi.yaml` — OpenAPI v0.5.0 design-first HTTP DTO/security contract; runtime implementation remains aligned through the Step 7 legacy subset until 1.1 is implemented.
+- `api/openapi.yaml` — OpenAPI v0.5.0 design-first HTTP DTO/security contract; Backend runtime now implements both 1.0/1.1 tie-break semantics, with 1.1 still DRAFT until activation.
 - `api/README.md` — API contract ownership and version rationale.
 
 ## Frontend architecture and implementation
@@ -54,7 +54,8 @@ Detailed backend/database/API/AWS design should refine this baseline rather than
 - `backend/12-assessment-submission-scoring-checkpoint.md` — submission/scoring checkpoint.
 - `backend/13-assessment-restart-checkpoint.md` — Restart / Start New checkpoint.
 - `backend/14-assessment-history-detail-checkpoint.md` — Assessment Step 6 History / Historical Detail checkpoint.
-- `backend/15-assessment-clarification-workflow-checkpoint.md` — latest accepted checkpoint: Assessment Step 7 Clarification workflow.
+- `backend/15-assessment-clarification-workflow-checkpoint.md` — historical Assessment Step 7 Clarification workflow checkpoint.
+- `backend/16-contextual-tie-break-compatibility-checkpoint.md` — latest Backend checkpoint: DefinitionVersion 1.1 compatibility + Step 2E pre-activation acceptance.
 
 
 ## Cloud / Delivery checkpoint
