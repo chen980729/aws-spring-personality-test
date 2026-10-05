@@ -1,8 +1,8 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F6 + post-F6 UI optimization complete — deterministic Assessment flow, Result/History integration, and portfolio-ready presentation layer
-> **Last updated:** 2026-10-04
-> **Project next focus:** AWS deployment, containerization, Terraform and CI/CD
+> **Current checkpoint:** Frontend F7-A — dual-version Tie-break API/type compatibility implemented; contextual Tie-break UI is next
+> **Last updated:** 2026-10-05
+> **Project next focus:** DefinitionVersion 1.1 Frontend compatibility, presentation content, and staged rollout
 > **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
 
 This directory contains the accepted frontend architecture baseline plus the implementation checkpoint for the currently executable browser application.
@@ -35,6 +35,9 @@ Backend-authoritative Workflow Resolver
 Clarification Read / Skip / Skip Remaining
         ↓
 Exact Tie-break when required
+        ↓
+Version-aware Tie-break contract
+(DIRECT_POLE_SELECTION / CONTEXTUAL_QUESTION)
         ↓
 Result Read Model / Decision Provenance
         ↓
@@ -76,4 +79,4 @@ Still deferred:
 - historical Assessment deletion until Group sharing exists, because deletion is a cross-domain operation that must end active shares before hard-deleting the Assessment Session;
 - dedicated Playwright E2E automation; the implemented flows are covered by Vitest/RTL/MSW and have also been exercised manually against the real Spring Boot + PostgreSQL stack.
 
-The next active project workstream is Cloud/Delivery rather than additional frontend feature development.
+Cloud/Delivery is now established. The active frontend workstream is DefinitionVersion 1.1 compatibility: F7-A has completed the API/type boundary, while F7-B will render and submit contextual Tie-break questions before 1.1 activation.
