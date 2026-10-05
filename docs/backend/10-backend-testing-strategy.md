@@ -618,18 +618,16 @@ Automated coverage proves:
 - the final contextual tie-break racing with `skip-remaining` is serialized by the Session row-lock boundary; the real PostgreSQL test ends with exactly one completed Session, one fact per dimension and one final result.
 - existing stale clarification execution / abandonment protections remain covered separately.
 
-### Activation-specific acceptance — intentionally pending
+### Activation-specific acceptance — implemented
 
-At this checkpoint:
+The post-activation catalog is:
 
 ```text
-1.0 = AVAILABLE
-1.1 = DRAFT
+1.0 = RETIRED
+1.1 = AVAILABLE
 ```
 
-This is intentional and is itself verified by integration tests. Step 2E does **not** promote 1.1.
-
-The later activation migration must add a second acceptance gate:
+V8 performs the availability transition after the compatibility release. The activation acceptance gate is:
 
 ```text
 existing Session bound to 1.0
@@ -642,6 +640,6 @@ new Session started after activation
   -> records TIE_BREAK_QUESTION
 ```
 
-The activation release now exercises this post-activation matrix against the migrated PostgreSQL fixture: normal Start binds 1.1, while an explicitly retained 1.0 Session continues to expose legacy direct-pole semantics.
+The activation release exercises this matrix against the migrated PostgreSQL fixture: normal Start binds 1.1, while an explicitly retained 1.0 Session continues to expose legacy direct-pole semantics.
 
 Historical Step 6/7 checkpoint documents remain unchanged. DefinitionVersion 1.1 compatibility is recorded in `16-contextual-tie-break-compatibility-checkpoint.md`; promotion and post-activation coverage are recorded in `17-definition-version-1-1-activation-checkpoint.md`.
