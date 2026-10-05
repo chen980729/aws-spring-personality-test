@@ -1,8 +1,8 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F7-D — Landing hero artwork integration implemented and acceptance-tested; final frontend release review is next
+> **Current checkpoint:** Frontend F7-E — final regression/documentation/release-readiness review complete; compatibility release is ready
 > **Last updated:** 2026-10-06
-> **Project next focus:** Frontend F7-E final regression/documentation/release review, then DefinitionVersion 1.1 activation
+> **Project next focus:** deploy the compatibility release, verify automatic CD, then activate DefinitionVersion 1.1 in a separate release
 > **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
 
 This directory contains the accepted frontend architecture baseline plus the implementation checkpoint for the currently executable browser application.
@@ -18,6 +18,7 @@ The frontend is not treated as a second source of business truth. It expresses u
 - [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md) — implemented React stack, accepted F1-F6 behavior, post-F6 UI optimization checkpoint, integration findings, remaining boundaries and cloud handoff.
 - [`06-result-content-checkpoint-f7c.md`](06-result-content-checkpoint-f7c.md) — F7-C content-version boundary, 8-letter / 16-type catalogs, result imagery, UI hierarchy, tests and acceptance checkpoint.
 - [`07-landing-hero-checkpoint-f7d.md`](07-landing-hero-checkpoint-f7d.md) — F7-D Landing hero asset integration, responsive/LCP/accessibility decisions and acceptance checkpoint.
+- [`08-final-review-checkpoint-f7e.md`](08-final-review-checkpoint-f7e.md) — F7-E final regression/documentation/release-readiness review, merge strategy and staged activation checklist.
 
 ## Current implementation summary
 
