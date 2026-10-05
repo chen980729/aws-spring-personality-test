@@ -1,7 +1,7 @@
 # Flyway Schema & JPA Persistence Mapping
 
-> **Status:** Accepted MVP Detailed Design — implementation-aligned through Assessment Step 7
-> **Last updated:** 2026-09-30
+> **Status:** Accepted MVP Detailed Design — implementation-aligned through contextual tie-break persistence expansion
+> **Last updated:** 2026-10-05
 
 ## 1. Migration layout
 
@@ -13,11 +13,13 @@ V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
 V4__seed_sixteen_personality_v1.sql
 V5__add_clarification_execution_token.sql
+V6__add_tie_break_question_provenance.sql
+V7__seed_sixteen_personality_v1_1_draft.sql
 ```
 
-`V3` creates the Assessment tables together with the Assessment partial-unique/query indexes required by the initial schema. `V4` seeds immutable application-owned Sixteen Personality reference data. `V5` adds `active_execution_token` to `assessment_dimension_clarifications` for stale external-result protection and adds the status/token consistency check. `V2` contains the PostgreSQL schema required by the project's pinned Spring Session JDBC version and is owned by Flyway rather than runtime auto-initialization.
+`V3` creates the Assessment tables together with the Assessment partial-unique/query indexes required by the initial schema. `V4` seeds immutable application-owned Sixteen Personality 1.0 reference data. `V5` adds `active_execution_token` to `assessment_dimension_clarifications` for stale external-result protection. `V6` expands `assessment_dimension_tie_breaks` with contextual question/option provenance. `V7` seeds the complete Sixteen Personality 1.1 specification as `DRAFT`; it deliberately leaves 1.0 `AVAILABLE` during the compatibility deployment. `V2` contains the PostgreSQL schema required by the project's pinned Spring Session JDBC version and is owned by Flyway rather than runtime auto-initialization.
 
-Group schema has not been migrated yet. Future migrations begin at `V6` (or later) and should add Group tables/indexes without rewriting or renumbering V1-V5. New indexes for already-deployed tables also receive a new forward-only migration rather than editing an applied migration.
+A later forward-only activation migration will retire 1.0 and promote 1.1 only after the compatible Backend has been deployed and old ECS tasks have drained. This separates schema/data expansion from business-version activation and avoids exposing 1.1 to old rolling-deployment tasks. Applied migrations V1-V7 are never edited or renumbered. Group migrations follow the Assessment activation migration rather than reusing an applied version number.
 
 ## 2. Naming convention
 
@@ -170,12 +172,16 @@ Dimension/pole semantics are intentionally not hardcoded in SQL.
 ```text
 session_id
 dimension_code
-selected_pole
+question_id          NULL for legacy 1.0
+selected_option_id   NULL for legacy 1.0
+selected_pole        resolved business outcome
 decided_at
 PK(session_id, dimension_code)
 ```
 
-It records the user fact separately from the derived final result. Domain validates whether the dimension truly requires a tie-break and whether the pole is valid for the bound definition.
+`V6` adds `question_id` and `selected_option_id` without rewriting legacy rows. A CHECK constraint requires both provenance columns to be null together or populated together, and populated IDs may not be blank. The existing `selected_pole` column is intentionally retained: for 1.0 it is the directly selected pole, while for 1.1 it is the Backend-resolved pole derived from the immutable question/option mapping. This keeps finalization queries simple while retaining the contextual evidence path.
+
+The database protects structural provenance consistency; Domain/Application validates whether the Session's bound DefinitionVersion permits legacy or contextual semantics, whether the dimension truly requires a tie-break, and whether the resolved pole belongs to that dimension.
 
 ## 8. Group tables
 
