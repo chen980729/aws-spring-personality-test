@@ -79,7 +79,7 @@ User-visible behavior for the currently executable Identity + deterministic Asse
 - [ ] Retry / temporary-runtime-loss UX for real AI clarification; deferred with Backend Step 8.
 - [x] Exact-tie legacy direct-pole user decision UX.
 - [x] Frontend F7-A dual-version Tie-break API/type compatibility (`DIRECT_POLE_SELECTION` / `CONTEXTUAL_QUESTION`, exclusive PUT union, `TIE_BREAK_QUESTION` source).
-- [ ] Frontend F7-B contextual Tie-break question interaction.
+- [x] Frontend F7-B contextual Tie-break question interaction, including no-pole-mapping presentation and rolling-deploy compatibility for legacy 1.0 Sessions.
 - [x] Result UX with decision provenance.
 - [x] Completed History UX with pagination and canonical detail navigation.
 - [x] Responsive layout, focus/hover treatment, loading/error/empty states, reduced-motion support and styled 404 presentation for the implemented surface.
@@ -162,7 +162,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-**Current status:** Frontend **F1-F6 plus the post-F6 UI optimization checkpoint are complete for the executable Authentication + deterministic Assessment slice**. The browser application covers Session/CSRF authentication, Assessment entry, questionnaire/autosave/submit, deterministic clarification Skip/Tie-break, Result, completed History and canonical navigation, with a consistent responsive presentation layer. The AWS/CI-CD foundation is now established, so frontend work can resume when the next product capability has an executable backend boundary.
+**Current status:** Frontend **F1-F6, post-F6 UI optimization, and DefinitionVersion 1.1 compatibility through F7-B are complete**. The browser now supports both the retained 1.0 direct-pole flow and the staged 1.1 contextual Tie-break flow. The next work is Result interpretation content/imagery and Landing visual integration before activation.
 
 - [x] F0 — React + TypeScript architecture/integration baseline.
 - [x] F1 — React + TypeScript/Vite foundation and test infrastructure.
@@ -171,6 +171,11 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 - [x] F4 — Questionnaire rendering, local draft ownership, debounced autosave, Submit and recovery.
 - [x] F5 — deterministic Clarification read/Skip/Skip Remaining + exact Tie-break/finalization.
 - [x] F6 — Result read model + completed History + canonical detail/navigation integration.
+- [x] F7-A — dual-version Tie-break TypeScript/API contract and `TIE_BREAK_QUESTION` source support.
+- [x] F7-B — contextual Tie-break GET/render/confirm/PUT flow; 1.0 intentionally avoids the new GET dependency during parallel rollout.
+- [ ] F7-C — 8 pole descriptions + 16 personality-type descriptions + result imagery.
+- [ ] F7-D — Landing hero visual integration.
+- [ ] F7-E — final frontend regression/documentation/release review.
 - [x] Post-F6 UI optimization — design tokens, App Shells, reusable UI primitives, public/auth/dashboard/workflow redesign, responsive/error/empty/404 polish.
 - [x] Loading/error/retry UX for implemented Identity + deterministic Assessment flows.
 - [x] Vitest / React Testing Library / MSW coverage plus repeated real-browser integration verification.
@@ -198,7 +203,7 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] Provenance-aware finalization retaining `USER_TIE_BREAK` for 1.0 and producing `TIE_BREAK_QUESTION` for contextual facts (Step 2D).
 - [x] DefinitionVersion 1.1 pre-activation acceptance sweep (Step 2E): immutable content equivalence, UNCLEAR/SKIPPED matrix, retries/conflicts, 50/50 evidence, persisted history and Session-lock finalization race.
 - [ ] DefinitionVersion 1.1 activation migration + post-activation retained-1.0/new-1.1 binding verification.
-- [ ] Frontend contextual Tie-break integration — F7-A contract compatibility complete; F7-B UI interaction pending.
+- [x] Frontend contextual Tie-break integration — F7-A contract compatibility + F7-B UI interaction complete; 1.1 remains DRAFT until presentation/release work is complete.
 - [ ] real AI integration adapter / runtime context (Step 8).
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
