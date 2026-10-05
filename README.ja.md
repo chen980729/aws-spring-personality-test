@@ -8,9 +8,10 @@ React + TypeScript / Java + Spring Boot / PostgreSQL / AWS を中心に、**非�
 
 このプロジェクトでは、単に機能を作ることではなく、**Domain Modeling → API Design → Persistence → Security → Testing → Frontend → Containerization → AWS → CI/CD → Infrastructure as Code** までを一貫して設計・実装・説明できることを目標としています。
 
-> **現在の Backend:** Assessment **Step 7 完了 — deterministic Clarification + Tie-break workflow**<br>
-> **現在の Frontend:** **F1-F6 完了 — Authentication + deterministic Assessment flow を Result / History まで実装し、Portfolio 向け UI redesign も完了**<br>
-> **次の主な作業:** **AWS deployment / Containerization / Terraform / GitHub Actions CI/CD**。provider-backed LLM interaction、Group / Sharing、cross-domain historical deletion は意図的に後続へ defer しています。
+> **現在の Application:** Authentication + deterministic Assessment flow を Result / History まで実装し、AWS 上で動作確認済みです。<br>
+> **現在の Cloud Delivery:** Docker、Terraform、RDS、ECR、ECS Fargate、ALB、private S3 + CloudFront、CloudWatch、Secrets Manager、GitHub Actions CI、OIDC、least-privilege CD を実装済みです。<br>
+> **CD status:** manual production CD と public smoke test は end-to-end で検証済みです。automatic CI-success → CD trigger は実装済みで、次回の実機能更新時に最終 live verification を行います。<br>
+> **次の Product focus:** provider-backed LLM clarification、Group / Sharing、historical deletion orchestration、および追加の product refinement。
 
 ---
 
@@ -53,74 +54,88 @@ GitHub 上で Repository を見るだけでも製品の見た目を把握でき�
 
 ## Architecture
 
-MVP では **Modular Monolith** を採用しています。
+MVP は **Spring Boot Modular Monolith** として実装し、現在は AWS 上に full-stack application として deployment 済みです。Browser から見た public entry は CloudFront に一本化し、React/Vite の static assets は private S3 + OAC、`/api/*` は ALB → ECS Fargate の Spring Boot backend へ routing します。
 
-Identity / Assessment / Group / AI Integration を business module として分離しつつ、初期段階から Microservices を導入するのではなく、package boundary、公開 interface、architecture test、Application / Domain / Infrastructure の責務分離によって module 間の境界を維持します。
+### Production Architecture
 
 ```mermaid
-flowchart TD
-    Browser["React + TypeScript<br/>Frontend - Auth + Assessment F1-F6 implemented"]
+flowchart TB
+    Browser["Browser"]
 
-    subgraph Backend[Java 21 + Spring Boot Modular Monolith]
-        Identity[Identity]
-        Assessment[Assessment]
-        Group[Group - planned]
-        AI[AI Integration - planned]
+    subgraph GitHub["GitHub"]
+        Repo["Repository"]
+        Actions["GitHub Actions<br/>CI + CD"]
     end
 
-    DB[(PostgreSQL)]
-    Provider["External LLM Provider<br/>planned"]
-    AWS["AWS Deployment<br/>next active focus"]
+    subgraph AWS["AWS - ap-northeast-1"]
+        CF["CloudFront<br/>single public entry"]
+        S3["Private S3<br/>React/Vite build"]
+        IAM["IAM deploy role<br/>OIDC trust"]
+        ECR["ECR<br/>immutable backend images"]
+        SM["Secrets Manager<br/>RDS credentials"]
+        CW["CloudWatch Logs"]
 
-    Browser -->|REST / JSON| Backend
-    Identity --> DB
-    Assessment --> DB
-    Group --> DB
-    Assessment --> AI
-    AI --> Provider
-    Backend -. deploy .-> AWS
+        subgraph VPC["VPC 10.0.0.0/16"]
+            subgraph Public["Public app subnets - 2 AZs"]
+                ALB["Application Load Balancer"]
+                ECS["ECS Fargate<br/>Spring Boot"]
+            end
+
+            subgraph Private["Private DB subnets - 2 AZs"]
+                RDS[("RDS PostgreSQL<br/>Single-AZ")]
+            end
+        end
+    end
+
+    Browser -->|"HTTPS"| CF
+    CF -->|"/* via OAC"| S3
+    CF -->|"/api/*"| ALB
+    ALB -->|"HTTP :8080"| ECS
+    ECS -->|"JDBC :5432"| RDS
+    ECS -->|"read DB secret"| SM
+    ECS -->|"application logs"| CW
+    ECR -->|"container image"| ECS
+
+    Repo --> Actions
+    Actions -->|"AssumeRoleWithWebIdentity"| IAM
+    Actions -->|"push image"| ECR
+    Actions -->|"sync frontend"| S3
+    Actions -->|"invalidate cache"| CF
+    Actions -->|"register task definition + update service"| ECS
 ```
 
-### 現在の Backend flow
+初期 deployment では NAT Gateway を使わず、ECS task は public app subnet で public IP を持ちます。ただし inbound は Security Group によって ALB から port 8080 のみに制限し、RDS は private subnet に保持しています。これは個人 Portfolio MVP における cost / complexity の trade-off です。
 
-```text
-Register / Login / Session / CSRF
-                ↓
-        Assessment Catalog
-                ↓
-      Start / Resume / Restart
-                ↓
-   Session-bound Questionnaire
-                ↓
-             Autosave
-                ↓
-              Submit
-                ↓
- Deterministic Scoring + Ambiguity
-                ↓
-   ┌────────────┴─────────────┐
-   │                          │
-No ambiguity              Ambiguous
-   │                          │
-   ↓                          ↓
-Complete           Clarification lifecycle boundary
-                              ↓
-                     Skip current / remaining
-                              ↓
-                     Exact tie if unresolved?
-                              ↓
-                       User Tie-break
-                              ↓
-                           Complete
-                ↓
-History → Historical Detail
+### CI/CD Flow
 
-Provider-backed AI conversation は Backend Step 8 で実装予定です。
+```mermaid
+flowchart LR
+    Dev["Feature change / PR"] --> Main["Merge to main"]
+    Main --> CI["GitHub Actions CI"]
+
+    CI --> BTest["Backend<br/>Maven verify"]
+    CI --> FTest["Frontend<br/>lint + test + build"]
+    BTest --> DockerCheck["Backend Docker<br/>build + runtime checks"]
+    FTest --> DockerCheck
+
+    DockerCheck -->|"CI success"| Gate{"CD_ENABLED<br/>production gate"}
+    Manual["workflow_dispatch<br/>manual deploy"] --> CD["CD workflow"]
+    Gate -->|"enabled"| CD
+
+    CD --> OIDC["GitHub OIDC<br/>temporary AWS credentials"]
+    OIDC --> BackendDeploy["Backend<br/>build → ECR → ECS revision"]
+    OIDC --> FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
+    BackendDeploy --> Smoke["Public smoke test"]
+    FrontendDeploy --> Smoke
 ```
 
-React frontend は現在、この deterministic flow を Browser から end-to-end で利用できます。Session/CSRF authentication、Questionnaire autosave/submission、Skip/Tie-break、Result provenance、completed History navigation まで実装済みです。
+GitHub Actions には長期 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` を保存せず、OIDC + STS temporary credentials を利用します。Deploy role は ECR push、ECS deployment、frontend S3、CloudFront invalidation、必要最小限の `iam:PassRole` のみに制限しています。
 
-詳細な Architecture baseline は [`docs/architecture.md`](docs/architecture.md) にまとめています。
+Manual CD は backend rolling deployment、frontend publish、public smoke test まで成功済みです。Automatic CD は `CD_ENABLED` gate の後ろに実装済みで、次回の実機能更新時に最終検証します。
+
+Terraform は infrastructure baseline を管理し、CD は backend image / ECS Task Definition revision / frontend artifact といった application release を管理します。
+
+詳細: [`docs/architecture.md`](docs/architecture.md) · [`docs/deployment/aws-deployment.md`](docs/deployment/aws-deployment.md) · [`docs/deployment/ci-cd.md`](docs/deployment/ci-cd.md)
 
 ---
 
@@ -221,10 +236,10 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | Local environment | Docker Compose | ✅ PostgreSQL 環境を実装 |
 | Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + deterministic Assessment flow を F6 まで実装 |
 | AI integration | External LLM behind an adapter boundary | ⏸ Cloud/CI-CD 完了後まで deferred |
-| Containerization | Docker application image | 🚧 次の active focus |
-| Cloud | AWS | 🚧 次の active focus |
-| CI/CD | GitHub Actions | 🚧 次の active focus |
-| Infrastructure as Code | Terraform | 🚧 次の active focus |
+| Containerization | Multi-stage Docker backend image | ✅ 実装・AWS deployment 済み |
+| Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ ap-northeast-1 に deployment 済み |
+| CI/CD | GitHub Actions CI + OIDC + least-privilege CD | ✅ Manual CD 検証済み / automatic trigger 最終検証待ち |
+| Infrastructure as Code | Terraform + remote S3 state | ✅ 現在の AWS stack を管理 |
 
 ---
 
@@ -247,10 +262,10 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | Historical assessment deletion | ⏸ Group sharing backend 実装後まで deferred |
 | Group / Membership / Sharing implementation | ⏳ 現在の Cloud/CI-CD work 後に実装予定 |
 | React frontend | ✅ 現在 executable な Auth + deterministic Assessment scope を F1-F6 まで完了 |
-| Docker application image | 🚧 次の active focus |
-| AWS deployment | 🚧 次の active focus |
-| GitHub Actions CI/CD | 🚧 次の active focus |
-| Terraform infrastructure | 🚧 次の active focus |
+| Docker application image | ✅ ECR / ECS で deployment 済み |
+| AWS deployment | ✅ Full-stack deployment 検証済み |
+| GitHub Actions CI/CD | ✅ CI + OIDC + manual CD 検証済み / automatic CD 最終検証待ち |
+| Terraform infrastructure | ✅ Remote state を含む current AWS infrastructure を実装 |
 
 詳細な roadmap は [`docs/roadmap.md`](docs/roadmap.md) に記録しています。
 
@@ -306,7 +321,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 - completed Assessment History / URL pagination / canonical Session detail navigation
 - Vitest / React Testing Library / MSW と real-browser integration verification
 
-real provider-backed clarification、Group / Sharing UI、historical deletion UI は未実装です。現在は Frontend feature development を一旦停止し、AWS / CI-CD line に移っています。
+real provider-backed clarification、Group / Sharing UI、historical deletion UI は未実装です。AWS / CI-CD foundation は現在確立されており、今後の feature work は deployed environment と delivery pipeline を利用して進めます。
 
 ---
 
