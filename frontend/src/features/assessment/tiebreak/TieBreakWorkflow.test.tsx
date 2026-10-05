@@ -436,10 +436,6 @@ describe('tie-break workflow', () => {
     let requestCount = 0
 
     installCsrfHandler()
-    installLegacyInteraction(
-      'EI',
-      ['E', 'I'],
-    )
 
     server.use(
       http.get(
