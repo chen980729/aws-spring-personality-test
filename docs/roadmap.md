@@ -90,7 +90,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** design remains accepted and implementation is aligned through **Assessment Step 7**. OpenAPI v0.4.0 reflects the deterministic Clarification/Tie-break HTTP alignment; real provider-backed clarification interaction remains Step 8.
+**Current status:** design remains accepted and runtime implementation is aligned through **Assessment Step 7**. OpenAPI v0.5.0 additionally records the accepted DefinitionVersion 1.1 contextual tie-break design, while that 1.1 branch remains pending implementation/migration. Real provider-backed clarification interaction remains Step 8.
 
 ### Domain/Application
 
@@ -122,7 +122,7 @@ Accepted persistence artifacts are `docs/backend/04-persistence-postgresql-desig
 
 - [x] HTTP resource/use-case mapping.
 - [x] Routes and methods.
-- [x] Design-first DTO schema / OpenAPI v0.4.0 aligned through the deterministic Step 7 HTTP boundary.
+- [x] Design-first DTO schema / OpenAPI v0.5.0 accepted; executable runtime remains aligned through the deterministic Step 7 legacy boundary, with the DefinitionVersion 1.1 contextual branch pending implementation.
 - [x] Status/error mapping.
 - [x] Business authentication/authorization boundary.
 - [x] Authentication transport/security mechanics (server-side Session + JDBC + cookie + CSRF).
