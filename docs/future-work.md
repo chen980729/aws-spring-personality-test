@@ -5,9 +5,8 @@ This document separates **implemented current state** from optional hardening an
 ## 1. Near-term delivery work
 
 - Final live verification of `main CI success → automatic CD` during the next real feature update.
-- Synchronize the final ECS rollout tuning and Terraform/CD ownership rule into the committed Terraform source of truth where needed.
-- Remove any accidentally tracked Terraform plan artifacts from Git history going forward.
 - Continue documenting deployment changes when the infrastructure baseline changes.
+- Keep generated Terraform plans/state/local backend configuration out of version control.
 
 ## 2. Cloud and security hardening
 
