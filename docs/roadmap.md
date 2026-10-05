@@ -90,7 +90,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** design remains accepted and runtime implementation is aligned through **Assessment Step 7**. OpenAPI v0.5.0 additionally records the accepted DefinitionVersion 1.1 contextual tie-break design, while that 1.1 branch remains pending implementation/migration. Real provider-backed clarification interaction remains Step 8.
+**Current status:** the Step 7 runtime baseline remains intact, and DefinitionVersion 1.1 compatibility is implemented through **Step 2C — version-aware Tie-break Application/REST**. OpenAPI v0.5.0 now matches the implemented GET/PUT boundary and version-specific tie-break projections. DefinitionVersion 1.1 remains DRAFT while Step 2D finalization provenance and later activation are pending. Real provider-backed clarification interaction remains Step 8.
 
 ### Domain/Application
 
@@ -122,7 +122,7 @@ Accepted persistence artifacts are `docs/backend/04-persistence-postgresql-desig
 
 - [x] HTTP resource/use-case mapping.
 - [x] Routes and methods.
-- [x] Design-first DTO schema / OpenAPI v0.5.0 accepted; executable runtime remains aligned through the deterministic Step 7 legacy boundary, with the DefinitionVersion 1.1 contextual branch pending implementation.
+- [x] OpenAPI v0.5.0 version-aware Tie-break GET/PUT and legacy/contextual state projections implemented in Backend; 1.1 activation remains deferred until finalization compatibility is complete.
 - [x] Status/error mapping.
 - [x] Business authentication/authorization boundary.
 - [x] Authentication transport/security mechanics (server-side Session + JDBC + cookie + CSRF).
@@ -181,7 +181,7 @@ Accepted F0 baseline and the F1-F6 implementation checkpoint live under `docs/fr
 
 ## 9. Backend Implementation
 
-Current backend checkpoint: **Assessment Step 7 complete**.
+Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1 compatibility through Step 2C**.
 
 - [x] Java 21 + Spring Boot implementation foundation.
 - [x] PostgreSQL persistence foundation with Flyway + JPA/Hibernate.
@@ -191,6 +191,9 @@ Current backend checkpoint: **Assessment Step 7 complete**.
 - [x] Restart / Start New with targeted locking and retry/recovery semantics.
 - [x] completed Assessment History + Historical Detail read side.
 - [x] Clarification + Tie-break mutation workflow (Step 7).
+- [x] DefinitionVersion 1.1 Specification Domain + persistence expansion.
+- [x] Version-aware Tie-break GET interaction + exclusive legacy/contextual PUT + contextual Session projection (Step 2C).
+- [ ] DefinitionVersion 1.1 finalization source compatibility + activation (Step 2D / activation migration).
 - [ ] real AI integration adapter / runtime context (Step 8).
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
