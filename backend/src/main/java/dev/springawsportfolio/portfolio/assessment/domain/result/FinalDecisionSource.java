@@ -10,5 +10,7 @@ public enum FinalDecisionSource {
 
     QUESTIONNAIRE_FALLBACK,
 
-    USER_TIE_BREAK
+    USER_TIE_BREAK,
+
+    TIE_BREAK_QUESTION
 }
