@@ -15,11 +15,12 @@ V4__seed_sixteen_personality_v1.sql
 V5__add_clarification_execution_token.sql
 V6__add_tie_break_question_provenance.sql
 V7__seed_sixteen_personality_v1_1_draft.sql
+V8__activate_sixteen_personality_v1_1.sql
 ```
 
 `V3` creates the Assessment tables together with the Assessment partial-unique/query indexes required by the initial schema. `V4` seeds immutable application-owned Sixteen Personality 1.0 reference data. `V5` adds `active_execution_token` to `assessment_dimension_clarifications` for stale external-result protection. `V6` expands `assessment_dimension_tie_breaks` with contextual question/option provenance. `V7` seeds the complete Sixteen Personality 1.1 specification as `DRAFT`; it deliberately leaves 1.0 `AVAILABLE` during the compatibility deployment. `V2` contains the PostgreSQL schema required by the project's pinned Spring Session JDBC version and is owned by Flyway rather than runtime auto-initialization.
 
-V8 is the forward-only activation migration. After the compatible Backend/Frontend release has been deployed and old ECS tasks have drained, it retires 1.0 and promotes 1.1 to the sole AVAILABLE version. The migration retires 1.0 first to preserve the one-AVAILABLE-version unique index, assigns 1.1 its publication timestamp, and fails if the expected source states are not present. Applied migrations V1-V7 are never edited or renumbered. Group migrations follow V8 rather than reusing an applied version number.
+V8 is the applied forward-only activation migration. It was released only after the compatible Backend/Frontend version had been deployed and old ECS tasks had drained; it retires 1.0 and promotes 1.1 to the sole `AVAILABLE` version. The migration retires 1.0 first to preserve the one-AVAILABLE-version unique index, assigns 1.1 its publication timestamp, and fails if the expected source states are not present. Applied migrations V1-V8 are immutable history and are never edited or renumbered. Future Group migrations begin after V8 rather than reusing an applied version number.
 
 ## 2. Naming convention
 
