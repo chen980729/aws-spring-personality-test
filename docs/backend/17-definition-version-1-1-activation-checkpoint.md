@@ -1,6 +1,6 @@
 # DefinitionVersion 1.1 Activation Checkpoint
 
-> **Status:** Activation release implemented
+> **Status:** Activation release deployed and production-verified
 > **Date:** 2026-10-06
 > **Scope:** DefinitionVersion availability switch only; no questionnaire, scoring, API, or Frontend contract changes
 
@@ -57,16 +57,18 @@ These tests are intentionally different from the pre-activation acceptance in ch
 
 ## 5. Deployment verification
 
-After this release is merged and the automatic CD workflow succeeds:
+Production verification is complete:
 
-1. confirm the Backend ECS rollout reaches steady state;
-2. confirm public smoke tests pass;
-3. start a **new** Assessment with a user that has no active attempt;
-4. verify the returned Session reports `assessmentVersion = "1.1"`;
-5. exercise an exact tie and confirm the browser renders the contextual question rather than direct pole selection;
-6. optionally resume a retained 1.0 Session and confirm the legacy flow remains valid.
+1. the activation commit passed the `main` CI workflow;
+2. successful CI triggered the CD workflow automatically through `workflow_run`;
+3. Backend ECS deployment and Frontend S3/CloudFront deployment both succeeded;
+4. the post-deployment public smoke job passed;
+5. a new production Assessment was confirmed to use DefinitionVersion 1.1 behavior;
+6. an exact-tie production flow was confirmed to persist/report `TIE_BREAK_QUESTION`, proving the contextual tie-break path is active.
 
-The activation migration itself is the release boundary. No manual production SQL update should be performed outside Flyway.
+Retained 1.0 backward compatibility remains covered by the regression suite: an existing Session bound to 1.0 keeps the legacy direct-pole semantics even though 1.0 is no longer eligible for new binding.
+
+The activation migration itself is the release boundary. No manual production SQL update is performed outside Flyway.
 
 ## 6. Architectural result
 
