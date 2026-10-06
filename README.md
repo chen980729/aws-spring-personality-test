@@ -57,41 +57,54 @@ The MVP uses a **Spring Boot modular monolith** and is deployed as a real AWS fu
 
 ### Application architecture
 
-The cloud topology and the application architecture are separate concerns. Inside the single Spring Boot deployable, business boundaries remain explicit: Identity & Access and Assessment are implemented modules, Group is design-frozen but not yet executable, and AI Integration is the provider boundary that Step 8 will complete.
+The cloud topology and the application architecture are separate concerns. The Backend is one deployable **Spring Boot modular monolith**, but the code is organized **by business module**, with Application/Domain/Infrastructure boundaries inside each module rather than one global package-by-layer stack.
 
 ```mermaid
 flowchart LR
     Browser["Browser"] --> React["React + TypeScript<br/>Frontend"]
-    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web
+    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web["Spring Security + Web API"]
 
     subgraph Backend["Spring Boot Modular Monolith"]
-        Web["Web / Security<br/>Controllers + Spring Security"]
-        App["Application / Orchestration"]
-        Identity["Identity & Access<br/>implemented"]
-        Assessment["Assessment<br/>implemented"]
-        Group["Group<br/>design accepted / implementation pending"]
-        AI["AI Integration boundary<br/>provider runtime: Step 8"]
-        Infra["Persistence / Infrastructure adapters"]
+        Web
 
-        Web --> App
-        App --> Identity
-        App --> Assessment
-        App -.-> Group
-        Assessment --> AI
-        Identity --> Infra
-        Assessment --> Infra
-        Group -.-> Infra
+        subgraph Identity["Identity & Access Module — implemented"]
+            IApp["Application"]
+            IDomain["Domain"]
+            IInfra["Infrastructure / JPA"]
+            IApp --> IDomain
+            IApp --> IInfra
+        end
+
+        subgraph Assessment["Assessment Module — implemented"]
+            AApp["Application"]
+            ADomain["Domain"]
+            AInfra["Infrastructure / JPA"]
+            AApp --> ADomain
+            AApp --> AInfra
+        end
+
+        subgraph Group["Group Module — design accepted, implementation pending"]
+            GDomain["Domain specification"]
+        end
+
+        AI["AI Integration adapter boundary<br/>provider runtime: Step 8"]
+
+        Web --> IApp
+        Web --> AApp
+        AApp -.-> AI
+        AApp -.-> GDomain
     end
 
-    Infra --> PostgreSQL[("PostgreSQL")]
+    IInfra --> PostgreSQL[("PostgreSQL")]
+    AInfra --> PostgreSQL
     AI -.-> Provider["External LLM provider<br/>next milestone"]
 ```
 
-The modular monolith keeps deployment simple while preserving explicit module ownership and dependency rules. Cross-module use cases are coordinated in the Application layer; persistence and provider-specific details stay behind Infrastructure/adaptor boundaries.
+This structure keeps deployment simple while preserving business ownership. Cross-module use cases are coordinated at the Application boundary; Domain objects stay independent from JPA models, and provider/persistence details remain behind Infrastructure adapters.
 
 ### Current backend flow
 
-The currently deployed Assessment path is backend-authoritative and version-aware:
+The currently deployed Assessment path is backend-authoritative and version-aware. Provider-backed LLM execution is intentionally shown as the **next** branch rather than as an already deployed capability.
 
 ```mermaid
 flowchart TB
@@ -103,17 +116,22 @@ flowchart TB
     F --> G["Deterministic Scoring + Ambiguity"]
 
     G -->|"No ambiguity"| H["Deterministic Finalization"]
-    G -->|"Ambiguous"| I["DimensionClarification workflow"]
+    G -->|"Ambiguous"| I["Persisted DimensionClarification boundary"]
 
-    I --> J{"Accepted outcome"}
-    J -->|"RESOLVED"| K["Use clarification preference"]
-    J -->|"UNCLEAR / SKIPPED<br/>non-zero baseline"| L["Questionnaire fallback"]
-    J -->|"UNCLEAR / SKIPPED<br/>exact tie"| M["Version-aware Tie-break"]
+    I --> S["Current production path<br/>Skip Current / Skip Remaining"]
+    S --> J{"Questionnaire baseline"}
+    J -->|"Non-zero"| L["Deterministic questionnaire fallback"]
+    J -->|"Exact tie"| M["Version-aware Tie-break"]
 
     M --> M1["Retained 1.0 Session<br/>direct pole / USER_TIE_BREAK"]
     M --> M2["Active 1.1 Session<br/>contextual question / TIE_BREAK_QUESTION"]
 
-    K --> H
+    I -.-> P["Step 8 — provider-backed LLM<br/>not implemented yet"]
+    P -.-> Q["RESOLVED / UNCLEAR / retryable failure"]
+    Q -.-> H
+    Q -.-> L
+    Q -.-> M
+
     L --> H
     M1 --> H
     M2 --> H
@@ -122,7 +140,7 @@ flowchart TB
     N --> O["History / Historical Detail"]
 ```
 
-Provider-backed LLM execution is the next Assessment milestone, not an existing production capability. The persisted Clarification lifecycle, retry/stale-result protection, accepted-result boundary, Skip behavior, version-aware Tie-break and deterministic finalization are already implemented; Step 8 plugs provider execution into that existing boundary.
+The persisted Clarification lifecycle, execution-token stale-result protection, retry boundary, Skip behavior, version-aware Tie-break and deterministic finalization are already implemented. Step 8 will connect a real provider to that existing boundary rather than changing the core scoring/finalization authority.
 
 ### Production architecture
 
