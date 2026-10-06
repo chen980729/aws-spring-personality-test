@@ -1,6 +1,6 @@
 # Assessment Domain Model
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility and Frontend dual-version integration are complete. The separate activation release adds V8 to make 1.1 AVAILABLE and retire 1.0 for new Session binding; retained 1.0 Sessions remain immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility, Frontend dual-version integration, and Flyway V8 activation are complete. DefinitionVersion 1.1 is now `AVAILABLE` for new Session binding; 1.0 is `RETIRED` for new bindings while retained 1.0 Sessions remain immutable and supported.
 
 > **Status:** Accepted Assessment Domain Baseline — Step 7 legacy behavior plus implemented dual-version tie-break semantics
 > **Last updated:** 2026-10-06
