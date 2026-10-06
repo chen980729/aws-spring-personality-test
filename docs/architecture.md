@@ -1,6 +1,6 @@
 # Architecture
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend/Frontend dual-version compatibility is deployed, and the separate activation release adds V8 to retire 1.0 and promote 1.1 as the sole AVAILABLE version. Published 1.0 remains immutable and executable for Sessions already bound to it.
+> **DefinitionVersion 1.1 status (ADR-0018):** The compatibility rollout and V8 activation are complete in production. DefinitionVersion 1.1 is the sole `AVAILABLE` version for new Sessions; published 1.0 is `RETIRED` for new binding but remains immutable and executable for Sessions already bound to it.
 
 ## 1. Purpose
 
@@ -8,7 +8,7 @@ This document is the source of truth for the system-level architecture baseline 
 
 ## 2. As-Built Production Architecture
 
-The current system is no longer only a target architecture: the full-stack application has been deployed and manually verified on AWS in `ap-northeast-1`.
+The current system is no longer only a target architecture: the full-stack application is deployed on AWS in `ap-northeast-1`, and both manual deployment and the automatic post-CI CD path have been verified end-to-end.
 
 CloudFront is the browser-facing entry point. Static React/Vite assets are served from a private S3 bucket through Origin Access Control (OAC), while `/api/*` is routed to an Application Load Balancer and then to the Spring Boot backend on ECS Fargate.
 
@@ -106,7 +106,7 @@ flowchart LR
     CD --> OIDC["GitHub OIDC<br/>STS temporary credentials"]
     OIDC --> BackendCD["Backend<br/>build → ECR → ECS revision"]
     OIDC --> FrontendCD["Frontend<br/>build → S3 → CloudFront invalidation"]
-    BackendCD --> Smoke["Public smoke test"]
+    BackendCD --> Smoke["Post-deployment<br/>public smoke test"]
     FrontendCD --> Smoke
 ```
 
@@ -137,7 +137,7 @@ CD currently:
 - creates and waits for a CloudFront invalidation;
 - verifies the public frontend root, SPA route and backend CSRF endpoint.
 
-Manual production CD has been verified end-to-end. The automatic `CI success → CD` path is implemented behind the repository variable `CD_ENABLED`; its final live verification is intentionally deferred to the next real feature update.
+Manual production CD and the automatic `CI success → CD` path are both verified end-to-end. The automatic path remains gated by the repository variable `CD_ENABLED` and runs only after successful CI on a `main` push; backend/frontend deployment and the post-deployment public smoke job have succeeded on real feature releases.
 
 ### 3.3 Deployment security
 
