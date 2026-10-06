@@ -55,6 +55,75 @@ The product itself is deliberately non-clinical. AI is treated as a constrained 
 
 The MVP uses a **Spring Boot modular monolith** and is deployed as a real AWS full-stack application. CloudFront is the single browser-facing entry point: static React assets come from a private S3 bucket through OAC, while `/api/*` is routed to the Spring Boot backend through an Application Load Balancer.
 
+### Application architecture
+
+The cloud topology and the application architecture are separate concerns. Inside the single Spring Boot deployable, business boundaries remain explicit: Identity & Access and Assessment are implemented modules, Group is design-frozen but not yet executable, and AI Integration is the provider boundary that Step 8 will complete.
+
+```mermaid
+flowchart LR
+    Browser["Browser"] --> React["React + TypeScript<br/>Frontend"]
+    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web
+
+    subgraph Backend["Spring Boot Modular Monolith"]
+        Web["Web / Security<br/>Controllers + Spring Security"]
+        App["Application / Orchestration"]
+        Identity["Identity & Access<br/>implemented"]
+        Assessment["Assessment<br/>implemented"]
+        Group["Group<br/>design accepted / implementation pending"]
+        AI["AI Integration boundary<br/>provider runtime: Step 8"]
+        Infra["Persistence / Infrastructure adapters"]
+
+        Web --> App
+        App --> Identity
+        App --> Assessment
+        App -.-> Group
+        Assessment --> AI
+        Identity --> Infra
+        Assessment --> Infra
+        Group -.-> Infra
+    end
+
+    Infra --> PostgreSQL[("PostgreSQL")]
+    AI -.-> Provider["External LLM provider<br/>next milestone"]
+```
+
+The modular monolith keeps deployment simple while preserving explicit module ownership and dependency rules. Cross-module use cases are coordinated in the Application layer; persistence and provider-specific details stay behind Infrastructure/adaptor boundaries.
+
+### Current backend flow
+
+The currently deployed Assessment path is backend-authoritative and version-aware:
+
+```mermaid
+flowchart TB
+    A["Register / Login / Session / CSRF"] --> B["Assessment Catalog"]
+    B --> C["Start / Resume<br/>bind exact DefinitionVersion"]
+    C --> D["Session-bound Questionnaire"]
+    D --> E["Autosave"]
+    E --> F["Submit"]
+    F --> G["Deterministic Scoring + Ambiguity"]
+
+    G -->|"No ambiguity"| H["Deterministic Finalization"]
+    G -->|"Ambiguous"| I["DimensionClarification workflow"]
+
+    I --> J{"Accepted outcome"}
+    J -->|"RESOLVED"| K["Use clarification preference"]
+    J -->|"UNCLEAR / SKIPPED<br/>non-zero baseline"| L["Questionnaire fallback"]
+    J -->|"UNCLEAR / SKIPPED<br/>exact tie"| M["Version-aware Tie-break"]
+
+    M --> M1["Retained 1.0 Session<br/>direct pole / USER_TIE_BREAK"]
+    M --> M2["Active 1.1 Session<br/>contextual question / TIE_BREAK_QUESTION"]
+
+    K --> H
+    L --> H
+    M1 --> H
+    M2 --> H
+
+    H --> N["Final Result"]
+    N --> O["History / Historical Detail"]
+```
+
+Provider-backed LLM execution is the next Assessment milestone, not an existing production capability. The persisted Clarification lifecycle, retry/stale-result protection, accepted-result boundary, Skip behavior, version-aware Tie-break and deterministic finalization are already implemented; Step 8 plugs provider execution into that existing boundary.
+
 ### Production architecture
 
 ```mermaid
@@ -124,7 +193,7 @@ flowchart LR
     CD --> OIDC["GitHub OIDC<br/>temporary AWS credentials"]
     OIDC --> BackendDeploy["Backend<br/>build → ECR → new ECS revision"]
     OIDC --> FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
-    BackendDeploy --> Smoke["Public smoke test"]
+    BackendDeploy --> Smoke["Post-deployment<br/>public smoke test"]
     FrontendDeploy --> Smoke
 ```
 
@@ -241,10 +310,10 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
 | Clarification + Tie-break mutation | ✅ Complete |
-| External AI adapter / runtime context | ⏳ Planned next after the cloud foundation |
+| External AI adapter / runtime context | 🚧 Next — provider-backed Step 8 LLM clarification |
 | Historical assessment deletion | ⏸ Deferred until Group sharing backend exists |
 | Group / Membership / Sharing implementation | ⏳ Planned product milestone |
-| React frontend | ✅ F1-F6 + F7-A–F7-D complete for current executable/staged Assessment scope |
+| React frontend | ✅ F1-F7 compatibility/presentation scope deployed for current Assessment flow |
 | Docker application image | ✅ Implemented and deployed via ECR/ECS |
 | AWS deployment | ✅ Full-stack production deployment verified |
 | GitHub Actions CI/CD | ✅ CI + OIDC + automatic post-CI CD verified end-to-end |
@@ -280,7 +349,7 @@ The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
 - immediate finalization when clarification is unnecessary;
 - persisted Clarification lifecycle and stale external-result protection;
 - Skip Current / Skip Remaining deterministic clarification mutations;
-- version-aware exact-tie finalization: retained 1.0 direct-pole semantics plus staged 1.1 contextual question support;
+- version-aware exact-tie finalization: retained 1.0 direct-pole semantics plus active 1.1 contextual-question semantics;
 - completed Assessment History;
 - historical Assessment detail;
 - PostgreSQL-backed read projections;
@@ -299,7 +368,7 @@ Not yet implemented in the executable backend are provider-backed LLM interactio
 - debounced serialized full-snapshot autosave with save/error/retry state;
 - final Submit coordinated with in-flight autosave and already-submitted recovery;
 - deterministic Clarification read model, Skip Current and Skip Remaining;
-- dual-version exact-tie UI: retained 1.0 direct-pole flow plus staged 1.1 contextual-question flow without exposing option-to-pole mappings;
+- dual-version exact-tie UI: retained 1.0 direct-pole flow plus active 1.1 contextual-question flow without exposing option-to-pole mappings;
 - enriched Result interpretation with 8 preference-letter descriptions, 16 type profiles, optimized per-type artwork, and preserved per-dimension decision provenance;
 - optimized four-profile Landing hero artwork;
 - completed Assessment History, URL pagination and canonical Session detail navigation;
@@ -479,9 +548,12 @@ V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
 V4__seed_sixteen_personality_v1.sql
 V5__add_clarification_execution_token.sql
+V6__add_tie_break_question_provenance.sql
+V7__seed_sixteen_personality_v1_1_draft.sql
+V8__activate_sixteen_personality_v1_1.sql
 ```
 
-Applied migrations are treated as immutable history and are not renumbered to match older design documents. Future database work begins at `V6` or later.
+Applied migrations are treated as immutable history and are not renumbered to match older design documents. Future database work begins at `V9` or later.
 
 ---
 
