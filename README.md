@@ -9,10 +9,10 @@ The application is designed to let users complete versioned personality assessme
 The project is intentionally developed as an end-to-end engineering exercise rather than a feature-only demo: **domain modeling → API design → persistence → security → testing → frontend → containerization → AWS → CI/CD → Infrastructure as Code**.
 
 > **Live application:** [https://dmvsj5bm8m29k.cloudfront.net/](https://dmvsj5bm8m29k.cloudfront.net/)<br>
-> **Current application:** Authentication + deterministic Assessment flow through Result/History is implemented and deployed on AWS; the current release also includes dual-version contextual Tie-break compatibility and the refreshed Result/Landing presentation layer.<br>
+> **Current application:** Authentication + deterministic Assessment flow through Result/History is implemented and deployed on AWS; DefinitionVersion 1.1 contextual Tie-break is activated for new Sessions while retained 1.0 Sessions remain backward-compatible.<br>
 > **Current cloud delivery:** Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, OIDC and least-privilege CD are implemented.<br>
 > **CD status:** Manual deployment and the automatic CI-success → CD path are both verified end-to-end on `main`, including backend/frontend deployment and public smoke tests.<br>
-> **Next product focus:** activate DefinitionVersion 1.1, then return to provider-backed LLM clarification and Group/Sharing work.
+> **Next product focus:** provider-backed LLM clarification and Group/Sharing work.
 
 ---
 
@@ -214,7 +214,7 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Security | Spring Security, Spring Session JDBC, CSRF | ✅ Implemented |
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
-| API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + DefinitionVersion 1.1 compatibility implemented |
+| API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + activated DefinitionVersion 1.1 contextual Tie-break |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ Implemented for current Backend + Frontend scope |
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
 | Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow through F7-D |
@@ -339,7 +339,8 @@ Recommended starting points:
 - [`docs/domain/group-spec-aligned.md`](docs/domain/group-spec-aligned.md) — Group, membership and sharing rules;
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — current OpenAPI contract;
 - [`docs/adr/`](docs/adr/) — major design decisions and trade-offs;
-- [`docs/backend/16-contextual-tie-break-compatibility-checkpoint.md`](docs/backend/16-contextual-tie-break-compatibility-checkpoint.md) — latest Backend compatibility/pre-activation checkpoint;
+- [`docs/backend/16-contextual-tie-break-compatibility-checkpoint.md`](docs/backend/16-contextual-tie-break-compatibility-checkpoint.md) — Backend compatibility/pre-activation checkpoint;
+- [`docs/backend/17-definition-version-1-1-activation-checkpoint.md`](docs/backend/17-definition-version-1-1-activation-checkpoint.md) — latest Backend activation/post-activation checkpoint;
 - [`docs/frontend/README.md`](docs/frontend/README.md) — frontend architecture/implementation index.
 - [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — F1-F6 implementation checkpoint;
 - [`docs/frontend/06-result-content-checkpoint-f7c.md`](docs/frontend/06-result-content-checkpoint-f7c.md) — F7-C Result content/image checkpoint;

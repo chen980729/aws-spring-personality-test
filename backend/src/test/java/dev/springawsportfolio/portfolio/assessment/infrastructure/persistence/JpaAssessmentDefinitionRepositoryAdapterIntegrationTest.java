@@ -18,12 +18,28 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @Testcontainers
 class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
+
+    private static final AssessmentDefinitionVersionId
+            VERSION_1_0_ID =
+            new AssessmentDefinitionVersionId(
+                    UUID.fromString(
+                            "9e2b641f-7600-4a4c-8f56-2d74c9b03e11"
+                    )
+            );
+
+    private static final AssessmentDefinitionVersionId
+            VERSION_1_1_ID =
+            new AssessmentDefinitionVersionId(
+                    UUID.fromString(
+                            "b7a63f1e-60f4-4b5e-a0e3-1c1b1a110001"
+                    )
+            );
 
     @Container
     @ServiceConnection
@@ -37,7 +53,7 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
     AssessmentDefinitionVersionRepository versionRepository;
 
     @Test
-    void loadsSeededSixteenPersonalityAvailableVersion() {
+    void loadsActivatedSixteenPersonalityVersionOnePointOne() {
         AssessmentDefinition definition =
                 definitionRepository
                         .findByCode(
@@ -68,7 +84,7 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
         );
 
         assertEquals(
-                "1.0",
+                "1.1",
                 version.versionCode()
         );
 
@@ -121,7 +137,7 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
     }
 
     @Test
-    void keepsVersionOneAvailableAndLoadsVersionOnePointOneAsDraft() {
+    void activatesVersionOnePointOneAndRetiresVersionOne() {
         AssessmentDefinition definition =
                 definitionRepository
                         .findByCode(
@@ -137,7 +153,7 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
                         .orElseThrow();
 
         assertEquals(
-                "1.0",
+                "1.1",
                 available.versionCode()
         );
 
@@ -146,41 +162,13 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
                 available.status()
         );
 
-        assertTrue(
-                available
-                        .specification()
-                        .tieBreakQuestions()
-                        .isEmpty()
-        );
-
-        AssessmentDefinitionVersion draft =
-                versionRepository
-                        .findById(
-                                new AssessmentDefinitionVersionId(
-                                        UUID.fromString(
-                                                "b7a63f1e-60f4-4b5e-a0e3-1c1b1a110001"
-                                        )
-                                )
-                        )
-                        .orElseThrow();
-
-        assertEquals(
-                "1.1",
-                draft.versionCode()
-        );
-
-        assertEquals(
-                AssessmentDefinitionVersionStatus.DRAFT,
-                draft.status()
-        );
-
-        assertNull(
-                draft.publishedAt()
+        assertNotNull(
+                available.publishedAt()
         );
 
         assertEquals(
                 "v2",
-                draft
+                available
                         .specification()
                         .finalizationPolicy()
                         .revision()
@@ -188,19 +176,46 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
 
         assertEquals(
                 4,
-                draft
+                available
                         .specification()
                         .tieBreakQuestions()
                         .size()
         );
 
+        AssessmentDefinitionVersion retired =
+                versionRepository
+                        .findById(
+                                VERSION_1_0_ID
+                        )
+                        .orElseThrow();
+
         assertEquals(
-                48,
-                draft
+                "1.0",
+                retired.versionCode()
+        );
+
+        assertEquals(
+                AssessmentDefinitionVersionStatus.RETIRED,
+                retired.status()
+        );
+
+        assertNotNull(
+                retired.publishedAt()
+        );
+
+        assertEquals(
+                "v1",
+                retired
                         .specification()
-                        .questionnaire()
-                        .questions()
-                        .size()
+                        .finalizationPolicy()
+                        .revision()
+        );
+
+        assertTrue(
+                retired
+                        .specification()
+                        .tieBreakQuestions()
+                        .isEmpty()
         );
     }
 
@@ -215,19 +230,15 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
 
         AssessmentDefinitionVersion versionOne =
                 versionRepository
-                        .findAvailableByDefinitionId(
-                                definition.id()
+                        .findById(
+                                VERSION_1_0_ID
                         )
                         .orElseThrow();
 
         AssessmentDefinitionVersion versionOnePointOne =
                 versionRepository
                         .findById(
-                                new AssessmentDefinitionVersionId(
-                                        UUID.fromString(
-                                                "b7a63f1e-60f4-4b5e-a0e3-1c1b1a110001"
-                                        )
-                                )
+                                VERSION_1_1_ID
                         )
                         .orElseThrow();
 

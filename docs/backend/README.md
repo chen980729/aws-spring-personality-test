@@ -2,7 +2,7 @@
 
 > **Status:** Active backend design + implementation record
 > **Last updated:** 2026-10-05
-> **Current implementation checkpoint:** DefinitionVersion 1.1 Step 2E — Backend compatibility + pre-activation acceptance complete; activation/Frontend integration pending
+> **Current implementation checkpoint:** DefinitionVersion 1.1 activation release — V8 promotion + retained-1.0/new-1.1 binding coverage
 > **Current project focus:** AWS deployment / containerization / Terraform / CI/CD
 > **Deferred backend feature work:** Group/Sharing; historical deletion after Group sharing; provider-backed Step 8 LLM runtime after the Cloud/CI-CD line
 
@@ -31,7 +31,7 @@ Domain truth remains primarily in:
 8. `08-authentication-security.md` — server-side Session/JDBC, cookie, CSRF, password and Spring Security boundary design.
 10. `10-backend-testing-strategy.md` — active testing strategy and coverage through DefinitionVersion 1.1 Step 2E.
 
-Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.5.0**). Backend GET/PUT, Session tie-break projections, and final decision-source provenance now implement the version-aware 1.0/1.1 contract. DefinitionVersion 1.1 remains DRAFT until later activation and Frontend integration.
+Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.5.0**). Backend GET/PUT, Session tie-break projections, and final decision-source provenance implement the version-aware 1.0/1.1 contract. V8 activates 1.1 for new Sessions while existing 1.0 Session semantics remain supported.
 
 ## Implementation checkpoints
 
@@ -42,6 +42,7 @@ Machine-readable API contract: `../api/openapi.yaml` (**contract version v0.5.0*
 14. `14-assessment-history-detail-checkpoint.md` — completed History + Historical Detail and authoritative persisted workflow reads.
 15. `15-assessment-clarification-workflow-checkpoint.md` — Clarification Aggregate lifecycle, deterministic finalization, stale-result protection and deterministic HTTP boundary.
 16. `16-contextual-tie-break-compatibility-checkpoint.md` — DefinitionVersion 1.1 dual-version Backend compatibility, staged rollout and Step 2E acceptance checkpoint.
+17. `17-definition-version-1-1-activation-checkpoint.md` — V8 activation, 1.1 AVAILABLE / 1.0 RETIRED state, and post-activation Session-binding regression coverage.
 
 ## High-level backend shape
 

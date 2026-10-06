@@ -92,7 +92,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** the Step 7 runtime baseline remains intact, DefinitionVersion 1.1 Backend compatibility has completed **Step 2E — pre-activation acceptance sweep**, and Frontend dual-version support is complete through F7-D. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific projections and final-source semantics. DefinitionVersion 1.1 remains DRAFT while this compatibility release awaits deployment; activation will be a separate migration/release after old ECS tasks drain. Real provider-backed clarification interaction remains Step 8.
+**Current status:** the Step 7 runtime baseline remains intact, DefinitionVersion 1.1 Backend compatibility completed **Step 2E — pre-activation acceptance sweep**, Frontend dual-version support is complete, and the separate activation release adds V8 plus post-activation binding verification. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific projections and final-source semantics. After V8, new Sessions bind 1.1 while retained 1.0 Sessions preserve their original semantics. Real provider-backed clarification interaction remains Step 8.
 
 ### Domain/Application
 
@@ -124,7 +124,7 @@ Accepted persistence artifacts are `docs/backend/04-persistence-postgresql-desig
 
 - [x] HTTP resource/use-case mapping.
 - [x] Routes and methods.
-- [x] OpenAPI v0.5.0 version-aware Tie-break GET/PUT and legacy/contextual state projections implemented in Backend; 1.1 activation remains deferred until the compatibility-capable Backend + Frontend release is deployed and old ECS tasks drain.
+- [x] OpenAPI v0.5.0 version-aware Tie-break GET/PUT and legacy/contextual state projections implemented in Backend; V8 activation follows the already-deployed compatibility release and promotes 1.1 after old ECS tasks have drained.
 - [x] Status/error mapping.
 - [x] Business authentication/authorization boundary.
 - [x] Authentication transport/security mechanics (server-side Session + JDBC + cookie + CSRF).
@@ -162,7 +162,7 @@ Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
 ## 8. Frontend Implementation
 
-**Current status:** Frontend **F1-F6, post-F6 UI optimization, DefinitionVersion 1.1 compatibility through F7-B, F7-C Result interpretation/content, and F7-D Landing hero integration are complete**. The browser supports both retained 1.0 and staged 1.1 Tie-break semantics, completed results include versioned presentation content plus one optimized illustration per type, and the public Landing page now uses the optimized four-profile hero artwork. The F7-A–F7-E compatibility/presentation batch is review-complete. The next release step is compatibility deployment + automatic CD verification, followed by a separate DefinitionVersion 1.1 activation change.
+**Current status:** Frontend **F1-F6, post-F6 UI optimization, DefinitionVersion 1.1 compatibility through F7-B, F7-C Result interpretation/content, and F7-D Landing hero integration are complete**. The browser supports both retained 1.0 and 1.1 Tie-break semantics, completed results include versioned presentation content plus one optimized illustration per type, and the public Landing page uses the optimized four-profile hero artwork. The F7-A–F7-E compatibility/presentation batch is review-complete; the separate activation release requires no additional Frontend code.
 
 - [x] F0 — React + TypeScript architecture/integration baseline.
 - [x] F1 — React + TypeScript/Vite foundation and test infrastructure.
@@ -188,7 +188,7 @@ Accepted F0 baseline and the F1-F6 implementation checkpoint live under `docs/fr
 
 ## 9. Backend Implementation
 
-Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1 Backend compatibility/pre-activation acceptance through Step 2E**.
+Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1 activation release**.
 
 - [x] Java 21 + Spring Boot implementation foundation.
 - [x] PostgreSQL persistence foundation with Flyway + JPA/Hibernate.
@@ -202,8 +202,8 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] Version-aware Tie-break GET interaction + exclusive legacy/contextual PUT + contextual Session projection (Step 2C).
 - [x] Provenance-aware finalization retaining `USER_TIE_BREAK` for 1.0 and producing `TIE_BREAK_QUESTION` for contextual facts (Step 2D).
 - [x] DefinitionVersion 1.1 pre-activation acceptance sweep (Step 2E): immutable content equivalence, UNCLEAR/SKIPPED matrix, retries/conflicts, 50/50 evidence, persisted history and Session-lock finalization race.
-- [ ] DefinitionVersion 1.1 activation migration + post-activation retained-1.0/new-1.1 binding verification.
-- [x] Frontend contextual Tie-break integration — F7-A contract compatibility + F7-B UI interaction complete; 1.1 remains DRAFT until presentation/release work is complete.
+- [x] DefinitionVersion 1.1 activation migration + post-activation retained-1.0/new-1.1 binding verification (V8 / checkpoint 17).
+- [x] Frontend contextual Tie-break integration — F7-A contract compatibility + F7-B UI interaction complete; activation requires no additional Frontend code.
 - [ ] real AI integration adapter / runtime context (Step 8).
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.

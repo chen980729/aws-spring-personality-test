@@ -9,10 +9,10 @@ React + TypeScript / Java + Spring Boot / PostgreSQL / AWS を中心に、**非�
 このプロジェクトでは、単に機能を作ることではなく、**Domain Modeling → API Design → Persistence → Security → Testing → Frontend → Containerization → AWS → CI/CD → Infrastructure as Code** までを一貫して設計・実装・説明できることを目標としています。
 
 > **公開URL:** [https://dmvsj5bm8m29k.cloudfront.net/](https://dmvsj5bm8m29k.cloudfront.net/)<br>
-> **現在の Application:** Authentication + deterministic Assessment flow を Result / History まで実装し、AWS 上で動作確認済みです。現在の release には dual-version contextual Tie-break compatibility と Result / Landing presentation の更新も含まれています。<br>
+> **現在の Application:** Authentication + deterministic Assessment flow を Result / History まで実装し、AWS 上で動作確認済みです。DefinitionVersion 1.1 contextual Tie-break は新規 Session 向けに activate され、既存の 1.0 Session も backward-compatible に維持されます。<br>
 > **現在の Cloud Delivery:** Docker、Terraform、RDS、ECR、ECS Fargate、ALB、private S3 + CloudFront、CloudWatch、Secrets Manager、GitHub Actions CI、OIDC、least-privilege CD を実装済みです。<br>
 > **CD status:** manual deployment と automatic CI-success → CD path の両方を `main` で end-to-end 検証済みです。Backend / Frontend deployment と public smoke test まで成功しています。<br>
-> **次の Product focus:** DefinitionVersion 1.1 を activate した後、provider-backed LLM clarification と Group / Sharing の実装に戻ります。
+> **次の Product focus:** provider-backed LLM clarification と Group / Sharing の実装。
 
 ---
 
@@ -232,7 +232,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | Security | Spring Security, Spring Session JDBC, CSRF | ✅ Implemented |
 | Database | PostgreSQL 18 | ✅ Implemented |
 | Persistence | JPA / Hibernate, Flyway | ✅ Implemented |
-| API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + DefinitionVersion 1.1 compatibility を実装 |
+| API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + activated DefinitionVersion 1.1 contextual Tie-break |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ 現在の Backend + Frontend scope で実装 |
 | Local environment | Docker Compose | ✅ PostgreSQL 環境を実装 |
 | Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow を F7-D まで実装 |
@@ -357,7 +357,8 @@ docs/
 - [`docs/domain/group-spec-aligned.md`](docs/domain/group-spec-aligned.md) — Group / Membership / Sharing rule
 - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) — Current OpenAPI contract
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records
-- [`docs/backend/16-contextual-tie-break-compatibility-checkpoint.md`](docs/backend/16-contextual-tie-break-compatibility-checkpoint.md) — Latest Backend compatibility / pre-activation checkpoint
+- [`docs/backend/16-contextual-tie-break-compatibility-checkpoint.md`](docs/backend/16-contextual-tie-break-compatibility-checkpoint.md) — Backend compatibility / pre-activation checkpoint
+- [`docs/backend/17-definition-version-1-1-activation-checkpoint.md`](docs/backend/17-definition-version-1-1-activation-checkpoint.md) — Latest Backend activation / post-activation checkpoint
 - [`docs/frontend/README.md`](docs/frontend/README.md) — Frontend architecture / implementation index
 - [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-implementation-checkpoint-f1-f6.md) — F1-F6 implementation checkpoint
 - [`docs/frontend/06-result-content-checkpoint-f7c.md`](docs/frontend/06-result-content-checkpoint-f7c.md) — F7-C Result content / image checkpoint
