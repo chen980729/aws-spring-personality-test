@@ -286,7 +286,7 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + activated DefinitionVersion 1.1 contextual Tie-break |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ Implemented for current Backend + Frontend scope |
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
-| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow through F7-D |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow through F7-E review |
 | AI integration | External LLM behind an adapter boundary | ⏳ Next product milestone after the completed cloud foundation |
 | Containerization | Multi-stage Docker backend image | ✅ Implemented and deployed |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ Deployed in ap-northeast-1 |
