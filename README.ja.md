@@ -64,10 +64,9 @@ Cloud topology と application architecture は別の観点として扱ってい
 ```mermaid
 flowchart LR
     Browser["Browser"] --> React["React + TypeScript<br/>Frontend"]
-    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web["Spring Security + Web API"]
 
     subgraph Backend["Spring Boot Modular Monolith"]
-        Web
+        Web["Spring Security + Web API"]
 
         subgraph Identity["Identity & Access Module — implemented"]
             IApp["Application"]
@@ -97,6 +96,7 @@ flowchart LR
         AApp -.-> GDomain
     end
 
+    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web
     IInfra --> PostgreSQL[("PostgreSQL")]
     AInfra --> PostgreSQL
     AI -.-> Provider["External LLM provider<br/>next milestone"]
@@ -129,10 +129,15 @@ flowchart TB
     M --> M2["Active 1.1 Session<br/>contextual question / TIE_BREAK_QUESTION"]
 
     I -.-> P["Step 8 — provider-backed LLM<br/>not implemented yet"]
-    P -.-> Q["RESOLVED / UNCLEAR / retryable failure"]
-    Q -.-> H
-    Q -.-> L
-    Q -.-> M
+    P -.-> Q{"Provider outcome"}
+    Q -.->|"RESOLVED"| K["Accepted ClarificationResult"]
+    Q -.->|"UNCLEAR"| U{"Questionnaire baseline"}
+    Q -.->|"Technical failure"| R["FAILED_RETRYABLE<br/>Retry or explicit Skip"]
+    K -.-> H
+    U -.->|"Non-zero"| L
+    U -.->|"Exact tie"| M
+    R -.->|"Retry"| P
+    R -.->|"Skip"| S
 
     L --> H
     M1 --> H
