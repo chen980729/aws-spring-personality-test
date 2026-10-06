@@ -1,5 +1,7 @@
 # Frontend F7-E — Final Review / Release Readiness Checkpoint
 
+> **Post-release status (2026-10-06):** The compatibility release and separate DefinitionVersion 1.1 activation release are now deployed. Automatic post-CI CD has been verified end-to-end. The release-readiness decisions below are retained as the historical F7-E checkpoint; README screenshot refresh remains a separate visual-maintenance task.
+
 > **Status:** Review complete — compatibility release ready
 > **Date:** 2026-10-06
 > **DefinitionVersion state:** 1.0 = AVAILABLE, 1.1 = DRAFT
