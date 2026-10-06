@@ -8,7 +8,7 @@ The backend implementation is aligned through **Assessment Step 7 plus Definitio
 
 Frontend **F1-F6 plus F7-A/F7-B/F7-C/F7-D** is implemented for the executable Authentication + deterministic Assessment slice: Register/Login/Session/CSRF, Assessment entry, questionnaire/autosave/submit, deterministic clarification, dual-version Tie-break compatibility, enriched Result interpretation, completed History and canonical Session navigation. The Result page keeps backend-authoritative evidence/decision provenance while adding a separate Content Version 1.0 catalog and optimized per-type illustrations; the public Landing page now uses the optimized four-profile hero artwork. Provider-backed LLM interaction, Group UI and historical deletion remain intentionally deferred because their executable backend boundaries are not complete.
 
-The project has now completed its first AWS deployment and delivery foundation: Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, GitHub OIDC and least-privilege CD are implemented. Manual production CD and public smoke tests are verified. The automatic post-CI CD path is prepared and will receive its final live verification during the next real feature update. Historical Assessment deletion still waits for the Group sharing boundary; provider-backed LLM Step 8 remains a later product milestone.
+The project has completed its AWS deployment and delivery foundation: Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, GitHub OIDC and least-privilege CD are implemented. Manual CD and the automatic `main CI success -> CD` path are both verified end-to-end, including backend/frontend deployment and the post-deployment public smoke test. DefinitionVersion 1.1 is now active for new Sessions while retained 1.0 Sessions remain executable. Provider-backed LLM clarification is the next product milestone; historical Assessment deletion still waits for the Group sharing boundary.
 
 Use these documents as the main entry points:
 
@@ -78,7 +78,6 @@ The repository now has a real deployed delivery baseline rather than only a targ
 - CI: backend/frontend quality gates plus Docker verification.
 - AWS authentication: GitHub OIDC → STS temporary credentials.
 - CD: least-privilege backend + frontend deployment.
-- Verified: manual end-to-end CD and public smoke tests.
-- Pending final verification: automatic successful-CI → CD trigger during the next real feature update.
+- Verified: manual CD and automatic successful-`main`-CI → CD, including backend/frontend deployment and the public post-deployment smoke test.
 
 The canonical architecture diagram appears before the CI/CD flow diagram in `architecture.md`, and both are also surfaced from the repository README for portfolio review.
