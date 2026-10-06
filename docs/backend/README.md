@@ -1,10 +1,10 @@
 # Backend Documentation Index
 
 > **Status:** Active backend design + implementation record
-> **Last updated:** 2026-10-05
+> **Last updated:** 2026-10-06
 > **Current implementation checkpoint:** DefinitionVersion 1.1 activation release — V8 promotion + retained-1.0/new-1.1 binding coverage
-> **Current project focus:** AWS deployment / containerization / Terraform / CI/CD
-> **Deferred backend feature work:** Group/Sharing; historical deletion after Group sharing; provider-backed Step 8 LLM runtime after the Cloud/CI-CD line
+> **Current project focus:** provider-backed Assessment Step 8 LLM clarification runtime
+> **Deferred backend feature work:** Group/Sharing; historical deletion after Group sharing
 
 This directory contains two kinds of documents:
 
@@ -105,6 +105,6 @@ The real LLM provider/runtime interaction is still deferred to Step 8. In partic
 
 Historical Assessment deletion also remains intentionally unimplemented. Its contract is designed, but the real use case must coordinate with Group sharing before hard deletion; it should not be implemented as an Assessment-only shortcut before the Group sharing boundary exists.
 
-The project is currently shifting from feature implementation to Cloud/Delivery. Backend work in the next phase should therefore include production/deployment configuration and CI verification without prematurely reopening the deferred LLM/Group/deletion feature boundaries.
+The Cloud/Delivery foundation is now deployed and the automatic post-CI CD path has been verified with real feature releases. Backend work can therefore return to the next Assessment milestone: provider-backed Step 8 LLM clarification. Group/Sharing and historical deletion remain separate later boundaries rather than prerequisites for Step 8.
 
 Further design changes should continue to be driven by explicit implementation feedback and recorded in the relevant design document and/or ADR.
