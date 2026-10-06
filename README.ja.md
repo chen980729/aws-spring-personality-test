@@ -304,7 +304,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + activated DefinitionVersion 1.1 contextual Tie-break |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ 現在の Backend + Frontend scope で実装 |
 | Local environment | Docker Compose | ✅ PostgreSQL 環境を実装 |
-| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow を F7-D まで実装 |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow を F7-E review まで完了 |
 | AI integration | External LLM behind an adapter boundary | ⏳ Cloud foundation 完了後の次期 product milestone |
 | Containerization | Multi-stage Docker backend image | ✅ 実装・AWS deployment 済み |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ ap-northeast-1 に deployment 済み |
