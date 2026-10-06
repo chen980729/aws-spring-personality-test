@@ -2,6 +2,15 @@ name: CD
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+        default: all
   workflow_run:
     workflows:
       - CI
@@ -15,9 +24,12 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+env:
+  DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
 jobs:
-  deploy-backend:
-    name: Deploy backend
+  changes:
+    name: Detect changes
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (
@@ -27,6 +39,70 @@ jobs:
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_branch == 'main'
       )
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+
+    steps:
+      - name: Checkout deployment revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          fetch-depth: 2
+
+      - name: Decide deployment targets
+        id: filter
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+
+          backend=false
+          frontend=false
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            case "$DISPATCH_TARGET" in
+              all)      backend=true; frontend=true ;;
+              backend)  backend=true ;;
+              frontend) frontend=true ;;
+            esac
+          else
+            # This repository currently uses squash/merge commits for PRs.
+            # HEAD^1 is main before the merged change, while HEAD contains
+            # the complete merged change set. Rebase/multi-commit pushes
+            # would require a different comparison strategy.
+            CHANGED="$(git diff --name-only HEAD^1 HEAD)"
+
+            echo "Changed files:"
+            echo "$CHANGED"
+
+            if grep -qE '^(backend/|\.github/workflows/cd\.yml$)' <<<"$CHANGED"; then
+              backend=true
+            fi
+
+            if grep -qE '^(frontend/|\.github/workflows/cd\.yml$)' <<<"$CHANGED"; then
+              frontend=true
+            fi
+          fi
+
+          echo "backend=${backend}" >> "$GITHUB_OUTPUT"
+          echo "frontend=${frontend}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Deployment targets"
+            echo "- Backend: ${backend}"
+            echo "- Frontend: ${frontend}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-backend:
+    name: Deploy backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -40,7 +116,6 @@ jobs:
       ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
       ECS_SERVICE: ${{ vars.ECS_SERVICE }}
       CONTAINER_NAME: backend
-      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
     steps:
       - name: Checkout deployment revision
@@ -223,15 +298,8 @@ jobs:
 
   deploy-frontend:
     name: Deploy frontend
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (
-        vars.CD_ENABLED == 'true' &&
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_branch == 'main'
-      )
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -243,7 +311,6 @@ jobs:
       AWS_REGION: ${{ vars.AWS_REGION }}
       FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
-      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
     steps:
       - name: Checkout deployment revision
@@ -333,6 +400,15 @@ jobs:
     needs:
       - deploy-backend
       - deploy-frontend
+    if: >-
+      always() &&
+      !cancelled() &&
+      needs.deploy-backend.result != 'failure' &&
+      needs.deploy-frontend.result != 'failure' &&
+      (
+        needs.deploy-backend.result == 'success' ||
+        needs.deploy-frontend.result == 'success'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
