@@ -1,8 +1,8 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F7-E — final regression/documentation/release-readiness review complete; compatibility release is ready
+> **Current checkpoint:** Frontend F7-E complete; DefinitionVersion 1.1 compatibility is deployed and activation requires no further frontend code
 > **Last updated:** 2026-10-06
-> **Project next focus:** provider-backed LLM interaction and Group/Sharing after the separate DefinitionVersion 1.1 activation release
+> **Project next focus:** provider-backed LLM clarification interaction; Group/Sharing follows when its backend capability becomes executable
 > **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
 
 This directory contains the accepted frontend architecture baseline plus the implementation checkpoint for the currently executable browser application.
@@ -82,4 +82,4 @@ Still deferred:
 - historical Assessment deletion until Group sharing exists, because deletion is a cross-domain operation that must end active shares before hard-deleting the Assessment Session;
 - dedicated Playwright E2E automation; the implemented flows are covered by Vitest/RTL/MSW and have also been exercised manually against the real Spring Boot + PostgreSQL stack.
 
-Cloud/Delivery is now established. DefinitionVersion 1.1 frontend compatibility is implemented through F7-B, F7-C adds the presentation content layer required to make completed results understandable, and F7-D replaces the former CSS-generated Landing visual with the optimized four-profile hero artwork. The hero is responsive, uses intrinsic dimensions and high-priority eager loading for the first-screen image, and preserves the existing headline/CTA/features content. F7-E final regression/documentation/release review is complete; the separate V8 activation release requires no additional Frontend code.
+Cloud/Delivery is established and the automatic CD path is verified. DefinitionVersion 1.1 frontend compatibility is implemented through F7-B, F7-C adds the presentation content layer required to make completed results understandable, and F7-D replaces the former CSS-generated Landing visual with the optimized four-profile hero artwork. The hero is responsive, uses intrinsic dimensions and high-priority eager loading for the first-screen image, and preserves the existing headline/CTA/features content. F7-E final regression/documentation/release review is complete, V8 activation is deployed, and new 1.1 Sessions use the already-compatible contextual Tie-break UI without further frontend changes.
