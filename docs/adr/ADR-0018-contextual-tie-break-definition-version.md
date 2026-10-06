@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-10-05. Backend compatibility implementation, pre-activation acceptance, and Frontend dual-version integration are complete. The separate activation release adds Flyway V8, which retires 1.0 and promotes DefinitionVersion 1.1 to the sole AVAILABLE version after compatible application deployment.
+Accepted, 2026-10-05. Backend compatibility implementation, pre-activation acceptance, Frontend dual-version integration, and the separate Flyway V8 activation release are complete. DefinitionVersion 1.1 is now the sole `AVAILABLE` version for new Sessions; 1.0 is `RETIRED` for new binding while existing 1.0 Sessions remain executable with their original semantics.
 
 ## Context
 
@@ -42,6 +42,6 @@ Backend must support two semantics simultaneously even though only one version i
 
 Automated pre-activation acceptance now covers both version semantics, exact immutable questionnaire/specification equivalence, accepted contextual wording/IDs, definition validation, legacy JSON loading, DTO mapping exclusion, wrong-version/wrong-option rejection, UNCLEAR and SKIPPED exact-tie paths, 50/50 evidence preservation, completed retry/conflict behavior, persisted history projection, and a real PostgreSQL race at the final Session-lock boundary. Existing technical-failure/clarification and stale-execution protections remain intact.
 
-Activation-specific acceptance is implemented in the separate activation release. Flyway V8 retires 1.0 and promotes 1.1, normal Start Assessment is regression-tested to bind 1.1, and an explicitly retained 1.0 Session is regression-tested to continue exposing legacy direct-pole semantics. See [current testing coverage](../backend/10-backend-testing-strategy.md#14-definitionversion-11-acceptance-coverage) and [activation checkpoint](../backend/17-definition-version-1-1-activation-checkpoint.md).
+Activation-specific acceptance is implemented and deployed. Flyway V8 retires 1.0 and promotes 1.1, normal Start Assessment is regression-tested to bind 1.1, and an explicitly retained 1.0 Session is regression-tested to continue exposing legacy direct-pole semantics. The activation release also passed the repository's automatic post-CI CD and public smoke checks. See [current testing coverage](../backend/10-backend-testing-strategy.md#14-definitionversion-11-acceptance-coverage) and [activation checkpoint](../backend/17-definition-version-1-1-activation-checkpoint.md).
 
 Historical Step 6/7 checkpoint documents remain unchanged; the implemented compatibility work is recorded in the Step 2E contextual tie-break checkpoint.

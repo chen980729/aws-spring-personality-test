@@ -6,9 +6,9 @@ This directory contains the Architecture/Domain baselines, implementation-facing
 
 The backend implementation is aligned through **Assessment Step 7 plus DefinitionVersion 1.1 activation**. Identity/Security, the deterministic Assessment core/read side, Clarification lifecycle persistence, version-aware Tie-break interaction/finalization, stale external-result protection, contextual provenance persistence/history, the v0.5.0 HTTP boundary, and the V8 availability promotion are implemented.
 
-Frontend **F1-F6 plus F7-A/F7-B/F7-C/F7-D** is implemented for the executable Authentication + deterministic Assessment slice: Register/Login/Session/CSRF, Assessment entry, questionnaire/autosave/submit, deterministic clarification, dual-version Tie-break compatibility, enriched Result interpretation, completed History and canonical Session navigation. The Result page keeps backend-authoritative evidence/decision provenance while adding a separate Content Version 1.0 catalog and optimized per-type illustrations; the public Landing page now uses the optimized four-profile hero artwork. Provider-backed LLM interaction, Group UI and historical deletion remain intentionally deferred because their executable backend boundaries are not complete.
+Frontend **F1-F6 plus F7-A/F7-B/F7-C/F7-D and the F7-E final review** is complete for the executable Authentication + deterministic Assessment slice: Register/Login/Session/CSRF, Assessment entry, questionnaire/autosave/submit, deterministic clarification, dual-version Tie-break compatibility, enriched Result interpretation, completed History and canonical Session navigation. The Result page keeps backend-authoritative evidence/decision provenance while adding a separate Content Version 1.0 catalog and optimized per-type illustrations; the public Landing page now uses the optimized four-profile hero artwork. Provider-backed LLM interaction, Group UI and historical deletion remain intentionally deferred because their executable backend boundaries are not complete.
 
-The project has now completed its first AWS deployment and delivery foundation: Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, GitHub OIDC and least-privilege CD are implemented. Manual production CD and public smoke tests are verified. The automatic post-CI CD path is prepared and will receive its final live verification during the next real feature update. Historical Assessment deletion still waits for the Group sharing boundary; provider-backed LLM Step 8 remains a later product milestone.
+The project has completed its AWS deployment and delivery foundation: Docker, Terraform, RDS, ECR, ECS Fargate, ALB, private S3 + CloudFront, CloudWatch, Secrets Manager, GitHub Actions CI, GitHub OIDC and least-privilege CD are implemented. Manual CD and the automatic `main CI success -> CD` path are both verified end-to-end, including backend/frontend deployment and the post-deployment public smoke test. DefinitionVersion 1.1 is now active for new Sessions while retained 1.0 Sessions remain executable. Provider-backed LLM clarification is the next product milestone; historical Assessment deletion still waits for the Group sharing boundary.
 
 Use these documents as the main entry points:
 
@@ -18,7 +18,7 @@ Use these documents as the main entry points:
 - `domain/group-spec-aligned.md` — accepted Group lifecycle, memberships, join requests, admin authority, and sharing consent.
 - `sixteen-personality-spec-aligned.md` — executable Sixteen Personality Assessment specification.
 - `backend/README.md` — backend design + implementation-checkpoint index.
-- `frontend/README.md` — frontend documentation index, current F7-D checkpoint and deferred boundaries.
+- `frontend/README.md` — frontend documentation index, current F7-E review checkpoint and deferred boundaries.
 - `frontend/05-implementation-checkpoint-f1-f6.md` — accepted F1-F6 implementation checkpoint, post-F6 UI optimization checkpoint and cloud handoff.
 - `frontend/06-result-content-checkpoint-f7c.md` — F7-C result interpretation/content/image checkpoint.
 - `frontend/07-landing-hero-checkpoint-f7d.md` — F7-D Landing hero visual/performance/accessibility checkpoint.
@@ -44,7 +44,7 @@ Detailed backend/database/API/AWS design should refine this baseline rather than
 ## Frontend architecture and implementation
 
 - `frontend/README.md` — current frontend documentation index.
-- `frontend/01-frontend-architecture.md` — F0 routing/page/state baseline, now validated through F7-D and the post-F6 presentation refactor.
+- `frontend/01-frontend-architecture.md` — F0 routing/page/state baseline, now validated through the F7-E review and the post-F6 presentation refactor.
 - `frontend/02-api-integration.md` — executable API baseline, query/mutation ownership and implemented recovery behavior.
 - `frontend/03-auth-session-csrf.md` — Session/CSRF browser protocol and implemented authentication recovery.
 - `frontend/04-testing-strategy.md` — Vitest/RTL/MSW strategy, current coverage, UI regression lesson and deferred Playwright boundary.
@@ -78,7 +78,6 @@ The repository now has a real deployed delivery baseline rather than only a targ
 - CI: backend/frontend quality gates plus Docker verification.
 - AWS authentication: GitHub OIDC → STS temporary credentials.
 - CD: least-privilege backend + frontend deployment.
-- Verified: manual end-to-end CD and public smoke tests.
-- Pending final verification: automatic successful-CI → CD trigger during the next real feature update.
+- Verified: manual CD and automatic successful-`main`-CI → CD, including backend/frontend deployment and the public post-deployment smoke test.
 
 The canonical architecture diagram appears before the CI/CD flow diagram in `architecture.md`, and both are also surfaced from the repository README for portfolio review.

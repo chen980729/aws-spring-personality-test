@@ -34,7 +34,7 @@ The React frontend therefore uses implemented **Controller + DTO + SecurityConfi
 
 ### v0.5.0 — 2026-10-05
 
-Records the DefinitionVersion 1.1 contextual tie-break contract. Backend compatibility and Frontend dual-version support are now implemented, while 1.1 remains non-active until the separate activation release is completed:
+Records the DefinitionVersion 1.1 contextual tie-break contract. Backend compatibility and Frontend dual-version support were deployed before activation; Flyway V8 has since promoted 1.1 to `AVAILABLE` for new Sessions while retained 1.0 Sessions remain supported:
 
 - preserves immutable 1.0 direct-pole semantics and `USER_TIE_BREAK`;
 - adds the version-aware tie-break interaction design for 1.1;

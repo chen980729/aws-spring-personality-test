@@ -1,47 +1,38 @@
 # Group Domain Specification
 
-> **File:** `docs/domain/group-spec.md`  
-> **Status:** MVP Baseline / Accepted  
-> **Last updated:** 2026-09-19  
+> **File:** `docs/domain/group-spec-aligned.md`  
+> **Status:** MVP Baseline / Accepted — design-frozen, implementation pending  
+> **Last updated:** 2026-10-06  
 > **Scope:** Group lifecycle, membership, join requests, admin authority, result sharing consent, aggregate boundaries, invariants, commands, queries, and persistence facts.
 
 ---
 
 ## 1. Purpose
 
-`Group` 是本项目 MVP 中的主要 Supporting Business Domain Model。
+Group is the major Supporting Business Domain planned for the MVP.
 
-它的主要目标不是实现复杂的社交网络或组织权限系统，而是提供一个足够真实、可解释、可测试的协作场景，用于展示：
+Its purpose is not to build a complex social network or enterprise authorization system. It provides a realistic collaboration domain for demonstrating:
 
-- Spring Boot domain modeling
-- Entity lifecycle modeling
-- authorization
-- privacy / consent design
-- cross-aggregate orchestration
-- transaction consistency
-- PostgreSQL uniqueness constraints
-- concurrency considerations
-- Assessment 与 Group 的 bounded responsibility
-- automated testing
-- API contract design
+- Spring Boot domain modeling;
+- Entity lifecycle modeling;
+- authorization;
+- privacy and consent;
+- cross-Aggregate orchestration;
+- transactional consistency;
+- PostgreSQL uniqueness constraints;
+- concurrency reasoning;
+- bounded responsibility between Assessment and Group;
+- automated testing and API contract design.
 
-MVP 优先保证：
-
-1. Group、Membership、JoinRequest、Sharing 的业务语义明确；
-2. 生命周期转换可测试且不会产生矛盾状态；
-3. Admin authority 与 Creator historical fact 清晰分离；
-4. Group 只能获得用户明确授权共享的 completed Assessment result；
-5. Membership / Sharing history 可以被保留；
-6. Aggregate 不因历史 Membership / JoinRequest 无限增长而膨胀；
-7. 实现复杂度与 Portfolio Project 目标匹配。
+The MVP prioritizes clear semantics for Group, Membership, JoinRequest, and Sharing; testable lifecycle transitions; separation of Admin authority from Creator history; explicit sharing of completed Assessment results only; retained relationship/consent history; bounded Aggregate size; and implementation complexity appropriate for the portfolio.
 
 ---
 
 ## 2. MVP Product Boundary
 
-MVP Group flow：
+The intended flow is:
 
-```text
+~~~text
 Create Group
     ↓
 Creator becomes Admin + Member
@@ -54,37 +45,25 @@ Admin Approve / Reject
     ↓
 Active Membership
     ↓
-Member optionally shares the finalized result of one specific COMPLETED AssessmentSession
-```
+Member optionally shares the finalized result
+of one specific COMPLETED AssessmentSession
+~~~
 
-MVP 支持：
+MVP supports:
 
-- Create Group
-- Join by Group Code
-- Join Request
-- Approve / Reject Request
-- View Members
-- Transfer Admin
-- Leave Group
-- Disband Group
-- Explicitly share one completed Assessment result
-- Change shared result
-- Stop sharing result
-- View results explicitly shared inside the Group
+- Create Group;
+- join discovery by Group Code;
+- JoinRequest approval/rejection;
+- member listing;
+- Admin transfer;
+- leaving and disbanding;
+- explicitly sharing one completed Assessment result;
+- replacing/stopping the shared result;
+- viewing results explicitly shared inside the Group.
 
-MVP 不实现：
+MVP excludes email invitations, Group avatars, multiple Admins, kick/blacklist, chat/feed, complex RBAC, organization hierarchy, and restoring a disbanded Group.
 
-- Email Invitation
-- Group Avatar
-- Multiple Admins
-- Kick Member
-- Blacklist
-- Group Chat / Feed
-- Complex RBAC
-- Organization hierarchy
-- Restoring a disbanded Group
-
-> **Scope alignment note:** earlier requirement drafts treated `Admin Transfer` as a future feature and considered sharing the user's "latest result". This specification supersedes those preliminary decisions: **single-admin transfer is now part of MVP**, and sharing is **explicitly bound to one specific completed `AssessmentSession` result**.
+Earlier drafts treated Admin transfer as future scope and discussed automatically sharing the latest result. This accepted specification supersedes those drafts: **single-Admin transfer is MVP, and sharing is explicitly bound to one specific completed AssessmentSession result.**
 
 ---
 
@@ -92,194 +71,81 @@ MVP 不实现：
 
 ### 3.1 Group
 
-`Group` 表示一个长期存在的协作 / sharing space。
-
-它拥有：
-
-- identity
-- name
-- group code
-- lifecycle
-- creator historical fact
-- current admin authority
-
-它不拥有：
-
-- User
-- AssessmentResult
-- Membership history collection
-- JoinRequest history collection
+A long-lived collaboration/sharing space that owns identity, name, GroupCode, lifecycle, creator history, and current Admin authority. It does not own User, Assessment results, or unbounded Membership/JoinRequest history collections.
 
 ### 3.2 Creator
 
-`Creator` 表示：
-
-> 创建 Group 的 User。
-
-它是 immutable historical fact：
-
-```text
-Group.createdByUserId
-```
-
-Creator **不是 Role**，也不拥有永久管理权限。
+The User who created the Group. Creator is immutable historical information represented by createdByUserId, not a permanent Role or authority.
 
 ### 3.3 Admin
 
-`Admin` 表示：
-
-> 当前唯一具有 Group management authority 的 Active Member。
-
-MVP 每个 Active Group 恰好只有一个 Admin：
-
-```text
-Group.adminUserId
-```
-
-Admin 可以转让。
+The single current Active Member with Group-management authority. For an Active Group, Group.adminUserId identifies the Admin and can change through transfer.
 
 ### 3.4 GroupMembership
 
-`GroupMembership` 表示：
-
-> 一个 User 已经成为、或曾经成为某个 Group 成员这一业务事实。
-
-Join intent 不属于 Membership。
+The business fact that a User is or was a member of a Group. Join intent is not Membership.
 
 ### 3.5 JoinRequest
 
-`JoinRequest` 表示：
+A User’s intent to establish GroupMembership.
 
-> User 希望建立 GroupMembership 的申请。
-
-因此：
-
-```text
+~~~text
 JoinRequest = intent
 GroupMembership = established relationship
-```
+~~~
 
 ### 3.6 GroupAssessmentShare
 
-`GroupAssessmentShare` 表示：
-
-> 一个 Active Member 明确同意将某一次具体、已完成的 `AssessmentSession` 所产生的 finalized result 分享给某一个 Group。
-
-它是 consent / visibility fact，而不是 Assessment data 本身。Group 只长期引用 `AssessmentSessionId`；该 Session 是否可分享、其 finalized result 是什么，仍由 Assessment Domain 决定。
+The consent/visibility fact that an Active Member explicitly shares the finalized result of one specific completed AssessmentSession with one Group. Group stores only the AssessmentSession reference; Assessment remains authoritative for ownership, completion, and the finalized result.
 
 ---
 
 ## 4. Core Domain Objects
 
-MVP Group Domain 包含四个独立 Aggregate Root：
+The Group Domain uses four separate Aggregate Roots:
 
-```text
-Group Domain
-│
-├── Group
-│
-├── GroupMembership
-│
-├── JoinRequest
-│
-└── GroupAssessmentShare
-```
+~~~text
+Group
+GroupMembership
+JoinRequest
+GroupAssessmentShare
+~~~
 
-Identity / reference types：
-
-```text
-GroupId
-MembershipId
-JoinRequestId
-ShareId
-UserId
-AssessmentSessionId
-GroupCode
-```
-
-这些 ID 应作为明确的 domain identifiers 使用，而不是依赖隐式 object graph。
+Explicit identifiers include GroupId, MembershipId, JoinRequestId, ShareId, UserId, AssessmentSessionId, and GroupCode.
 
 ---
 
 ## 5. Group Lifecycle
 
-### 5.1 Status
+GroupStatus:
 
-```text
-GroupStatus
-- ACTIVE
-- DISBANDED
-```
+~~~text
+ACTIVE -> DISBANDED
+~~~
 
-生命周期：
+DISBANDED is terminal. SUSPENDED/ARCHIVED/PAUSED are outside current requirements.
 
-```text
-ACTIVE
-  |
-  └──> DISBANDED
-```
+An ACTIVE Group has exactly one Admin, and that Admin must have an ACTIVE Membership in the same Group.
 
-`DISBANDED` 是 terminal state。
+After disbanding:
 
-禁止：
+- no new JoinRequest may be created;
+- pending requests cannot be manually approved/rejected;
+- Admin transfer and LeaveGroup are unavailable;
+- no share may be created/replaced;
+- all Active Memberships end;
+- all Pending JoinRequests are rejected;
+- all Active Shares end.
 
-```text
-DISBANDED -> ACTIVE
-```
-
-MVP 不需要：
-
-```text
-SUSPENDED
-ARCHIVED
-PAUSED
-```
-
-这些状态没有当前业务需求。
-
-### 5.2 Active Group
-
-对任意 `ACTIVE` Group：
-
-```text
-exactly one Admin exists
-```
-
-并且：
-
-```text
-Admin must have an ACTIVE Membership
-in the same Group
-```
-
-### 5.3 Disbanded Group
-
-Group 被解散以后：
-
-- 不允许新的 JoinRequest；
-- 不允许 Approve / Reject；
-- 不允许 TransferAdmin；
-- 不允许 LeaveGroup；
-- 不允许创建 / 修改 Sharing；
-- 所有 Active Membership 被终止；
-- 所有 Pending JoinRequest 被拒绝；
-- 所有 Active Share 被终止。
-
-`adminUserId` 可以保留最后一个 Admin，作为 historical fact。
+The last adminUserId may be retained as historical information.
 
 ---
 
 ## 6. Group Creation
 
-创建 Group：
+CreateGroup atomically creates:
 
-```text
-CreateGroup(creator)
-```
-
-必须原子地产生：
-
-```text
+~~~text
 Group
 - status = ACTIVE
 - createdByUserId = creator
@@ -288,1195 +154,441 @@ Group
 GroupMembership
 - userId = creator
 - status = ACTIVE
-```
+~~~
 
-因此：
-
-> Active Group 不能在没有 Active Admin Membership 的情况下存在。
-
-实现阶段：
-
-```text
-Create Group
-+
-Create creator Membership
-```
-
-必须位于同一个 local database transaction 中。
+An Active Group may never exist without an Active Admin Membership. Group creation and creator Membership creation therefore share one local database transaction.
 
 ### 6.1 Group Code
 
-MVP 使用 `GroupCode` 作为加入 Group 的发现入口：
+GroupCode is a Backend-generated, globally unique, immutable discovery identifier allocated at creation.
 
-```text
-Group Code
-→ locate Group
-→ submit JoinRequest
-```
-
-`GroupCode` 只是 discovery identifier：
-
-```text
+~~~text
 knowing GroupCode
-!=
-being a Member
-!=
-having access to shared results
-```
+!= being a Member
+!= having access to shared results
+~~~
 
-MVP baseline：
-
-- 由 Backend 生成；
-- 创建 Group 时分配；
-- 全局唯一；
-- 创建后保持 immutable；
-- 已使用的 code 不重新分配给其他 Group；
-- `DISBANDED` Group 的 code 不再接受 JoinRequest。
-
-具体字符集、长度以及 collision retry strategy 在 Database / Application Design 阶段决定。
+Used codes are not reassigned. A disbanded Group no longer accepts requests through its code. Exact format/collision strategy belongs to Database/Application design.
 
 ---
 
 ## 7. Creator / Admin / Member Semantics
 
-三者必须严格区分：
+~~~text
+Creator = immutable historical fact
+Admin   = mutable current authority
+Member  = active membership relationship
+~~~
 
-```text
-Creator
-= immutable historical fact
-
-Admin
-= mutable current authority
-
-Member
-= active membership relationship
-```
-
-例如：
-
-```text
-Alice creates Group
-↓
-createdBy = Alice
-admin = Alice
-Alice Membership = ACTIVE
-
-Alice transfers admin to Bob
-↓
-createdBy = Alice
-admin = Bob
-
-Alice leaves
-↓
-createdBy = Alice
-admin = Bob
-Alice Membership = ENDED
-```
-
-这个状态完全合法。
-
-Creator 本身不获得：
-
-- permanent admin authority
-- permanent membership
-- privacy override
-- special result visibility
+A creator may transfer Admin and later leave. Creator status gives no permanent Admin right, permanent Membership, privacy override, or special result visibility.
 
 ---
 
 ## 8. Admin Model
 
-MVP 只允许：
+The MVP has exactly one Admin. Admin authority lives on Group.adminUserId rather than a MembershipRole column. This avoids inconsistent multiple-Admin Membership rows.
 
-```text
-exactly one Admin
-```
-
-因此 Admin authority 保存于：
-
-```text
-Group.adminUserId
-```
-
-而不是：
-
-```text
-GroupMembership.role = ADMIN
-```
-
-MVP 不需要：
-
-```text
-MembershipRole.ADMIN
-MembershipRole.MEMBER
-```
-
-这样可以直接避免：
-
-```text
-two Membership rows accidentally marked ADMIN
-```
-
-如果未来支持 multiple admins，再引入 Membership Role / Group Role model。
+A role model may be introduced later only if multiple Admins become a real requirement.
 
 ---
 
 ## 9. Admin Transfer
 
-Command：
+TransferAdmin requires:
 
-```text
-TransferAdmin(groupId, currentAdminId, newAdminId)
-```
-
-必须满足：
-
-```text
+~~~text
 Group.status == ACTIVE
-
 currentAdminId == Group.adminUserId
-
 newAdminId != currentAdminId
-
 newAdminId has ACTIVE Membership in this Group
-```
+~~~
 
-执行：
+The command sets Group.adminUserId = newAdminId.
 
-```text
-Group.adminUserId = newAdminId
-```
-
-MVP 中：
-
-> Admin transfer 不需要 recipient confirmation。
-
-这是明确的 MVP simplification。
-
-未来可以演化为：
-
-```text
-AdminTransferRequest
-PENDING
-ACCEPTED
-REJECTED
-```
-
-但当前不实现。
-
-### 9.1 Deliberate Trade-off
-
-因为 Admin 不能直接 Leave，Admin transfer without consent 意味着某个 Member 可能被立即赋予 Admin responsibility。
-
-当前接受该 trade-off，以避免引入额外 transfer workflow。
-
-被转让的 Admin 仍可：
-
-- 再次 TransferAdmin；
-- 或在没有可转让 Member 时 Disband Group。
+Recipient confirmation is intentionally excluded from MVP. The trade-off is accepted because the new Admin can transfer again or disband when appropriate.
 
 ---
 
 ## 10. GroupMembership Lifecycle
 
-### 10.1 Status
+MembershipStatus:
 
-```text
-MembershipStatus
-- ACTIVE
-- ENDED
-```
+~~~text
+ACTIVE -> ENDED
+~~~
 
-生命周期：
+End reasons:
 
-```text
-ACTIVE
-  |
-  └──> ENDED
-```
-
-终止原因：
-
-```text
-MembershipEndReason
-- LEFT
-- GROUP_DISBANDED
-```
-
-不使用：
-
-```text
-ACTIVE -> LEFT
-```
-
-作为 status，因为：
-
-```text
+~~~text
 LEFT
-```
+GROUP_DISBANDED
+~~~
 
-只描述主动离开，无法准确表达因 Group Disband 被终止的 Membership。
-
-### 10.2 Historical Membership
-
-Membership 不在离开后恢复。
-
-例如：
-
-```text
-Membership #101
-joinedAt = Jan 1
-endedAt  = Feb 1
-endReason = LEFT
-
-Membership #257
-joinedAt = Mar 10
-status   = ACTIVE
-```
-
-User 重新加入时创建新的 Membership。
-
-历史 Membership 保留。
+Historical Memberships are never reactivated. Rejoining creates a new Membership row/identity and keeps prior Membership history intact.
 
 ---
 
 ## 11. Membership Uniqueness
 
-User 可以：
+A User may belong to multiple Groups and may have multiple historical Memberships for the same Group, but for one (GroupId, UserId):
 
-- 同时属于多个 Group；
-- 同时向多个不同 Group 申请加入。
-
-但是，对同一个：
-
-```text
-(GroupId, UserId)
-```
-
-必须满足：
-
-```text
+~~~text
 at most one ACTIVE Membership
-```
-
-历史上可以存在多个 Membership：
-
-```text
-Membership #1 ENDED
-Membership #2 ENDED
-Membership #3 ACTIVE
-```
+~~~
 
 ---
 
 ## 12. Leave Group
 
-Command：
+LeaveGroup requires an Active Group, an Active Membership for the user, and userId != Group.adminUserId.
 
-```text
-LeaveGroup(groupId, userId)
-```
+The Membership transitions to ENDED with endReason = LEFT and endedAt = now.
 
-必须满足：
-
-```text
-Group.status == ACTIVE
-
-user has ACTIVE Membership
-
-userId != Group.adminUserId
-```
-
-执行：
-
-```text
-Membership.status = ENDED
-Membership.endReason = LEFT
-Membership.endedAt = now
-```
-
-### 12.1 Admin Cannot Leave
-
-当前 Admin 不能直接执行：
-
-```text
-LeaveGroup
-```
-
-Admin 想离开时必须先：
-
-```text
-TransferAdmin
-↓
-LeaveGroup
-```
-
-如果 Group 只有 Admin 一个 Member：
-
-```text
-TransferAdmin impossible
-LeaveGroup impossible
-DisbandGroup available
-```
-
-不存在业务 deadlock。
+The current Admin cannot leave directly. They must first TransferAdmin or DisbandGroup. If the Admin is the only Member, DisbandGroup prevents a business deadlock.
 
 ---
 
 ## 13. JoinRequest Lifecycle
 
-### 13.1 Status
+JoinRequestStatus:
 
-```text
-JoinRequestStatus
-- PENDING
-- APPROVED
-- REJECTED
-```
+~~~text
+PENDING -> APPROVED
+        -> REJECTED
+~~~
 
-生命周期：
+APPROVED and REJECTED are terminal.
 
-```text
-             ┌──> APPROVED
-PENDING -----|
-             └──> REJECTED
-```
+Rejected requests distinguish:
 
-`APPROVED` 和 `REJECTED` 都是 terminal state。
+~~~text
+ADMIN_REJECTED
+TIMED_OUT
+GROUP_DISBANDED
+~~~
 
-### 13.2 Resolution Metadata
-
-建议保存：
-
-```text
-JoinRequestRejectionReason
-- ADMIN_REJECTED
-- TIMED_OUT
-- GROUP_DISBANDED
-```
-
-所有从 `PENDING` 进入 terminal state 的 JoinRequest 都记录：
-
-```text
-resolvedAt
-resolvedBy?
-```
-
-`resolvedBy` 对 Admin 手动处理的 `APPROVED` / `ADMIN_REJECTED` 保存当前 Admin；对系统触发的 `TIMED_OUT` / `GROUP_DISBANDED` 可以为空。
-
-只有 `REJECTED` 状态需要：
-
-```text
-rejectionReason
-```
-
-`APPROVED` 已由 status 本身完整表达，因此不需要 `rejectionReason`。
+All terminal transitions record resolvedAt. Manual Admin resolution records resolvedBy; system timeout/disband resolution may leave resolvedBy empty. rejectionReason exists only for REJECTED.
 
 ---
 
 ## 14. Request to Join
 
-Command：
+RequestToJoinGroup requires:
 
-```text
-RequestToJoinGroup(groupId, userId)
-```
-
-必须满足：
-
-```text
+~~~text
 Group.status == ACTIVE
+no ACTIVE Membership
+no PENDING JoinRequest
+rejection cooldown elapsed
+~~~
 
-no ACTIVE Membership exists
+A successful request is PENDING with requestedAt = now and expiresAt = requestedAt + 7 days.
 
-no PENDING JoinRequest exists
-
-rejection cooldown has elapsed
-```
-
-成功后：
-
-```text
-JoinRequest.status = PENDING
-requestedAt = now
-expiresAt = requestedAt + 7 days
-```
-
-### 14.1 Pending Request Uniqueness
-
-对同一个：
-
-```text
-(GroupId, UserId)
-```
-
-最多存在：
-
-```text
-one PENDING JoinRequest
-```
-
-但历史 Request 不删除：
-
-```text
-Request #1 REJECTED
-Request #2 REJECTED
-Request #3 APPROVED
-```
-
-都可以保留。
+For one (GroupId, UserId), at most one PENDING request may exist, while historical requests remain retained.
 
 ---
 
 ## 15. Rejection Cooldown
 
-被拒绝后可以重新申请。
+ADMIN_REJECTED and TIMED_OUT requests impose an eight-hour cooldown:
 
-MVP cooldown：
+~~~text
+nextAllowedRequestAt = resolvedAt + 8 hours
+~~~
 
-```text
-8 hours
-```
+GROUP_DISBANDED has no retry path because the Group is terminal. Retry count is otherwise unlimited in MVP.
 
-计算规则：
-
-```text
-nextAllowedRequestAt
-=
-resolvedAt + 8 hours
-```
-
-适用于：
-
-```text
-ADMIN_REJECTED
-TIMED_OUT
-```
-
-`GROUP_DISBANDED` 无需重新申请，因为 Group 已经 terminal。
-
-MVP 不限制拒绝次数。
-
-未来可以增加：
-
-- blacklist
-- temporary ban
-- configurable cooldown
-
-但当前不实现。
-
-`nextAllowedRequestAt` 当前不需要单独持久化，因为可以由历史事实计算。
+nextAllowedRequestAt is derived from history and does not need separate persistence.
 
 ---
 
 ## 16. JoinRequest Expiration
 
-Group 必须在：
+A Pending request expires seven days after requestedAt.
 
-```text
-7 days
-```
-
-内处理 JoinRequest。
-
-如果超过：
-
-```text
-expiresAt = requestedAt + 7 days
-```
-
-仍然是 `PENDING`：
-
-```text
+~~~text
 PENDING -> REJECTED
 rejectionReason = TIMED_OUT
 resolvedAt = expiresAt
-```
+~~~
 
-`resolvedAt` 应表达业务 expiration time，而不是 scheduled job 实际碰巧执行的时间。
+resolvedAt represents the business expiration instant, not the later time when a scheduled/lazy process happens to perform the transition.
 
-例如 job 在：
-
-```text
-10:05
-```
-
-才处理一个：
-
-```text
-expiresAt = 10:00
-```
-
-的 Request，则业务上：
-
-```text
-resolvedAt = 10:00
-```
-
-### 16.1 Domain Rule vs Scheduling Mechanism
-
-```text
-"7 天后自动拒绝"
-```
-
-是 Domain Rule。
-
-至于实现使用：
-
-- scheduled job
-- lazy expiration
-- background process
-
-属于 Application / Infrastructure concern。
+The seven-day rule is Domain policy; scheduler/lazy/background implementation is an Application/Infrastructure concern.
 
 ---
 
 ## 17. Approve JoinRequest
 
-Command：
+Approval revalidates:
 
-```text
-ApproveJoinRequest(joinRequestId, adminUserId)
-```
+~~~text
+Group ACTIVE
+actor is current Admin
+request PENDING
+request not expired
+applicant has no ACTIVE Membership
+~~~
 
-必须重新验证：
-
-```text
-Group.status == ACTIVE
-
-adminUserId == Group.adminUserId
-
-JoinRequest.status == PENDING
-
-JoinRequest has not expired
-
-Applicant has no ACTIVE Membership
-```
-
-执行：
-
-```text
-JoinRequest
-PENDING -> APPROVED
-
-+
-
-Create NEW GroupMembership
-status = ACTIVE
-
-JoinRequest.resolvedAt = now
-JoinRequest.resolvedBy = adminUserId
-JoinRequest.rejectionReason = null
-```
-
-Approve 绝不能恢复历史 Membership。
+It atomically transitions the request to APPROVED and creates a **new** ACTIVE Membership. Historical Membership is never reactivated.
 
 ---
 
 ## 18. Reject JoinRequest
 
-Command：
+Only the current Admin of an Active Group may reject a Pending request.
 
-```text
-RejectJoinRequest(joinRequestId, adminUserId)
-```
-
-必须满足：
-
-```text
-Group.status == ACTIVE
-
-adminUserId == Group.adminUserId
-
-JoinRequest.status == PENDING
-```
-
-执行：
-
-```text
-JoinRequest.status = REJECTED
-rejectionReason = ADMIN_REJECTED
-resolvedAt = now
-resolvedBy = adminUserId
-```
-
-之后进入 8-hour cooldown。
+The request becomes REJECTED with ADMIN_REJECTED, resolvedAt = now, and resolvedBy = adminUserId, then enters the eight-hour cooldown.
 
 ---
 
 ## 19. Disband Group
 
-只有当前 Admin 可以执行：
+Only the current Admin may DisbandGroup.
 
-```text
-DisbandGroup
-```
+Disbanding atomically produces:
 
-执行后的业务结果：
+~~~text
+Group ACTIVE -> DISBANDED
 
-```text
-Group
-ACTIVE -> DISBANDED
-```
-
-以及：
-
-```text
 all ACTIVE Memberships
--> ENDED
-   endReason = GROUP_DISBANDED
-```
+-> ENDED / GROUP_DISBANDED
 
-```text
 all PENDING JoinRequests
--> REJECTED
-   rejectionReason = GROUP_DISBANDED
-```
+-> REJECTED / GROUP_DISBANDED
 
-```text
 all ACTIVE GroupAssessmentShares
--> ENDED
-   endReason = GROUP_DISBANDED
-```
+-> ENDED / GROUP_DISBANDED
+~~~
 
-并记录：
-
-```text
-Group.disbandedAt
-```
-
-Group 不允许恢复。
+Group.disbandedAt is recorded and the Group cannot be restored in MVP.
 
 ---
 
 ## 20. Assessment Sharing Principle
 
-Group 遵循：
+Group follows **Minimum Sharing + Explicit Consent**.
 
-> **Minimum Sharing + Explicit Consent**
+Membership never automatically shares Assessment data. Admin/Creator cannot force or override consent.
 
-加入 Group：
-
-```text
-does NOT automatically share assessment data
-```
-
-Admin：
-
-```text
-cannot force a member to share
-```
-
-Creator：
-
-```text
-has no privacy override
-```
-
-Group 不获得：
-
-- complete Assessment history
-- InitialAssessmentResult
-- ClarificationResult
-- AI conversation
-- questionnaire answers
-
-MVP 只允许用户主动分享：
-
-```text
-one specific completed AssessmentSession result
-```
+Group does not receive complete Assessment history, InitialAssessmentResult, ClarificationResult, AI conversations, or questionnaire answers. MVP exposes only the finalized result of one explicitly selected completed AssessmentSession.
 
 ---
 
 ## 21. Why Share a Specific Result
 
-不使用：
+The system does not automatically share “latest result”.
 
-```text
-share latest result automatically
-```
+If Result #123 is shared and the user later creates Result #456, the existing Share remains bound to #123. Changing to #456 requires explicit ChangeSharedAssessmentResult.
 
-因为用户重新完成 Assessment 后：
-
-```text
-Result #123  ← consented
-Result #456  ← newly created
-```
-
-如果 Group 自动切换至 #456：
-
-> 可见内容会在没有新 consent 的情况下发生变化。
-
-因此：
-
-```text
-Creating a new assessment result
-does not alter an existing share.
-```
-
-用户想改为 #456 时必须显式执行：
-
-```text
-ChangeSharedAssessmentResult
-```
+This prevents visible data from changing without renewed consent.
 
 ---
 
 ## 22. Sharing Consent Scope
 
-Consent 采用：
+Consent is scoped per Membership + specific completed AssessmentSession, not globally per User/account/result.
 
-```text
-per Membership + per completed AssessmentSession
-```
-
-而不是：
-
-```text
-per user
-per result globally
-per account
-```
-
-例如同一 User 可以：
-
-```text
-Group A -> Result #123
-Group B -> Result #456
-Group C -> no share
-```
-
-这表示：
-
-> 用户只向特定 Group、在特定 Membership relationship 下，授权可见某个具体 Result。
+The same User may independently share different results to different Groups or share nothing in another Group.
 
 ---
 
 ## 23. GroupAssessmentShare
 
-`GroupAssessmentShare` 是独立 Aggregate Root。
+GroupAssessmentShare is a separate Aggregate Root with conceptual fields:
 
-建议概念字段：
+~~~text
+ShareId
+MembershipId
+AssessmentSessionId
+ShareStatus
+sharedAt
+endedAt?
+endReason?
+~~~
 
-```text
-GroupAssessmentShare
-- ShareId
-- MembershipId
-- AssessmentSessionId
-- ShareStatus
-- sharedAt
-- endedAt?
-- endReason?
-```
-
-它不复制 Assessment 内容。
+It stores consent/visibility, not copied Assessment content.
 
 ---
 
 ## 24. Share Lifecycle
 
-### 24.1 Status
-
-```text
+~~~text
 ShareStatus
-- ACTIVE
-- ENDED
-```
+ACTIVE -> ENDED
+~~~
 
-### 24.2 End Reason
+Possible end reasons:
 
-```text
-ShareEndReason
-- STOPPED_BY_MEMBER
-- RESULT_REPLACED
-- MEMBERSHIP_ENDED
-- GROUP_DISBANDED
-- ASSESSMENT_DELETED
-```
+~~~text
+STOPPED_BY_MEMBER
+RESULT_REPLACED
+MEMBERSHIP_ENDED
+GROUP_DISBANDED
+ASSESSMENT_DELETED
+~~~
 
-Share history 保留。
+Share history is retained.
 
 ---
 
 ## 25. Share Invariants
 
-对于一个 ACTIVE Membership：
+One Active Membership may own zero or one Active Share.
 
-```text
-0 or 1 ACTIVE Share
-```
+A single completed AssessmentSession may be independently shared through Memberships in multiple Groups; each Share is a separate consent fact.
 
-即：
-
-```text
-one Membership
-↓
-zero or one explicitly selected COMPLETED AssessmentSession result
-```
-
-MVP 不支持同时向同一个 Group 分享多个历史 Result。
-
-同一个 `COMPLETED AssessmentSession` 的 finalized result 可以被用户分别分享给多个不同 Group：
-
-```text
-Completed AssessmentSession #123 result
-├── Group A
-└── Group B
-```
-
-每个 Share 都是独立 consent。
+MVP does not support sharing multiple historical results simultaneously through one Membership.
 
 ---
 
 ## 26. Start Sharing
 
-Command：
+ShareAssessmentResult requires:
 
-```text
-ShareAssessmentResult(
-  membershipId,
-  assessmentSessionId
-)
-```
-
-必须满足：
-
-```text
-Group.status == ACTIVE
-
-Membership.status == ACTIVE
-
-requesting user owns the Membership
-
-referenced AssessmentSession belongs to the same user
-
-referenced AssessmentSession.status == COMPLETED
-
-referenced AssessmentSession has a FinalAssessmentResult
-
+~~~text
+Group ACTIVE
+Membership ACTIVE
+requesting user owns Membership
+AssessmentSession belongs to same user
+AssessmentSession.status == COMPLETED
+FinalAssessmentResult exists
 Membership has no ACTIVE Share
-```
+~~~
 
-只有 Membership owner 可以开始分享。
+Only the Membership owner may create the Share; Admin cannot share on another member’s behalf.
 
-Admin 不能替 Member 创建 Share。
+AssessmentSessionId is a cross-module reference. The Group Domain cannot decide whether the Session is shareable. The Application use case asks the Assessment module to validate existence, ownership, COMPLETED state, and FinalAssessmentResult.
 
-这里的 `AssessmentSessionId` 只是跨模块 reference。`Group` Aggregate 自己不能判断 Session 是否完成，也不会读取 Assessment 内部对象。
+IN_PROGRESS, AWAITING_CLARIFICATION, CLARIFICATION_IN_PROGRESS, ABANDONED, nonexistent, or non-finalized Sessions cannot be shared.
 
-`ShareAssessmentResult` Application Use Case 必须向 Assessment Module 验证：
-
-```text
-AssessmentSession exists
-AND owner == sharing user
-AND status == COMPLETED
-AND FinalAssessmentResult exists
-```
-
-如果 Session 仍处于：
-
-```text
-IN_PROGRESS
-AWAITING_CLARIFICATION
-CLARIFICATION_IN_PROGRESS
-ABANDONED
-```
-
-或者虽有 ID 但不存在 finalized result，则 Share command 必须被拒绝。
-
-因此：
-
-```text
-having an AssessmentSessionId
-!=
-having a shareable assessment result
-```
-
-可选实现方式是在 Application Boundary 使用一个经过 Assessment Module 验证后返回的概念：
-
-```text
-ShareableAssessmentResultRef
-└── assessmentSessionId
-```
-
-但它只是 boundary representation，不创建新的 Assessment Domain Entity。
+A narrow boundary representation such as ShareableAssessmentResultRef may be used without introducing a new Assessment Domain Entity.
 
 ---
 
 ## 27. Change Shared Result
 
-假设：
+Replacing Result #123 with #456 does not mutate the existing Share’s result reference.
 
-```text
-Share #10
-Result #123
-ACTIVE
-```
+Instead:
 
-Member 改为：
-
-```text
-Result #456
-```
-
-不直接修改：
-
-```text
-Share #10.resultId
-```
-
-而应该：
-
-```text
-Share #10
-ACTIVE -> ENDED
-endReason = RESULT_REPLACED
-
+~~~text
+old Share ACTIVE -> ENDED / RESULT_REPLACED
 +
+new Share for Result #456 -> ACTIVE
+~~~
 
-Share #11
-Result #456
-ACTIVE
-```
-
-原因：
-
-> Consent 针对具体 Result；历史 consent 不应该被覆盖。
+Consent history is therefore preserved.
 
 ---
 
 ## 28. Stop Sharing
 
-Command：
+Only the Share owner may stop sharing.
 
-```text
-StopSharingAssessmentResult
-```
-
-只有 Share owner 可以执行。
-
-结果：
-
-```text
+~~~text
 ACTIVE -> ENDED
 endReason = STOPPED_BY_MEMBER
 endedAt = now
-```
+~~~
 
-停止 Sharing 不影响：
-
-- Membership
-- Group
-- FinalAssessmentResult
+Stopping a Share does not change Membership, Group, or FinalAssessmentResult.
 
 ---
 
 ## 29. Membership End and Sharing
 
-如果 Sharing owner 的 Membership 结束：
+When the sharing owner’s Membership ends, its Active Share ends with MEMBERSHIP_ENDED.
 
-```text
-Membership
-ACTIVE -> ENDED
-```
-
-其 Active Share 必须同步终止：
-
-```text
-Share
-ACTIVE -> ENDED
-endReason = MEMBERSHIP_ENDED
-```
-
-如果用户之后重新加入：
-
-```text
-new Membership
-```
-
-旧 Share 不恢复。
-
-用户必须重新表达 consent。
+If the User later rejoins, the new Membership does not reactivate the old Share; consent must be expressed again.
 
 ---
 
 ## 30. Viewer Access Rule
 
-假设 Alice 分享 Result，Bob 希望查看。
+A viewer may see a member’s shared result only when:
 
-Bob 可以查看的前提：
+~~~text
+Group is ACTIVE
+sharing owner has ACTIVE Membership
+viewer has ACTIVE Membership
+sharing owner has ACTIVE Share
+for the selected completed AssessmentSession in this Group
+~~~
 
-```text
-Group == ACTIVE
+canViewResult is derived authorization, not persisted state.
 
-Alice has ACTIVE Membership
-
-Bob has ACTIVE Membership
-
-Alice has ACTIVE Share
-for this specific completed AssessmentSession result
-in this Group
-```
-
-`canViewResult` 是 derived authorization，不是持久化 Boolean。
-
-Bob 如果 Leave：
-
-```text
-Bob loses access immediately
-```
-
-但 Alice 的 Share 不受影响。
+A viewer who leaves loses access immediately; the owner’s Share remains unchanged.
 
 ---
 
 ## 31. Historical Assessment Deletion
 
-用户可以删除自己的 Assessment history。
+Historical Assessment deletion must end every Active Share referencing the deleted AssessmentSession with ASSESSMENT_DELETED.
 
-如果某个：
+After deletion completes, no Active Share may continue to authorize access to that finalized result.
 
-```text
-AssessmentSession
-```
-
-正在被 Group Share 引用，则删除该 historical Assessment 时必须：
-
-```text
-end all ACTIVE Shares referencing that AssessmentSession
-
-endReason = ASSESSMENT_DELETED
-```
-
-Group 不能继续保留一个有效 authorization 指向已删除 Result。
-
-具体数据库删除策略：
-
-- physical delete
-- soft delete
-- historical identifier retention
-
-留到 Database Design 阶段决定。
-
-Domain Rule 只要求：
-
-> 删除完成后，不存在任何 ACTIVE Share 可以访问该 historical Assessment 的 finalized result。
+Physical delete vs soft delete vs retained identifier is a persistence/deletion-policy decision, not a Group Domain rule.
 
 ---
 
 ## 32. Assessment ↔ Group Boundary
 
-正式 Architecture Rule：
+Architecture rule:
 
-```text
+~~~text
 Assessment Domain
 owns AssessmentSession
-and its FinalAssessmentResult.
+and FinalAssessmentResult.
 
 Group Domain
-never owns, modifies,
-or copies AssessmentSession
-or FinalAssessmentResult.
+never owns, modifies, or copies them.
 
-Group Domain only owns
-the authorization / consent fact
-that a specific Membership shares
-the finalized result of a specific
-COMPLETED AssessmentSession
-with its Group.
-```
+Group Domain owns only
+the consent/visibility fact
+that one Membership shares
+one specific completed AssessmentSession result.
+~~~
 
-因此 Group 只长期引用：
-
-```text
-AssessmentSessionId
-```
-
-该 ID 指向 Assessment Aggregate Root，而不是为 `FinalAssessmentResult` 人为增加独立 identity。
-
-Group 不保存：
-
-```text
-personalityType
-dimensionScores
-questionnaireAnswers
-clarificationData
-AI conversation
-```
+Group retains only AssessmentSessionId as the cross-domain reference and never copies personality type, dimension scores, questionnaire answers, clarification data, or AI conversation content.
 
 ---
 
 ## 33. Cross-Domain Result Query
 
-Group Member 查看共享结果时，Application Layer 可以：
+A Group shared-result query may:
 
-```text
-1. Load Group / viewer Membership
-2. Validate Group access
-3. Find owner's ACTIVE Share
-4. Ask Assessment Domain for the shareable result of the referenced COMPLETED AssessmentSession
-5. Assessment Domain validates that the Session still exists and exposes the permitted finalized-result representation
-6. Compose query DTO
-```
+~~~text
+1. load Group + viewer Membership
+2. validate Group access
+3. find owner ACTIVE Share
+4. ask Assessment for the shareable result of the referenced completed Session
+5. Assessment validates the Session/result
+6. compose a cross-domain query DTO
+~~~
 
-Query DTO 可以跨 Domain 组合数据。
-
-这不改变 ownership：
-
-```text
-Assessment owns result
-Group owns visibility
-```
+A composed read DTO does not change ownership: Assessment owns the result; Group owns visibility.
 
 ---
 
 ## 34. Shared Assessment Stability
 
-Sharing model 要求：
-
-> A referenced `AssessmentSession` must be `COMPLETED`, and its `FinalAssessmentResult` is immutable except for deletion / lifecycle removal semantics.
-
-否则用户同意分享：
-
-```text
-Result #123
-```
-
-之后 #123 的内容如果还能任意变化，就会绕过 consent。
-
-因此 Group Domain 假设：
-
-```text
-FinalAssessmentResult
-= stable finalized evidence
-```
+A shared AssessmentSession must be COMPLETED and its FinalAssessmentResult stable/immutable except deletion/lifecycle removal. Otherwise previously granted consent could silently expose changing content.
 
 ---
 
 ## 35. Aggregate Boundary
 
-MVP 正式采用：
+The MVP intentionally uses separate Aggregate Roots:
 
-```text
-Group Domain
-│
-├── Group                  Aggregate Root
-│
-├── GroupMembership        Aggregate Root
-│
-├── JoinRequest            Aggregate Root
-│
-└── GroupAssessmentShare   Aggregate Root
-```
-
-不采用：
-
-```text
+~~~text
 Group
-├── List<GroupMembership>
-├── List<JoinRequest>
-└── List<GroupAssessmentShare>
-```
+GroupMembership
+JoinRequest
+GroupAssessmentShare
+~~~
+
+It does not model an unbounded Group Aggregate containing lists of all Memberships, requests, and shares.
 
 ---
 
@@ -1484,84 +596,25 @@ Group
 
 ### 36.1 Unbounded History
 
-Group 生命周期内可能存在：
-
-```text
-100 active members
-500 historical memberships
-1000 join requests
-many historical shares
-```
-
-如果全部塞入 Group Aggregate：
-
-```text
-load Group
-=
-load large historical object graph
-```
-
-不合理。
+Long-lived Groups may accumulate many historical Memberships, JoinRequests, and Shares. Loading that complete history for every Group command would create an unbounded Aggregate/object graph.
 
 ### 36.2 Most Commands Need Only Partial State
 
-例如：
-
-```text
-LeaveGroup
-```
-
-主要关心：
-
-```text
-Group status
-current admin
-target ACTIVE Membership
-```
-
-不需要加载全部 Membership history。
+For example, LeaveGroup mainly needs Group status/current Admin plus the target Active Membership, not all historical relationships.
 
 ### 36.3 Disband Is a Batch Use Case
 
-```text
-DisbandGroup
-↓
-Group transition
-+
-N Membership transitions
-+
-M JoinRequest transitions
-+
-K Share transitions
-```
-
-不应为了一个批量 use case，把整个历史 collection 强行变成一个巨大 Aggregate。
+DisbandGroup coordinates one Group transition plus N Membership, M JoinRequest, and K Share transitions. A batch use case does not justify making the entire history one Aggregate.
 
 ---
 
 ## 37. Cross-Aggregate Orchestration
 
-例如：
+Cross-Aggregate use cases are coordinated by Application Services.
 
-```text
-ApproveJoinRequest
-```
+Example approval flow:
 
-涉及：
-
-```text
-Group
-JoinRequest
-GroupMembership
-```
-
-由 Application Service 协调。
-
-概念流程：
-
-```text
-ApproveJoinRequestUseCase
-
+~~~text
 1. load JoinRequest
 2. load Group
 3. verify current Admin
@@ -1570,170 +623,52 @@ ApproveJoinRequestUseCase
 6. verify no ACTIVE Membership
 7. approve Request
 8. create Membership
-9. persist changes
-```
+9. persist atomically
+~~~
 
-当前项目是：
-
-```text
-Spring Boot Modular Monolith
-+
-single PostgreSQL database
-```
-
-因此合理使用：
-
-```text
-@Transactional
-```
-
-完成 local atomic consistency。
-
-MVP 不为此引入：
-
-- Kafka
-- Saga
-- Outbox
-- distributed transaction
-- microservices
+The MVP is a Spring Boot Modular Monolith with one PostgreSQL database, so local @Transactional consistency is appropriate. Kafka, Saga, Outbox, distributed transactions, and microservice decomposition are not introduced solely for this workflow.
 
 ---
 
 ## 38. Concurrency Safety
 
-Application 层：
+Application “check then write” validation alone cannot prevent competing requests from observing the same precondition.
 
-```text
-check -> write
-```
+Critical invariants therefore require both:
 
-本身不足以防止 race condition。
-
-例如两个并发请求都可能看到：
-
-```text
-no ACTIVE Membership exists
-```
-
-然后同时创建。
-
-因此关键 invariant 需要：
-
-```text
+~~~text
 Domain/Application validation
 +
-Database constraint
-```
+Database-level protection
+~~~
 
-双层保护。
+Implementation should evaluate transactions, optimistic locking where useful, targeted row locks where necessary, and PostgreSQL constraints.
 
-实现阶段还应评估：
+Important races include Admin transfer vs leave/disband, approve vs expire/reject, duplicate join requests, Share creation vs membership/disband/deletion, and replace vs stop sharing.
 
-```text
-@Transactional
-optimistic locking (@Version)
-select / row locking where necessary
-PostgreSQL constraints
-```
-
-特别需要验证的并发场景：
-
-```text
-TransferAdmin
-vs
-new Admin LeaveGroup
-
-TransferAdmin
-vs
-DisbandGroup
-
-ApproveJoinRequest
-vs
-ExpireJoinRequest
-
-ApproveJoinRequest
-vs
-RejectJoinRequest
-
-RequestToJoinGroup
-vs
-RequestToJoinGroup
-
-ShareAssessmentResult
-vs
-LeaveGroup
-
-ShareAssessmentResult
-vs
-DisbandGroup
-
-ShareAssessmentResult
-vs
-DeleteHistoricalAssessment
-
-ChangeSharedAssessmentResult
-vs
-StopSharingAssessmentResult
-```
-
-系统绝不能最终产生：
-
-```text
-Group.adminUserId = Bob
-Bob Membership = ENDED
-```
+The system must never end with an Admin reference pointing to an ended Membership.
 
 ---
 
 ## 39. Database-Level Uniqueness Candidates
 
-Database Design 阶段至少应落实：
+At minimum the persistence design should enforce:
 
-```text
-at most one ACTIVE Membership
-for (group_id, user_id)
-```
+~~~text
+at most one ACTIVE Membership for (group_id, user_id)
+at most one PENDING JoinRequest for (group_id, user_id)
+at most one ACTIVE Share for membership_id
+~~~
 
-以及：
-
-```text
-at most one PENDING JoinRequest
-for (group_id, user_id)
-```
-
-以及：
-
-```text
-at most one ACTIVE Share
-for membership_id
-```
-
-PostgreSQL 可考虑 partial unique index，例如概念上：
-
-```sql
-UNIQUE (group_id, user_id)
-WHERE status = 'ACTIVE'
-```
-
-```sql
-UNIQUE (group_id, user_id)
-WHERE status = 'PENDING'
-```
-
-```sql
-UNIQUE (membership_id)
-WHERE status = 'ACTIVE'
-```
-
-最终 SQL 在 Database Design 阶段决定。
+PostgreSQL partial unique indexes are the preferred candidate. Final SQL belongs to Database Design.
 
 ---
 
 ## 40. Commands
 
-MVP 用户业务 Commands：
+MVP user commands:
 
-```text
+~~~text
 CreateGroup
 
 RequestToJoinGroup
@@ -1747,38 +682,33 @@ DisbandGroup
 ShareAssessmentResult
 ChangeSharedAssessmentResult
 StopSharingAssessmentResult
-```
+~~~
 
-系统 lifecycle operation：
+System lifecycle operation:
 
-```text
+~~~text
 ExpirePendingJoinRequests
-```
+~~~
 
-`ExpirePendingJoinRequests` 不是必须暴露给 Frontend 的 API Command。
+Expiration need not be exposed as a Frontend command.
 
 ---
 
 ## 41. Queries
 
-MVP 主要 Queries：
+Main MVP queries:
 
-```text
+~~~text
 GetGroup
 GetMyGroups
-
 GetGroupMembers
-
 GetPendingJoinRequests
 GetMyJoinRequests
-
 GetGroupSharedResults
 GetMemberSharedResult
-```
+~~~
 
-具体 REST endpoint naming 在 API Design 阶段决定。
-
-Domain Specification 不绑定 REST URI。
+The Domain specification does not bind REST URI naming.
 
 ---
 
@@ -1786,9 +716,7 @@ Domain Specification 不绑定 REST URI。
 
 ### 42.1 Group
 
-建议持久保存：
-
-```text
+~~~text
 groupId
 name
 groupCode
@@ -1797,13 +725,11 @@ adminUserId
 status
 createdAt
 disbandedAt
-```
+~~~
 
 ### 42.2 GroupMembership
 
-建议持久保存：
-
-```text
+~~~text
 membershipId
 groupId
 userId
@@ -1811,13 +737,11 @@ status
 joinedAt
 endedAt
 endReason
-```
+~~~
 
 ### 42.3 JoinRequest
 
-建议持久保存：
-
-```text
+~~~text
 joinRequestId
 groupId
 userId
@@ -1827,13 +751,11 @@ expiresAt
 resolvedAt
 resolvedBy
 rejectionReason
-```
+~~~
 
 ### 42.4 GroupAssessmentShare
 
-建议持久保存：
-
-```text
+~~~text
 shareId
 membershipId
 assessmentSessionId
@@ -1841,92 +763,25 @@ status
 sharedAt
 endedAt
 endReason
-```
+~~~
 
-`GroupId` 不作为 `GroupAssessmentShare` 的独立 Domain fact 重复保存，因为 `MembershipId` 已唯一确定所属 Group。若 Database Design 为查询效率决定冗余保存 `group_id`，必须用 constraint / application validation 保证其与 Membership 一致，并把它视为 persistence denormalization，而不是第二个 source of truth。
+GroupId is not a second independent Domain fact on GroupAssessmentShare because MembershipId already determines the Group. A denormalized group_id may be introduced for query efficiency only if constraints/application validation guarantee consistency; it remains persistence optimization rather than a second source of truth.
 
 ---
 
 ## 43. Derived Facts — Do Not Persist by Default
 
-当前不需要额外保存：
+Do not persist isCreator, Membership role=ADMIN, canViewResult, latestAssessmentResultId, or nextAllowedJoinRequestAt merely because they are convenient.
 
-```text
-isCreator
-```
+They are derived respectively from createdByUserId, adminUserId, authorization policy, Assessment ownership/history, or latest rejection resolvedAt + eight hours.
 
-因为：
-
-```text
-userId == createdByUserId
-```
-
-可以推导。
-
-不需要 Membership：
-
-```text
-role = ADMIN
-```
-
-因为：
-
-```text
-userId == adminUserId
-```
-
-可以推导。
-
-不需要：
-
-```text
-canViewResult
-```
-
-因为它是 authorization policy 的计算结果。
-
-不需要：
-
-```text
-latestAssessmentResultId
-```
-
-因为 Group 不拥有 Assessment history。
-
-不需要：
-
-```text
-nextAllowedJoinRequestAt
-```
-
-因为可以从：
-
-```text
-latest rejection resolvedAt + 8 hours
-```
-
-计算。
-
-Group 绝不能复制：
-
-```text
-personalityType
-scores
-answers
-AI clarification content
-```
+Group must never copy personalityType, scores, answers, or AI clarification content.
 
 ---
 
 ## 44. Core Invariants
 
-为了避免把不同 consistency boundary 的规则混为一谈，本节将 invariant 分为：
-
-```text
-Aggregate-local
-Cross-Aggregate
-Cross-Domain
-```
+To keep consistency boundaries explicit, invariants are grouped as Aggregate-local, cross-Aggregate, and cross-Domain rules.
 
 ### 44.1 Aggregate-Local Invariants
 
@@ -2413,24 +1268,24 @@ Cross-aggregate consistency is coordinated by the Application Layer and, in the 
 
 MVP adopts:
 
-```text
+~~~text
 Group name is immutable after Group creation.
-```
+~~~
 
-There is no `RenameGroup` command/API in MVP. A future rename capability may be added only when a concrete product requirement exists.
+There is no RenameGroup command/API in MVP. A future rename capability may be added only when a concrete product requirement exists.
 
 ### TIMED_OUT JoinRequest Cooldown
 
-当前 baseline 仍保持：
+The frozen MVP baseline remains:
 
-```text
+~~~text
 ADMIN_REJECTED -> 8h cooldown
 TIMED_OUT      -> 8h cooldown
-```
+~~~
 
-该规则是可实现且自洽的。
+This rule is implementable and internally consistent.
 
-如果后续认为“Admin 未处理导致超时”不应继续惩罚申请者，可以把 `TIMED_OUT` 调整为立即允许重新申请。该调整属于 Product Rule change，不影响当前 Aggregate Boundary。
+If later product feedback concludes that an applicant should not be penalized for an Admin’s failure to process a request, TIMED_OUT may be changed to allow immediate re-application. That would be a Product Rule change and would not affect the current Aggregate boundaries.
 
 ---
 

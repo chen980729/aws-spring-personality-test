@@ -55,6 +55,98 @@ The product itself is deliberately non-clinical. AI is treated as a constrained 
 
 The MVP uses a **Spring Boot modular monolith** and is deployed as a real AWS full-stack application. CloudFront is the single browser-facing entry point: static React assets come from a private S3 bucket through OAC, while `/api/*` is routed to the Spring Boot backend through an Application Load Balancer.
 
+### Application architecture
+
+The cloud topology and the application architecture are separate concerns. The Backend is one deployable **Spring Boot modular monolith**, but the code is organized **by business module**, with Application/Domain/Infrastructure boundaries inside each module rather than one global package-by-layer stack.
+
+```mermaid
+flowchart LR
+    Browser["Browser"] --> React["React + TypeScript<br/>Frontend"]
+
+    subgraph Backend["Spring Boot Modular Monolith"]
+        Web["Spring Security + Web API"]
+
+        subgraph Identity["Identity & Access Module — implemented"]
+            IApp["Application"]
+            IDomain["Domain"]
+            IInfra["Infrastructure / JPA"]
+            IApp --> IDomain
+            IApp --> IInfra
+        end
+
+        subgraph Assessment["Assessment Module — implemented"]
+            AApp["Application"]
+            ADomain["Domain"]
+            AInfra["Infrastructure / JPA"]
+            AApp --> ADomain
+            AApp --> AInfra
+        end
+
+        subgraph Group["Group Module — design accepted, implementation pending"]
+            GDomain["Domain specification"]
+        end
+
+        AI["AI Integration adapter boundary<br/>provider runtime: Step 8"]
+
+        Web --> IApp
+        Web --> AApp
+        AApp -.-> AI
+        AApp -.-> GDomain
+    end
+
+    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web
+    IInfra --> PostgreSQL[("PostgreSQL")]
+    AInfra --> PostgreSQL
+    AI -.-> Provider["External LLM provider<br/>next milestone"]
+```
+
+This structure keeps deployment simple while preserving business ownership. Cross-module use cases are coordinated at the Application boundary; Domain objects stay independent from JPA models, and provider/persistence details remain behind Infrastructure adapters.
+
+### Current backend flow
+
+The currently deployed Assessment path is backend-authoritative and version-aware. Provider-backed LLM execution is intentionally shown as the **next** branch rather than as an already deployed capability.
+
+```mermaid
+flowchart TB
+    A["Register / Login / Session / CSRF"] --> B["Assessment Catalog"]
+    B --> C["Start / Resume<br/>bind exact DefinitionVersion"]
+    C --> D["Session-bound Questionnaire"]
+    D --> E["Autosave"]
+    E --> F["Submit"]
+    F --> G["Deterministic Scoring + Ambiguity"]
+
+    G -->|"No ambiguity"| H["Deterministic Finalization"]
+    G -->|"Ambiguous"| I["Persisted DimensionClarification boundary"]
+
+    I --> S["Current production path<br/>Skip Current / Skip Remaining"]
+    S --> J{"Questionnaire baseline"}
+    J -->|"Non-zero"| L["Deterministic questionnaire fallback"]
+    J -->|"Exact tie"| M["Version-aware Tie-break"]
+
+    M --> M1["Retained 1.0 Session<br/>direct pole / USER_TIE_BREAK"]
+    M --> M2["Active 1.1 Session<br/>contextual question / TIE_BREAK_QUESTION"]
+
+    I -.-> P["Step 8 — provider-backed LLM<br/>not implemented yet"]
+    P -.-> Q{"Provider outcome"}
+    Q -.->|"RESOLVED"| K["Accepted ClarificationResult"]
+    Q -.->|"UNCLEAR"| U{"Questionnaire baseline"}
+    Q -.->|"Technical failure"| R["FAILED_RETRYABLE<br/>Retry or explicit Skip"]
+    K -.-> H
+    U -.->|"Non-zero"| L
+    U -.->|"Exact tie"| M
+    R -.->|"Retry"| P
+    R -.->|"Skip"| S
+
+    L --> H
+    M1 --> H
+    M2 --> H
+
+    H --> N["Final Result"]
+    N --> O["History / Historical Detail"]
+```
+
+The persisted Clarification lifecycle, execution-token stale-result protection, retry boundary, Skip behavior, version-aware Tie-break and deterministic finalization are already implemented. Step 8 will connect a real provider to that existing boundary rather than changing the core scoring/finalization authority.
+
 ### Production architecture
 
 ```mermaid
@@ -124,7 +216,7 @@ flowchart LR
     CD --> OIDC["GitHub OIDC<br/>temporary AWS credentials"]
     OIDC --> BackendDeploy["Backend<br/>build → ECR → new ECS revision"]
     OIDC --> FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
-    BackendDeploy --> Smoke["Public smoke test"]
+    BackendDeploy --> Smoke["Post-deployment<br/>public smoke test"]
     FrontendDeploy --> Smoke
 ```
 
@@ -217,7 +309,7 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | API | REST, OpenAPI 3.1 | ✅ OpenAPI v0.5.0 + activated DefinitionVersion 1.1 contextual Tie-break |
 | Testing | JUnit 5, Spring MVC Test, ArchUnit, Testcontainers, Vitest, RTL, MSW | ✅ Implemented for current Backend + Frontend scope |
 | Local environment | Docker Compose | ✅ PostgreSQL environment implemented |
-| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow through F7-D |
+| Frontend | React + TypeScript, Vite, React Router, TanStack Query | ✅ Auth + Assessment flow through F7-E review |
 | AI integration | External LLM behind an adapter boundary | ⏳ Next product milestone after the completed cloud foundation |
 | Containerization | Multi-stage Docker backend image | ✅ Implemented and deployed |
 | Cloud | CloudFront, S3, ALB, ECS Fargate, ECR, RDS, Secrets Manager, CloudWatch | ✅ Deployed in ap-northeast-1 |
@@ -241,10 +333,10 @@ See [`docs/frontend/05-implementation-checkpoint-f1-f6.md`](docs/frontend/05-imp
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
 | Clarification + Tie-break mutation | ✅ Complete |
-| External AI adapter / runtime context | ⏳ Planned next after the cloud foundation |
+| External AI adapter / runtime context | 🚧 Next — provider-backed Step 8 LLM clarification |
 | Historical assessment deletion | ⏸ Deferred until Group sharing backend exists |
 | Group / Membership / Sharing implementation | ⏳ Planned product milestone |
-| React frontend | ✅ F1-F6 + F7-A–F7-D complete for current executable/staged Assessment scope |
+| React frontend | ✅ F1-F7 compatibility/presentation scope deployed for current Assessment flow |
 | Docker application image | ✅ Implemented and deployed via ECR/ECS |
 | AWS deployment | ✅ Full-stack production deployment verified |
 | GitHub Actions CI/CD | ✅ CI + OIDC + automatic post-CI CD verified end-to-end |
@@ -280,7 +372,7 @@ The detailed roadmap is maintained in [`docs/roadmap.md`](docs/roadmap.md).
 - immediate finalization when clarification is unnecessary;
 - persisted Clarification lifecycle and stale external-result protection;
 - Skip Current / Skip Remaining deterministic clarification mutations;
-- version-aware exact-tie finalization: retained 1.0 direct-pole semantics plus staged 1.1 contextual question support;
+- version-aware exact-tie finalization: retained 1.0 direct-pole semantics plus active 1.1 contextual-question semantics;
 - completed Assessment History;
 - historical Assessment detail;
 - PostgreSQL-backed read projections;
@@ -299,7 +391,7 @@ Not yet implemented in the executable backend are provider-backed LLM interactio
 - debounced serialized full-snapshot autosave with save/error/retry state;
 - final Submit coordinated with in-flight autosave and already-submitted recovery;
 - deterministic Clarification read model, Skip Current and Skip Remaining;
-- dual-version exact-tie UI: retained 1.0 direct-pole flow plus staged 1.1 contextual-question flow without exposing option-to-pole mappings;
+- dual-version exact-tie UI: retained 1.0 direct-pole flow plus active 1.1 contextual-question flow without exposing option-to-pole mappings;
 - enriched Result interpretation with 8 preference-letter descriptions, 16 type profiles, optimized per-type artwork, and preserved per-dimension decision provenance;
 - optimized four-profile Landing hero artwork;
 - completed Assessment History, URL pagination and canonical Session detail navigation;
@@ -479,9 +571,12 @@ V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
 V4__seed_sixteen_personality_v1.sql
 V5__add_clarification_execution_token.sql
+V6__add_tie_break_question_provenance.sql
+V7__seed_sixteen_personality_v1_1_draft.sql
+V8__activate_sixteen_personality_v1_1.sql
 ```
 
-Applied migrations are treated as immutable history and are not renumbered to match older design documents. Future database work begins at `V6` or later.
+Applied migrations are treated as immutable history and are not renumbered to match older design documents. Future database work begins at `V9` or later.
 
 ---
 

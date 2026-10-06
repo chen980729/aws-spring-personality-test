@@ -92,7 +92,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** the Step 7 runtime baseline remains intact, DefinitionVersion 1.1 Backend compatibility completed **Step 2E — pre-activation acceptance sweep**, Frontend dual-version support is complete, and the separate activation release adds V8 plus post-activation binding verification. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific projections and final-source semantics. After V8, new Sessions bind 1.1 while retained 1.0 Sessions preserve their original semantics. Real provider-backed clarification interaction remains Step 8.
+**Current status:** the Step 7 runtime baseline remains intact, DefinitionVersion 1.1 compatibility completed the pre-activation acceptance sweep, and the V8 activation release is deployed. New Sessions now bind 1.1 while retained 1.0 Sessions preserve their original direct-pole semantics. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific projections and final-source semantics. Real provider-backed clarification interaction is the next backend milestone: Step 8.
 
 ### Domain/Application
 
@@ -218,9 +218,11 @@ Implementation sequencing note:
 ```text
 AWS / Container / CI-CD foundation (completed)
         ↓
-Next real feature update + final automatic-CD verification
+DefinitionVersion 1.1 activation + automatic CD verification (completed)
         ↓
-Provider-backed LLM / Group backend work
+Provider-backed LLM clarification (Step 8)
+        ↓
+Group backend / sharing
         ↓
 Historical Assessment deletion orchestration + frontend deletion UX
 ```
@@ -269,7 +271,7 @@ Detailed as-built documentation: `docs/deployment/aws-deployment.md`.
 
 ## 12. CI/CD
 
-**Status: CI + OIDC + manual end-to-end CD verified.**
+**Status: CI + OIDC + automatic post-CI CD verified end-to-end.**
 
 - [x] GitHub Actions CI.
 - [x] Backend Maven `verify`.
@@ -285,7 +287,7 @@ Detailed as-built documentation: `docs/deployment/aws-deployment.md`.
 - [x] Public post-deployment smoke test.
 - [x] Manual production CD verified end-to-end.
 - [x] Automatic CD trigger implemented behind `CD_ENABLED`.
-- [ ] Final live verification of successful-main-CI → automatic CD during the next real feature update.
+- [x] Successful `main` CI → automatic CD verified with a real feature/activation release.
 
 Detailed pipeline documentation: `docs/deployment/ci-cd.md`.
 
@@ -319,7 +321,7 @@ Current baseline:
 - [x] Testing strategy explanation.
 - [x] Key ADR/index.
 - [x] Future-work/options document.
-- [ ] Final automatic-CD live verification.
+- [x] Final automatic-CD live verification.
 - [ ] Final MVP feature-completion review after LLM / Group / deletion scope.
 - [ ] Final interview-ready project retrospective after MVP completion.
 
