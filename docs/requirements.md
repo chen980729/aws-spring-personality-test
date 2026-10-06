@@ -1,6 +1,6 @@
 # Product Requirements
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented, and Frontend dual-version integration is complete through F7-D. 1.1 remains DRAFT; the compatibility release must be deployed and old ECS tasks drained before a separate activation release. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Backend/Frontend dual-version compatibility, pre-activation acceptance, and the separate V8 activation release are complete. DefinitionVersion 1.1 is now the sole `AVAILABLE` version for new Sessions; published 1.0 is `RETIRED` for new bindings but remains immutable and supported for Sessions already bound to it.
 
 ## 1. Product Goal
 
@@ -69,7 +69,7 @@ The final MVP includes both the core assessment vertical slice and the group/sha
 
 `SIXTEEN_PERSONALITY` 1.1 reuses exactly the same 48 questionnaire questions as 1.0. `ScoringPolicy`, `AmbiguityPolicy`, and clarification behavior (including the expected/default clarification policy revision) remain unchanged. Only `FinalizationPolicy` advances to revision `v2`, with immutable contextual tie-break definitions added to the specification.
 
-The compatibility rollout is staged. The Backend and persistence expansion support both semantics while 1.0 remains `AVAILABLE` and 1.1 remains `DRAFT`. A separate activation migration will later retire 1.0 and promote 1.1 to the sole `AVAILABLE` version only after compatible application tasks are deployed. Retirement prevents new 1.0 bindings; it must not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs.
+The compatibility rollout used an expand-then-promote sequence. The compatibility release first deployed Backend/Frontend support for both semantics while 1.0 remained `AVAILABLE` and 1.1 remained `DRAFT`; after compatible tasks were running, Flyway V8 retired 1.0 and promoted 1.1 to the sole `AVAILABLE` version. This activation is now complete. Retirement prevents new 1.0 bindings but does not prevent existing 1.0 Sessions from resuming and completing with their original direct-pole semantics. Existing Sessions never auto-upgrade, and historical facts/results are never reinterpreted or backfilled with invented question/option IDs.
 
 For an exact questionnaire tie left unresolved after `UNCLEAR` / `SKIPPED`, 1.1 requires exactly one binary contextual tie-break question for that dimension, with no neutral option. The Frontend receives only question text and stable option IDs/text, never option-to-pole mappings. Backend owns resolution using the Session's bound immutable DefinitionVersion, regardless of display order or which version is currently AVAILABLE. Neither tie-break path changes raw scores or the `50 / 50` questionnaire evidence. A resolved clarification does not require a tie-break; a technical failure still requires Retry or explicit Skip.
 
