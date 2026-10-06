@@ -2,9 +2,8 @@
 
 This document separates **implemented current state** from optional hardening and future product work. Items here are not claims about the deployed system.
 
-## 1. Near-term delivery work
+## 1. Near-term delivery hardening
 
-- Final live verification of `main CI success → automatic CD` during the next real feature update.
 - Continue documenting deployment changes when the infrastructure baseline changes.
 - Keep generated Terraform plans/state/local backend configuration out of version control.
 
@@ -68,7 +67,6 @@ Potential additions:
 
 ## 4. CI/CD hardening
 
-- Enable automatic CD after its final real feature-change validation.
 - Add a GitHub production Environment and optional manual approval.
 - Add browser-based deployment smoke coverage.
 - Consider image SBOM, signing/attestation and policy checks.
