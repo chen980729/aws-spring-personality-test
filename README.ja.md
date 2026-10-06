@@ -59,41 +59,54 @@ MVP は **Spring Boot Modular Monolith** として実装し、現在は AWS 上�
 
 ### Application Architecture
 
-Cloud topology と application 内部の module architecture は別の関心事として扱っています。単一の Spring Boot deployable の中でも business boundary を明確にし、Identity & Access と Assessment は実装済み、Group は design-frozen / implementation pending、AI Integration は Step 8 で provider runtime を接続する boundary としています。
+Cloud topology と application architecture は別の観点として扱っています。Backend は単一 deployable の **Spring Boot Modular Monolith** ですが、code は **business module 単位**で分割し、各 module の内部に Application / Domain / Infrastructure boundary を持たせています。Project 全体を package-by-layer にする構成ではありません。
 
 ```mermaid
 flowchart LR
     Browser["Browser"] --> React["React + TypeScript<br/>Frontend"]
-    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web
+    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web["Spring Security + Web API"]
 
     subgraph Backend["Spring Boot Modular Monolith"]
-        Web["Web / Security<br/>Controllers + Spring Security"]
-        App["Application / Orchestration"]
-        Identity["Identity & Access<br/>implemented"]
-        Assessment["Assessment<br/>implemented"]
-        Group["Group<br/>design accepted / implementation pending"]
-        AI["AI Integration boundary<br/>provider runtime: Step 8"]
-        Infra["Persistence / Infrastructure adapters"]
+        Web
 
-        Web --> App
-        App --> Identity
-        App --> Assessment
-        App -.-> Group
-        Assessment --> AI
-        Identity --> Infra
-        Assessment --> Infra
-        Group -.-> Infra
+        subgraph Identity["Identity & Access Module — implemented"]
+            IApp["Application"]
+            IDomain["Domain"]
+            IInfra["Infrastructure / JPA"]
+            IApp --> IDomain
+            IApp --> IInfra
+        end
+
+        subgraph Assessment["Assessment Module — implemented"]
+            AApp["Application"]
+            ADomain["Domain"]
+            AInfra["Infrastructure / JPA"]
+            AApp --> ADomain
+            AApp --> AInfra
+        end
+
+        subgraph Group["Group Module — design accepted / implementation pending"]
+            GDomain["Domain specification"]
+        end
+
+        AI["AI Integration adapter boundary<br/>provider runtime: Step 8"]
+
+        Web --> IApp
+        Web --> AApp
+        AApp -.-> AI
+        AApp -.-> GDomain
     end
 
-    Infra --> PostgreSQL[("PostgreSQL")]
+    IInfra --> PostgreSQL[("PostgreSQL")]
+    AInfra --> PostgreSQL
     AI -.-> Provider["External LLM provider<br/>next milestone"]
 ```
 
-Modular Monolith により deployment complexity を抑えつつ、module ownership / dependency rule は明示的に維持しています。Cross-module use case は Application layer が coordination し、Persistence や provider-specific detail は Infrastructure / adapter boundary の外側に閉じ込めます。
+この構成により deployment は単純なまま維持しつつ、business ownership を明確にしています。Cross-module use case は Application boundary で coordination し、Domain object と JPA model を分離し、provider / persistence detail は Infrastructure adapter の背後に置きます。
 
 ### Current Backend Flow
 
-現在 production で動作している Assessment path は Backend-authoritative かつ DefinitionVersion-aware です。
+現在 deployment 済みの Assessment flow は Backend-authoritative かつ DefinitionVersion-aware です。Provider-backed LLM は現行機能として誤解されないよう、**次の milestone** として点線で示しています。
 
 ```mermaid
 flowchart TB
@@ -105,17 +118,22 @@ flowchart TB
     F --> G["Deterministic Scoring + Ambiguity"]
 
     G -->|"No ambiguity"| H["Deterministic Finalization"]
-    G -->|"Ambiguous"| I["DimensionClarification workflow"]
+    G -->|"Ambiguous"| I["Persisted DimensionClarification boundary"]
 
-    I --> J{"Accepted outcome"}
-    J -->|"RESOLVED"| K["Use clarification preference"]
-    J -->|"UNCLEAR / SKIPPED<br/>non-zero baseline"| L["Questionnaire fallback"]
-    J -->|"UNCLEAR / SKIPPED<br/>exact tie"| M["Version-aware Tie-break"]
+    I --> S["Current production path<br/>Skip Current / Skip Remaining"]
+    S --> J{"Questionnaire baseline"}
+    J -->|"Non-zero"| L["Deterministic questionnaire fallback"]
+    J -->|"Exact tie"| M["Version-aware Tie-break"]
 
     M --> M1["Retained 1.0 Session<br/>direct pole / USER_TIE_BREAK"]
     M --> M2["Active 1.1 Session<br/>contextual question / TIE_BREAK_QUESTION"]
 
-    K --> H
+    I -.-> P["Step 8 — provider-backed LLM<br/>not implemented yet"]
+    P -.-> Q["RESOLVED / UNCLEAR / retryable failure"]
+    Q -.-> H
+    Q -.-> L
+    Q -.-> M
+
     L --> H
     M1 --> H
     M2 --> H
@@ -124,7 +142,7 @@ flowchart TB
     N --> O["History / Historical Detail"]
 ```
 
-Provider-backed LLM execution は次の Assessment milestone であり、現時点の production capability ではありません。一方で Clarification lifecycle、retry / stale-result protection、accepted-result boundary、Skip、version-aware Tie-break、deterministic finalization はすでに実装済みで、Step 8 ではこの既存 boundary に provider execution を接続します。
+Persisted Clarification lifecycle、execution-token による stale-result protection、retry boundary、Skip、version-aware Tie-break、deterministic finalization はすでに実装済みです。Step 8 では既存 boundary に real provider を接続し、core scoring / finalization authority 自体は変更しません。
 
 ### Production Architecture
 
