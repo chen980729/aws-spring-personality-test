@@ -1,105 +1,82 @@
 # Four-Dimension Personality Assessment Specification
 
-> **DefinitionVersion 1.1 status (ADR-0018):** Backend compatibility and pre-activation acceptance are implemented. 1.1 remains DRAFT; activation and Frontend integration remain pending. Published 1.0 remains immutable and supported.
+> **DefinitionVersion 1.1 status (ADR-0018):** Compatibility, Frontend dual-version support, and Flyway V8 activation are complete. DefinitionVersion 1.1 is the sole `AVAILABLE` version for new Sessions; 1.0 is `RETIRED` for new binding but remains immutable and executable for retained Sessions.
 
 > **File:** `docs/sixteen-personality-spec-aligned.md`\
-> **Status:** Immutable 1.0 baseline / Implemented 1.1 Backend specification, staged as DRAFT\
-> **Last updated:** 2026-10-05\
+> **Status:** Immutable 1.0 baseline / Active 1.1 specification\
+> **Last updated:** 2026-10-06\
 > **Scope:** Personality assessment domain rules, scoring, AI clarification, finalization, result composition, and content/legal boundaries.
 
 ---
 
 ## 1. Purpose
 
-本项目提供一个基于四个 personality dimensions 的人格偏好测试，并最终生成类似 `INFJ`、`ENTP` 的四字母 Personality Type。
+This project provides an original four-dimension personality preference assessment that produces a four-letter Personality Type such as INFJ or ENTP.
 
-本功能在当前 Portfolio Project 中的首要目标不是构建专业心理测量产品，而是提供一个足够完整、可解释、可测试的业务场景，用于展示：
+The MVP is not intended to be a professionally validated psychometric instrument. Its purpose is to provide a complete, explainable, and testable business domain for demonstrating:
 
-- React questionnaire flow
-- Spring Boot domain modeling
-- deterministic scoring
-- ambiguity handling
-- AI-assisted clarification
-- structured AI output
-- persistence and audit trail
-- result visualization
-- automated testing
-- API contract design
-- versioning
-- AWS deployment / observability integration
+- React questionnaire flow;
+- Spring Boot domain modeling;
+- deterministic scoring;
+- ambiguity handling;
+- AI-assisted clarification;
+- structured AI output;
+- persistence and auditability;
+- result visualization;
+- automated testing;
+- API contract design;
+- versioning;
+- AWS deployment and observability integration.
 
-因此，MVP 优先保证：
+The MVP therefore prioritizes clear business rules, repeatable scoring, a strict boundary between AI and deterministic business logic, traceable evidence/results, and implementation complexity appropriate for the portfolio.
 
-1. 业务规则明确；
-2. Scoring 可重复、可测试；
-3. AI 与 deterministic business logic 的职责边界清晰；
-4. 原始回答、初始结果、AI clarification、最终结果均可追踪；
-5. 实现复杂度与 Portfolio 目标相匹配。
-
-**Professional psychometric validation 不属于 MVP 目标。**
+**Professional psychometric validation is outside the MVP scope.**
 
 ---
 
 ## 2. Product Positioning
 
-本项目实现的是一个：
+The product is an:
 
 > **Original four-dimension personality preference assessment**
 
-它不是官方 MBTI® assessment，也不是 16Personalities / NERIS Type Explorer® 的复刻。
+It is not the official MBTI® assessment and is not a reproduction of 16Personalities / NERIS Type Explorer®.
 
-当前文件名 `sixteen-personality-spec.md` 只是项目内部既有命名。产品 UI、README marketing copy 和 API-facing product name 不应将本测试称为：
+The historical repository filename is an internal name only. Product UI, README marketing copy, and API-facing product names should not present the assessment as:
 
-- `MBTI Test`
-- `Free MBTI`
-- `AI MBTI`
-- `16Personalities`
-- `Sixteen Personality Test`
+- MBTI Test;
+- Free MBTI;
+- AI MBTI;
+- 16Personalities;
+- Sixteen Personality Test.
 
-推荐使用独立工作名称，例如：
-
-- `Personality Type Explorer`
-- `Four-Dimension Personality Explorer`
-
-最终品牌名称可以在 UI polish 阶段另行决定。
+Independent working names such as “Personality Type Explorer” or “Four-Dimension Personality Explorer” are preferred.
 
 ---
 
 ## 3. Assessment Model
 
-测试包含四个 dimensions：
+The assessment contains four dimensions:
 
 | Dimension | Pole A | Pole B |
 |---|---|---|
-| `EI` | Extraversion (`E`) | Introversion (`I`) |
-| `SN` | Sensing (`S`) | Intuition (`N`) |
-| `TF` | Thinking (`T`) | Feeling (`F`) |
-| `JP` | Judging (`J`) | Perceiving (`P`) |
+| EI | Extraversion (E) | Introversion (I) |
+| SN | Sensing (S) | Intuition (N) |
+| TF | Thinking (T) | Feeling (F) |
+| JP | Judging (J) | Perceiving (P) |
 
-统一规定 **Pole A 为 positive direction**：
+Pole A is the positive scoring direction:
 
-```text
+~~~text
 EI: E = positive, I = negative
 SN: S = positive, N = negative
 TF: T = positive, F = negative
 JP: J = positive, P = negative
-```
+~~~
 
-四个 finalized dimensions 按固定顺序组合：
+Finalized dimensions are composed in the fixed order EI + SN + TF + JP. For example, I + N + F + J produces INFJ.
 
-```text
-EI + SN + TF + JP
-```
-
-例如：
-
-```text
-I + N + F + J = INFJ
-```
-
-最终 Personality Type 必须由四个 finalized dimensions deterministic 地生成。
-
-**AI 不直接生成或重写最终四字母 type。**
+The final Personality Type must be composed deterministically from the four finalized dimensions. **AI never directly generates or rewrites the four-letter type.**
 
 ---
 
@@ -107,126 +84,57 @@ I + N + F + J = INFJ
 
 ### 4.1 Number of Questions
 
-MVP 固定为：
+The MVP contains exactly 48 questions: 12 per dimension.
 
-```text
-48 questions
-```
-
-每个 dimension：
-
-```text
-12 questions
-```
-
-因此：
-
-```text
+~~~text
 4 dimensions × 12 questions = 48 questions
-```
+~~~
 
-这在测试长度与 dimension-level signal 之间提供了足够合理的工程平衡。
+This is a deliberate engineering balance between assessment length and dimension-level signal.
 
 ### 4.2 Question Distribution
 
-四个 dimension 的题目交错出现，而不是连续完成同一 dimension。
+Questions from the four dimensions are interleaved rather than grouped:
 
-当前 baseline 顺序：
-
-```text
-Q1  → EI
-Q2  → SN
-Q3  → TF
-Q4  → JP
-Q5  → EI
+~~~text
+Q1  -> EI
+Q2  -> SN
+Q3  -> TF
+Q4  -> JP
+Q5  -> EI
 ...
-```
+~~~
 
-因此：
-
-```text
-Q1 belongs to EI
-```
-
-MVP 不要求 dynamic item selection。
-
-题目 randomization、larger item pool 等能力属于 Future Improvement。
+The MVP does not require dynamic item selection. Question randomization and a larger item pool remain future improvements.
 
 ---
 
 ## 5. Answer Scale
 
-采用：
-
-```text
-5-point Likert Scale
-```
-
-用户语义：
+The questionnaire uses a five-point Likert scale:
 
 | Stored Value | UI Meaning |
 |---:|---|
-| `1` | Strongly Disagree |
-| `2` | Disagree |
-| `3` | Neither Agree nor Disagree |
-| `4` | Agree |
-| `5` | Strongly Agree |
+| 1 | Strongly Disagree |
+| 2 | Disagree |
+| 3 | Neither Agree nor Disagree |
+| 4 | Agree |
+| 5 | Strongly Agree |
 
-Frontend 不应只显示裸数字；数字必须具有明确的语义标签。
-
-Backend 保存 canonical integer：
-
-```text
-1 / 2 / 3 / 4 / 5
-```
+The Frontend must present semantic labels rather than bare numbers. The Backend stores the canonical integer value 1..5.
 
 ---
 
 ## 6. Balanced Keying
 
-每个 dimension 的 12 道题采用：
+Each dimension has:
 
-```text
+~~~text
 6 questions keyed toward Pole A
 6 questions keyed toward Pole B
-```
+~~~
 
-例如 `EI`：
-
-```text
-6 E-keyed questions
-6 I-keyed questions
-```
-
-MVP 尽量避免使用复杂否定结构来实现传统意义上的 reverse wording，例如：
-
-```text
-I do not dislike ...
-```
-
-这类 wording 容易增加理解成本。
-
-Domain model 应表达题目的真实语义：
-
-```text
-dimension
-keyedPole
-```
-
-例如：
-
-```text
-dimension = EI
-keyedPole = I
-```
-
-而不是只保存：
-
-```text
-reverseScored = true
-```
-
-`keyedPole` 是更稳定、更可读的 domain representation。
+The MVP avoids unnecessarily complex negative wording. The Domain model expresses the real meaning of an item with dimension + keyedPole rather than relying only on a generic reverseScored flag.
 
 ---
 
@@ -234,70 +142,46 @@ reverseScored = true
 
 ### 7.1 Centered Item Score
 
-原始回答：
+Answers are centered as follows:
 
-```text
+~~~text
 1  2  3  4  5
-```
+-2 -1  0 +1 +2
+~~~
 
-转换为：
-
-```text
--2 -1 0 +1 +2
-```
-
-基础公式：
-
-```text
+~~~text
 centeredScore = answer - 3
-```
+~~~
 
 ### 7.2 Keyed Direction
 
-如果题目 keyed toward Pole A：
+For a Pole A keyed item:
 
-```text
+~~~text
 itemScore = answer - 3
-```
+~~~
 
-如果题目 keyed toward Pole B：
+For a Pole B keyed item:
 
-```text
+~~~text
 itemScore = -(answer - 3)
-```
+~~~
 
 ### 7.3 Dimension Raw Score
 
-每个 dimension 有 12 道题，每题：
+Each dimension contains 12 items, each contributing -2..+2:
 
-```text
--2 ... +2
-```
-
-因此：
-
-```text
+~~~text
 rawScore ∈ [-24, +24]
-```
 
-判定方向：
-
-```text
-rawScore > 0 → Pole A
-rawScore < 0 → Pole B
-rawScore = 0 → exact tie
-```
-
-例如 `EI`：
-
-```text
-rawScore = +8 → E
-rawScore = -8 → I
-```
+rawScore > 0 -> Pole A
+rawScore < 0 -> Pole B
+rawScore = 0 -> exact tie
+~~~
 
 ### 7.4 Reference Pseudocode
 
-```text
+~~~text
 scoreDimension(dimensionAnswers):
     rawScore = 0
 
@@ -310,151 +194,92 @@ scoreDimension(dimensionAnswers):
             rawScore -= centered
 
     return rawScore
-```
+~~~
 
-Scoring 必须是 deterministic application/domain logic，不调用 AI。
+Scoring is deterministic Application/Domain logic and never calls AI.
 
 ---
 
 ## 8. Preference Percentage
 
-Percentage 主要用于结果页展示，不作为核心 business rule 的 source of truth。
+Percentages exist for presentation, not as the source of truth for business decisions.
 
-Pole A display percentage：
-
-```text
+~~~text
 poleAPercentage = 50 + (rawScore / 24) * 50
-```
-
-Pole B：
-
-```text
 poleBPercentage = 100 - poleAPercentage
-```
-
-示例：
+~~~
 
 | Raw Score | Approx. Split |
 |---:|---|
-| `0` | `50.00 / 50.00` |
-| `+1` | `52.08 / 47.92` |
-| `+2` | `54.17 / 45.83` |
-| `+3` | `56.25 / 43.75` |
-| `-2` | `45.83 / 54.17` |
+| 0 | 50.00 / 50.00 |
+| +1 | 52.08 / 47.92 |
+| +2 | 54.17 / 45.83 |
+| +3 | 56.25 / 43.75 |
+| -2 | 45.83 / 54.17 |
 
-Frontend 可以进行合理 rounding。
-
-**Backend ambiguity / finalization logic 必须使用 raw score，而不是 rounded percentage。**
+Frontend rounding is allowed. **Ambiguity and finalization always use raw score, never the rounded percentage.**
 
 ---
 
 ## 9. Ambiguity Policy
 
-产品概念上使用约：
+The product concept is approximately a 45/55 ambiguity band. The executable deterministic rule is:
 
-```text
-45 / 55 ambiguity band
-```
-
-实际 deterministic rule：
-
-```text
+~~~text
 ambiguous = abs(rawScore) <= 2
-```
+~~~
 
-因此：
+Therefore 50/50, approximately 52/48, and approximately 54/46 are ambiguous; approximately 56/44 is non-ambiguous.
 
-```text
-50 / 50
-52 / 48
-54 / 46
-```
-
-均属于 ambiguous。
-
-约：
-
-```text
-56 / 44
-```
-
-开始属于 non-ambiguous。
-
-该 threshold 是本项目的 **product rule**，不是经过专业心理测量 validation 后得出的科学阈值。
+This threshold is a product rule, not a scientifically validated psychometric threshold.
 
 ---
 
 ## 10. Result Stages
 
-为与项目的 Assessment Domain Model 保持一致，本文件统一使用以下 Ubiquitous Language：
+The specification uses the same Ubiquitous Language as the Assessment Domain:
 
-```text
+~~~text
 InitialAssessmentResult
 ClarificationResult
 FinalAssessmentResult
-```
+~~~
 
-其中：
-
-```text
-InitialAssessmentResult
-└── InitialDimensionResult[]
-
-FinalAssessmentResult
-└── FinalDimensionConclusion[]
-```
-
-不能只保存一个可被后续流程覆盖的通用 `result`。
+InitialAssessmentResult contains InitialDimensionResult values. FinalAssessmentResult contains FinalDimensionConclusion values. The system must not use one generic mutable result that later workflow steps overwrite.
 
 ### 10.1 InitialAssessmentResult
 
-由 deterministic questionnaire scoring 产生，并作为 AI clarification 之前的不可变 baseline evidence。
-
-例如某个 `InitialDimensionResult`：
-
-```text
-dimension = EI
-rawScore = -2
-questionnairePreference = I
-ambiguous = true
-```
-
-`InitialAssessmentResult` 一旦产生即 immutable。AI clarification 不得修改或覆盖它。
+Deterministic questionnaire scoring creates the immutable baseline evidence. AI clarification never changes or overwrites it.
 
 ### 10.2 ClarificationResult
 
-只在 ambiguous dimension 上、当 clarification 真正完成并被业务接受时产生。
+A ClarificationResult exists only for an ambiguous dimension when a clarification has completed and its business outcome is accepted.
 
-例如：
+A representative result contains:
 
-```text
-dimension = EI
-suggestedPole = E
-resolution = RESOLVED
-confidence = HIGH
-```
+~~~text
+dimension
+resolution = RESOLVED | UNCLEAR
+suggestedPole?
+confidence
+reasoningSummary? / evidence?
+~~~
 
-`confidence` 可以保存用于 observability / future policy evolution，但 MVP 不要求根据 confidence 再增加一套复杂 threshold。
+RESOLVED requires a suggested pole. UNCLEAR requires suggestedPole = null.
 
-**Intermediate AI turn output 不等于 `ClarificationResult`。**
-
-多轮 clarification 可以经历若干中间交互；只有当当前 dimension 的 clarification 最终得到可接受业务结论时，才形成并持久化 `ClarificationResult`。
+Intermediate AI turns are not ClarificationResult values. Only the accepted business outcome is persisted as the clarification result.
 
 ### 10.3 FinalAssessmentResult
 
-由 deterministic `FinalizationPolicy` 基于：
+FinalizationPolicy deterministically combines accepted facts:
 
-```text
+~~~text
 InitialAssessmentResult
 +
-ClarificationResult / explicit skip / user tie-break facts
-```
+ClarificationResult / explicit skip / DimensionTieBreak facts
+~~~
 
-生成。
-
-每个 dimension 最终形成 `FinalDimensionConclusion`，四个 finalized dimensions 再 deterministic 地组成最终 Personality Type。
-
-AI 不直接持久化最终 Personality Type。
+Each dimension becomes one FinalDimensionConclusion, and the four conclusions are composed into the final Personality Type. AI does not persist the final type directly.
 
 ---
 
@@ -462,163 +287,84 @@ AI 不直接持久化最终 Personality Type。
 
 ### 11.1 Trigger
 
-只有：
-
-```text
-ambiguous == true
-```
-
-的 dimension 才允许进入 AI clarification。
-
-例如：
-
-```text
-EI = 54% I → clarification eligible
-EI = 67% I → no clarification
-```
+Only dimensions where ambiguous == true are eligible for AI clarification.
 
 ### 11.2 AI Business Output
 
-AI 的职责：
+AI receives contextual information for one ambiguous dimension and returns structured business output. At minimum:
 
-```text
-ambiguous InitialDimensionResult
-        ↓
-contextual clarification interaction
-        ↓
-structured business output
-```
-
-当一次 clarification 已经形成候选业务结论时，structured output 至少包含：
-
-```text
+~~~text
 dimension
 resolution
 suggestedPole?
 confidence
-```
+~~~
 
-其中：
+Optional business-facing evidence or a short reasoningSummary may be retained. The summary is for product explanation/audit and must not depend on storing private chain-of-thought.
 
-```text
-resolution = RESOLVED | UNCLEAR
-
-RESOLVED -> suggestedPole must be non-null
-UNCLEAR  -> suggestedPole must be null
-```
-
-可选业务内容：
-
-```text
-reasoningSummary
-evidence
-```
-
-`reasoningSummary` 应是面向 audit / product explanation 的简短摘要，不应依赖或保存模型私有 chain-of-thought。
-
-AI structured output **不负责报告技术执行状态**。例如 timeout、provider error、malformed response 等不应由模型返回：
-
-```text
-FAILED
-```
-
-这些属于 Backend / AI Integration 的 technical execution outcome。
+Technical execution outcomes such as timeout, provider error, or malformed response are not model-reported business states. They belong to the Backend / AI Integration execution boundary.
 
 ### 11.3 DimensionClarification Lifecycle vs AI Output
 
-`DimensionClarification` Entity 的 lifecycle 与 AI structured output 是两个不同概念。
+DimensionClarification lifecycle:
 
-Domain lifecycle：
-
-```text
+~~~text
 PENDING
 IN_PROGRESS
 CLARIFIED
 SKIPPED
 FAILED_RETRYABLE
-```
+~~~
 
-典型映射：
+Typical mapping:
 
-```text
-AI resolution = RESOLVED
-→ accepted ClarificationResult exists
-→ DimensionClarification = CLARIFIED
+~~~text
+AI RESOLVED
+-> accepted ClarificationResult
+-> DimensionClarification = CLARIFIED
 
-AI resolution = UNCLEAR
-→ accepted ClarificationResult exists with `suggestedPole = null`
-→ DimensionClarification = CLARIFIED
-→ FinalizationPolicy decides fallback / tie-break path
+AI UNCLEAR
+-> accepted ClarificationResult with suggestedPole = null
+-> DimensionClarification = CLARIFIED
+-> FinalizationPolicy selects fallback/tie-break behavior
 
 technical provider failure
-→ no accepted ClarificationResult
-→ DimensionClarification = FAILED_RETRYABLE
-```
+-> no accepted ClarificationResult
+-> DimensionClarification = FAILED_RETRYABLE
+~~~
 
-技术失败不能被伪装成一个正常的 `UNCLEAR` 业务结论。
+A technical failure must never be disguised as a valid UNCLEAR business outcome.
 
 ### 11.4 AI Provenance
 
-模型标识、prompt / clarification policy revision 等 provenance 不由 LLM 自己“声明”。
+Model identifier and clarification-policy revision are captured by Backend / AI Integration from the real execution context, not trusted as self-declared model output.
 
-Backend / AI Integration 必须从实际执行上下文记录：
-
-```text
+~~~text
 AIProvenance
 ├── modelIdentifier
 └── clarificationPolicyRevision
-```
+~~~
 
-MVP `AIProvenance` 表示：
-
-> **最终产生并被业务接受的 `ClarificationResult` 的有效 AI execution provenance。**
-
-它不是：
-
-```text
-all LLM calls
-all retry attempts
-all models used in every intermediate turn
-raw provider request / response history
-```
-
-如果未来需要完整 AI execution audit，再考虑引入 `ClarificationAttempt[]`；MVP 不建立该模型。
+For MVP, AIProvenance describes the accepted execution that produced the accepted ClarificationResult. It is not a complete log of every call, retry, intermediate model, or raw provider request/response. A future ClarificationAttempt[] model may be introduced only if full execution audit becomes a concrete requirement.
 
 ### 11.5 Conversation Runtime State
 
-完整 AI conversation transcript 不是 authoritative Assessment history。
+The complete AI conversation transcript is not authoritative Assessment history. Active clarification may use temporary/ephemeral multi-turn context, but MVP does not guarantee exact-message resume after runtime loss.
 
-Active clarification 可以依赖 temporary / ephemeral runtime context，以支持多轮交互，但 MVP 不保证：
+If temporary context is lost:
 
-```text
-browser/server restart
-→ resume from exact previous AI message
-```
-
-如果 temporary context 丢失：
-
-- 已持久化的 `AssessmentSession` 不得损坏；
-- `InitialAssessmentResult` 不得变化；
-- 当前 dimension 可以重新开始 clarification；
-- 最终仅长期保存 accepted `ClarificationResult`、必要的 `AIProvenance` 和可选 summary。
+- the persisted AssessmentSession remains valid;
+- InitialAssessmentResult remains unchanged;
+- the current dimension may restart clarification;
+- only the accepted ClarificationResult, required AIProvenance, and optional short summary become durable business history.
 
 ### 11.6 AI Boundary
 
-AI 不允许直接输出并决定：
+AI may not directly decide finalType and may not modify InitialAssessmentResult.
 
-```text
-finalType = INFJ
-```
+The responsibility chain remains:
 
-也不允许直接修改：
-
-```text
-InitialAssessmentResult
-```
-
-正确的职责链是：
-
-```text
+~~~text
 Questionnaire Scoring
         ↓
 InitialAssessmentResult
@@ -632,177 +378,75 @@ FinalizationPolicy
 FinalDimensionConclusion
         ↓
 PersonalityTypeComposer
-```
+~~~
 
 ---
 
 ## 12. FinalizationPolicy
 
-`FinalizationPolicy` 是 deterministic business logic。
+FinalizationPolicy is deterministic business logic over persisted/accepted facts.
 
-它消费已经持久化或已被业务接受的 facts，而不是重新让 AI 决定最终类型。
+### 12.1 Non-Ambiguous
 
-### 12.1 Case A — Non-Ambiguous
+A non-ambiguous questionnaire preference becomes the final preference with source QUESTIONNAIRE. AI does not participate and cannot override it.
 
-```text
-Questionnaire = 67% I
-```
+### 12.2 Ambiguous + Clarification Agrees
 
-结果：
+When clarification confirms the questionnaire preference:
 
-```text
-Final = I
-source = QUESTIONNAIRE
-```
-
-AI 不参与，也无权 override。
-
-### 12.2 Case B — Ambiguous + Clarification Agrees
-
-```text
-Questionnaire = 54% I
-Clarification = I
-```
-
-结果：
-
-```text
-Final = I
+~~~text
 source = QUESTIONNAIRE_CONFIRMED_BY_CLARIFICATION
-```
+~~~
 
-### 12.3 Case C — Ambiguous + Clarification Flips
+### 12.3 Ambiguous + Clarification Flips
 
-```text
-Questionnaire = 54% I
-Clarification = E
-```
+An accepted clarification may flip an ambiguous questionnaire preference:
 
-允许：
-
-```text
-Final = E
+~~~text
 source = AI_CLARIFICATION
 overrodeBaseline = true
-```
+~~~
 
-但必须同时保留：
+Both questionnairePreference and finalPreference remain visible; the InitialDimensionResult is never overwritten.
 
-```text
-questionnairePreference = I
-finalPreference = E
-```
+### 12.4 UNCLEAR + Non-Zero Baseline
 
-AI clarification 不能覆盖原始 `InitialDimensionResult`。
+If clarification is UNCLEAR and the questionnaire is not an exact tie, FinalizationPolicy falls back deterministically to the questionnaire preference:
 
-### 12.4 Case D — Clarification Unclear, Non-Zero Baseline
-
-```text
-Questionnaire = 52% E
-Clarification = UNCLEAR
-```
-
-如果 questionnaire baseline 不是 exact tie，则允许 deterministic fallback：
-
-```text
-Final = E
+~~~text
 source = QUESTIONNAIRE_FALLBACK
-```
+~~~
 
-这表示 AI 没有提供足够证据改变 baseline，而不是 AI “决定了 E”。
+This means AI supplied insufficient evidence to change the baseline; it does not mean AI selected the fallback pole.
 
-### 12.5 Case E — Technical AI Failure
+### 12.5 Technical AI Failure
 
-如果 AI provider timeout、调用失败、structured output invalid 等技术问题发生：
+Provider timeout, call failure, or invalid structured output transitions the clarification to FAILED_RETRYABLE. Finalization does not proceed automatically. The user may Retry or explicitly Skip; only an explicit Skip allows FinalizationPolicy to continue with questionnaire/tie-break rules.
 
-```text
-DimensionClarification
-→ FAILED_RETRYABLE
-```
+~~~text
+technical failure != UNCLEAR business result
+~~~
 
-此时 **不得直接完成 Finalization**。
+### 12.6 Clarification Skipped / AI Declined
 
-用户可以：
+For a non-zero baseline, Skip/Decline uses QUESTIONNAIRE_FALLBACK.
 
-```text
-Retry Current Clarification
-```
+For an exact 50/50 tie, no questionnaire preference may be invented. A version-specific explicit tie-break is required.
 
-或显式：
+### 12.7 Exact Tie + UNCLEAR / SKIPPED
 
-```text
-Skip Current / Remaining Clarification
-```
+A fixed hidden winner such as “E always wins” is forbidden.
 
-只有用户选择 Skip 后，`FinalizationPolicy` 才根据 questionnaire baseline 或 exact-tie rule 继续。
+Behavior is determined by the Session-bound immutable DefinitionVersion:
 
-因此：
+- **1.0 legacy:** direct selection of one legal pole; source = USER_TIE_BREAK.
+- **1.1 / FinalizationPolicy v2:** one binary contextual forced-choice question per unresolved exact-tie dimension; source = TIE_BREAK_QUESTION.
 
-```text
-technical failure
-≠
-UNCLEAR business result
-```
+Both paths persist DimensionTieBreak and preserve the questionnaire raw score/evidence at 50/50. A RESOLVED clarification that already supplies a legal pole does not require tie-break. Technical failure alone does not trigger tie-break.
 
-### 12.6 Case F — Clarification Skipped / AI Declined
+The Frontend must not receive or display option-to-pole mappings. It may reorder presentation, but must submit stable option IDs rather than interpreting A/B display position.
 
-如果用户跳过某个 ambiguous dimension，或选择 `Skip Remaining Clarifications / Decline AI Clarification`：
-
-#### Non-zero questionnaire baseline
-
-```text
-Questionnaire = 52% E
-Clarification = SKIPPED
-```
-
-结果：
-
-```text
-Final = E
-source = QUESTIONNAIRE_FALLBACK
-```
-
-#### Exact tie
-
-```text
-Questionnaire = 50 / 50
-Clarification = SKIPPED
-```
-
-不能使用固定 pole，也不能伪造 questionnaire preference。
-
-必须进入：
-
-```text
-1.0: USER_TIE_BREAK_REQUIRED (direct pole)
-1.1: contextual tie-break question required (FinalizationPolicy v2)
-```
-
-### 12.7 Case G — Exact Tie + Clarification Unclear / Skipped
-
-```text
-Questionnaire = 50 / 50
-Clarification = UNCLEAR | SKIPPED
-```
-
-系统不得偷偷使用固定 tie-break，例如：
-
-```text
-E always wins
-```
-
-按 Session 绑定的 immutable DefinitionVersion 区分：
-
-- **1.0 legacy:** 保留直接选择合法 pole 的既有行为，`source = USER_TIE_BREAK`；1.0 不包含 contextual tie-break questions。
-- **1.1 / FinalizationPolicy v2:** 每个 unresolved exact-tie dimension 使用一道 binary forced-choice contextual question，没有 Neutral option。Backend 根据绑定版本中的稳定 `selectedOptionId -> PoleCode` 映射生成 `source = TIE_BREAK_QUESTION`。
-
-两种路径都持久保存 `DimensionTieBreak`，不改写 questionnaire raw score；问卷证据始终为 `50 / 50`。`RESOLVED` clarification 已提供合法 pole 时不需要 tie-break；technical failure 本身不会自动触发 tie-break。
-
-Frontend 不得接收或显示 option-to-pole mapping。可改变选项显示顺序，但必须提交稳定 option ID，不能以 A/B 显示位置解释结果。
-
-### 12.8 Accepted contextual questions — 1.1 only
-
-以下 instruction、prompt 与 option text 原样采用 accepted aligned English specification。映射表仅属于 Backend specification，不能序列化给 Frontend。
+### 12.8 Accepted Contextual Questions — DefinitionVersion 1.1
 
 Shared instruction:
 
@@ -864,7 +508,7 @@ Shared instruction:
 
 > I keep the structure relatively open at first, gather more information, and commit to details when they become necessary.
 
-稳定标识（A/B 只表示上述文档顺序）：
+The A/B labels above describe documentation order only. Stable identifiers and Backend-only resolution are:
 
 | Dimension | questionId | Option A optionId | Backend resolvedPole | Option B optionId | Backend resolvedPole |
 |---|---|---|---|---|---|
@@ -873,213 +517,92 @@ Shared instruction:
 | TF | TB-TF-1 | TB-TF-01 | T | TB-TF-02 | F |
 | JP | TB-JP-1 | TB-JP-01 | J | TB-JP-02 | P |
 
-### 12.9 Specification validation and persisted decision
+### 12.9 Specification Validation and Persisted Decision
 
-1.1 的 `AssessmentSpecification` conceptually adds `TieBreakQuestionDefinition[]`，每项包含 `questionId`、`dimension`、`instruction`、`prompt`、恰好两个 options；每个 option 包含 `optionId`、`text`、Backend-only `resolvedPole`。
+DefinitionVersion 1.1 adds TieBreakQuestionDefinition[] to AssessmentSpecification. Each definition contains questionId, dimension, instruction, prompt, and exactly two options; each option contains optionId, text, and Backend-only resolvedPole.
 
-验证要求：referenced dimension 存在；v2 每个 dimension 恰好一道题；question IDs 在 specification 中唯一；每题恰好两个 options；option IDs 在题内唯一；两个 options 分别对应该 dimension 的两个不同 poles；每个 resolved pole 都属于引用的 `DimensionDefinition`。
+Validation requires:
 
-保留 `DimensionTieBreak`，不引入 `TieBreakResponse`。概念字段为 `sessionId`、`dimension`、`questionId`、`selectedOptionId`、`resolvedPole`、`decidedAt`。1.0 的 question/option IDs 为 null，不伪造历史题目；1.1 必须保存真实 IDs。Backend 始终根据 Session 绑定的 immutable DefinitionVersion 验证 question/option/dimension 并解析 pole。
+- the referenced dimension exists;
+- FinalizationPolicy v2 has exactly one tie-break question per dimension;
+- question IDs are unique within the specification;
+- each question has exactly two options;
+- option IDs are unique within the question;
+- the two options resolve to the dimension’s two different legal poles.
 
+DimensionTieBreak remains the persisted business fact; no separate TieBreakResponse domain object is introduced. Conceptual fields are sessionId, dimension, questionId, selectedOptionId, resolvedPole, and decidedAt.
+
+For 1.0, questionId/selectedOptionId remain null because no contextual question existed. For 1.1, the real identifiers must be stored. Backend always validates and resolves the submitted option against the Session-bound immutable DefinitionVersion.
 
 ---
 
 ## 13. Final Type Composition
 
-只有四个 `FinalDimensionConclusion` 都已经形成后，才能生成最终 Personality Type。
+Only after all four FinalDimensionConclusion values exist may PersonalityTypeComposer combine EI, SN, TF, and JP into the final four-letter type.
 
-例如：
-
-```text
-EI = I
-SN = N
-TF = F
-JP = J
-```
-
-得到：
-
-```text
-FinalType = INFJ
-```
-
-`PersonalityTypeComposer` 只负责组合：
-
-```text
-compose(EI, SN, TF, JP)
-```
-
-它不调用 AI，也不重新解释原始回答。
-
-不允许出现：
-
-```text
-initial questionnaire outcome = ISTJ
-AI says "sounds more like INTJ"
-final = INTJ
-```
-
-四个 finalized dimensions 是 final type 的唯一 source of truth。
+PersonalityTypeComposer performs composition only. It does not call AI or reinterpret questionnaire answers.
 
 ---
 
 ## 14. Result Presentation
 
-结果页至少包含三层信息。
+The result page should expose at least three layers:
 
-### 14.1 Final Type
+1. final four-letter type;
+2. questionnaire evidence plus final per-dimension conclusion/source;
+3. non-clinical type description.
 
-例如：
+Questionnaire percentages always represent deterministic raw-score evidence. They are never “AI-adjusted percentages”.
 
-```text
-INFJ
-```
+If clarification flips a baseline, the UI must distinguish questionnaire evidence from the final categorical conclusion.
 
-### 14.2 Dimension Evidence and Final Conclusion
-
-Questionnaire percentage 始终表示：
-
-> **Questionnaire evidence derived from deterministic raw score.**
-
-它不是 AI 调整后的“新百分比”。
-
-例如：
-
-```text
-Questionnaire evidence:
-Introversion 54%
-Extraversion 46%
-
-Final preference:
-E
-Decision source:
-AI_CLARIFICATION
-```
-
-如果 AI clarification 翻转了 baseline，Frontend 必须把：
-
-```text
-questionnaire evidence
-```
-
-和：
-
-```text
-final categorical conclusion
-```
-
-明确区分。
-
-禁止生成：
-
-```text
-AI-adjusted percentage
-```
-
-对于边界附近的 questionnaire evidence，文案应使用中性的 preference language，例如：
-
-```text
-slight preference
-```
-
-而不是过度确定的人格判断。
-
-### 14.3 Type Description
-
-描述文案推荐使用：
-
-```text
-You may tend to...
-You are likely to prefer...
-In some situations...
-```
-
-避免：
-
-```text
-You always...
-People of this type are...
-You are naturally...
-```
-
-产品定位是 self-reflection / personality preference exploration，不是心理诊断。
-
-建议结果页包含类似 disclaimer：
-
-> This result describes preference patterns reflected in your answers. It is intended for self-reflection and is not a clinical or professional psychological assessment.
+Descriptions should use preference language such as “may tend to” or “is likely to prefer” rather than absolute personality claims. The product is for self-reflection and not clinical/professional psychological assessment.
 
 ---
 
 ## 15. Assessment Versioning
 
-人格测试未来可能调整：
-
-- question wording
-- question set
-- keyed pole
-- ambiguity threshold
-- scoring rules
-- clarification policy / prompt
-- finalization rules
-
-历史测试结果必须绑定具体的 `AssessmentDefinitionVersion`。
+Semantic changes may affect question wording/set, keyed poles, ambiguity/scoring policy, clarification policy, or finalization policy. Historical Sessions must remain bound to their exact AssessmentDefinitionVersion.
 
 ### 15.1 Authoritative Version Snapshot
 
-已发布 legacy specification identity 是（immutable，使用原有 direct-pole exact-tie 语义）：
+DefinitionVersion 1.0 is the immutable legacy specification with direct-pole exact-tie semantics.
 
-```text
-AssessmentDefinitionVersion = "1.0"
-```
+DefinitionVersion 1.1 reuses the same 48 questionnaire questions, wording, order, keyed poles, ScoringPolicy, AmbiguityPolicy, and clarification-policy revision. It changes FinalizationPolicy to revision v2 and adds the accepted TieBreakQuestionDefinition[] from sections 12.8–12.9.
 
-它是完整 specification snapshot 的 source of truth，并包含：
+The expand-then-promote rollout is complete:
 
-```text
-QuestionnaireDefinition
-DimensionDefinition[]
-ScoringPolicy
-AmbiguityPolicy
-FinalizationPolicy
-expected/default ClarificationPolicy revision
-```
+~~~text
+compatibility release:
+1.0 AVAILABLE
+1.1 DRAFT
 
-`ScoringPolicy`、`AmbiguityPolicy`、`FinalizationPolicy` 在 Domain Model 中是 DefinitionVersion 内部的 VO，不建立独立的业务 version lifecycle。
+Flyway V8 activation:
+1.0 RETIRED
+1.1 AVAILABLE
+~~~
 
-内部 revision 只作为 snapshot metadata，不能成为与 `AssessmentDefinitionVersion` 竞争的独立 source of truth。
+New Sessions now bind 1.1. Existing 1.0 Sessions never auto-upgrade and remain executable with their original semantics. See ADR-0018.
 
-1.1 是 next specification，恰好复用 Appendix A 的同一份 48 道 questionnaire questions，不修改其 wording、顺序或 keyed poles；`ScoringPolicy`、`AmbiguityPolicy` 和 clarification behavior/revision 均保持不变。`FinalizationPolicy` 改为 revision `v2`，snapshot 新增 §12.8–12.9 的 `TieBreakQuestionDefinition[]`。
-
-实现和 migration 发布时，1.0 才转为 `RETIRED`，1.1 成为唯一 `AVAILABLE` 版本。已有 1.0 Sessions 永不自动升级，退休后仍须能按旧语义完成。此文档变更不表示 1.1 已实现或已部署。详见 [ADR-0018](adr/ADR-0018-contextual-tie-break-definition-version.md)。
+Internal policy revisions are metadata inside the DefinitionVersion snapshot; they are not independent competing version lifecycles.
 
 ### 15.2 Clarification Policy Provenance
 
-由于 AI clarification 的实际执行可能受 runtime provider / policy 变化影响：
-
-- `AssessmentDefinitionVersion` 可以绑定 expected/default `ClarificationPolicy` revision；
-- 每个实际完成的 `DimensionClarification` 必须记录实际使用的 `AIProvenance`；
-- 历史解释以 DefinitionVersion specification + actual clarification provenance 共同完成。
+AssessmentDefinitionVersion may bind the expected/default ClarificationPolicy revision, while each accepted DimensionClarification records the actual AIProvenance used at runtime. Historical explanation uses both the immutable specification and actual accepted-run provenance.
 
 ### 15.3 Immutability and Traceability
 
-一旦某个 `AssessmentDefinitionVersion` 对用户 executable / available：
+Once a DefinitionVersion is executable/available to users, its specification is immutable. Semantic changes require a new DefinitionVersion.
 
-> **其 specification 不得原地修改。**
-
-影响业务语义的变化必须创建新的 `AssessmentDefinitionVersion`。
-
-历史 Assessment 需要具备：
-
-> **traceability and explainability, with reproducibility for deterministic assessment components.**
-
-LLM clarification 不保证在未来重新执行时得到完全相同的输出，因此不宣称 strict end-to-end reproducibility。
+Historical assessment behavior targets traceability and explainability, with reproducibility for deterministic components. LLM output is not claimed to be strictly reproducible across future executions.
 
 ---
 
 ## 16. Persistence / Audit Requirements
 
-为了提供足够的 assessment traceability，至少应能够追踪：
+At minimum, retained assessment history must preserve:
 
-```text
+~~~text
 AssessmentSession
   ├─ AssessmentDefinitionVersion
   ├─ QuestionnaireResponse / answers
@@ -1088,45 +611,30 @@ AssessmentSession
   ├─ DimensionClarification[]
   │    ├─ ClarificationResult (when accepted)
   │    └─ AIProvenance
-  ├─ User tie-break fact (when required)
+  ├─ DimensionTieBreak (when required)
   └─ FinalAssessmentResult
        └─ FinalDimensionConclusion[]
-```
+~~~
 
-关键要求：
+Requirements:
 
-1. 在 retained Assessment record 的生命周期内，submitted answers 必须保留且不能被后续 AI 或新版本规则覆盖；
-2. `InitialAssessmentResult` 必须保留，并保持 immutable；
-3. AI clarification 不覆盖 baseline evidence；
-4. accepted `ClarificationResult` 与必要 `AIProvenance` 必须保存；
-5. technical retry history / raw provider request-response / complete conversation transcript 不属于 MVP core domain persistence requirement；
-6. `FinalAssessmentResult` 必须记录每个 dimension 的 decision source；
-7. exact tie 的 `DimensionTieBreak` 必须持久表达：1.0 保留 direct pole / `USER_TIE_BREAK`，1.1 保存真实 question/option IDs、resolved pole / `TIE_BREAK_QUESTION`；
-8. 历史 assessment 结果不能因为新版本规则被自动重算覆盖；
-9. 删除历史 Assessment 时，是否 hard delete / soft delete 由统一 deletion policy 决定；immutability 约束修改，不意味着永远不可删除。
-
-具体 DB schema 在独立 database/backend detailed design 中定义，本文件只定义 domain requirement。
+1. submitted answers remain available for the retained Session lifecycle and are never overwritten by AI/new rules;
+2. InitialAssessmentResult is retained and immutable;
+3. clarification never overwrites baseline evidence;
+4. accepted ClarificationResult and required AIProvenance are durable;
+5. raw provider retries/transcripts are not MVP core-domain persistence;
+6. FinalAssessmentResult retains per-dimension decision source;
+7. 1.0 tie-break persists direct-pole USER_TIE_BREAK; 1.1 persists real question/option identifiers plus TIE_BREAK_QUESTION;
+8. historical results are never silently recomputed under later DefinitionVersions;
+9. deletion follows the project-wide historical Assessment deletion policy; immutability means “not mutated”, not “never deletable”.
 
 ---
 
 ## 17. Question Content Policy
 
-MVP 使用：
+The MVP uses original questions only. It does not copy official MBTI instrument items, 16Personalities questions, commercial assessment banks, or third-party questions without clear reuse rights. Simple translation of protected questions is not treated as original content.
 
-```text
-Original Questions Only
-```
-
-不直接复制：
-
-- official MBTI instrument items
-- 16Personalities questions
-- commercial personality assessment question banks
-- 未明确允许复用的第三方测试题目
-
-也不通过简单翻译已有题目来当作原创题。
-
-可以参考公开的人格理论和 questionnaire design methodology，但最终 wording 应由本项目自行设计。
+Public personality theory and questionnaire-design methodology may inform the work, but final wording must be independently authored for this project.
 
 ---
 
@@ -1134,16 +642,7 @@ Original Questions Only
 
 ### 18.1 MBTI
 
-`Myers-Briggs Type Indicator`、`Myers-Briggs`、`MBTI` 等名称属于相关权利人的 trademarks / registered trademarks。
-
-官方 Myers & Briggs Foundation 说明，MBTI instrument 不能在未经书面许可的情况下复制，其 instrument items 的 reprint / modification / adaptation / translation 需要许可。
-
-因此本项目：
-
-- 不宣称自己是官方 MBTI assessment；
-- 不使用 `MBTI Test` 等名称推广本产品；
-- 不复制官方 instrument items；
-- 如在 documentation 中提及 MBTI，仅用于背景说明和技术/产品边界说明。
+Myers-Briggs Type Indicator, Myers-Briggs, and MBTI are trademarks/registered trademarks of their respective rights holders. The project does not claim to be an official MBTI assessment, market itself as an MBTI Test, or copy official instrument items. References to MBTI in documentation are background/context only.
 
 Official reference:
 
@@ -1151,13 +650,7 @@ Official reference:
 
 ### 18.2 16Personalities
 
-16Personalities 的公开资料将其体系描述为 `16Personalities / NERIS Type Explorer® framework`，相关网站内容和产品材料受其 terms / intellectual-property rules 约束。
-
-因此本项目：
-
-- 不复制 16Personalities question wording；
-- 不复制其 type profile 文案或 nickname；
-- 不将本项目包装为 16Personalities 产品或兼容版本。
+The project does not copy 16Personalities question wording, type-profile copy, or nicknames and is not presented as a 16Personalities product or compatible implementation.
 
 Official references:
 
@@ -1166,16 +659,14 @@ Official references:
 
 ### 18.3 General Copyright Principle
 
-Copyright 一般保护具体 expression，而不是 idea、procedure、method、system 本身。
+Copyright generally protects concrete expression rather than ideas, procedures, methods, or systems. The project may independently implement a four-dimension scoring/assessment approach while avoiding copying protected question or explanatory wording.
 
-这意味着我们可以独立实现自己的四维 scoring / assessment approach，但不应因此复制第三方受保护的具体题目或说明文案。
-
-Reference:
+References:
 
 - https://www.copyright.gov/what-is-copyright/
 - https://www.copyright.gov/help/faq/faq-protect.html
 
-> 本节用于定义项目实现边界，不构成法律意见。若未来将项目商业化，应进行单独的 trademark / licensing review。
+This section defines implementation boundaries and is not legal advice. Commercialization would require a separate trademark/licensing review.
 
 ---
 
@@ -1183,189 +674,72 @@ Reference:
 
 ### In Scope
 
-- 48 original questions
-- 12 questions per dimension
-- 5-point Likert scale
-- balanced keying
-- deterministic scoring
-- raw-score-based ambiguity detection
-- AI clarification for ambiguous dimensions
-- deterministic FinalizationPolicy
-- final type composition
-- result page
-- result history
-- assessment versioning
-- automated tests for scoring / finalization
+- 48 original questions;
+- 12 questions per dimension;
+- five-point Likert scale;
+- balanced keying;
+- deterministic scoring;
+- raw-score ambiguity detection;
+- AI clarification for ambiguous dimensions;
+- deterministic FinalizationPolicy;
+- final type composition;
+- result/history presentation;
+- assessment versioning;
+- automated scoring/finalization tests.
 
 ### Out of Scope
 
-以下不属于 MVP：
-
-- formal psychometric validation
-- large-scale norming
-- Cronbach's alpha optimization
-- exploratory / confirmatory factor analysis
-- Item Response Theory (IRT)
-- demographic norm calibration
-- clinical interpretation
-- hiring / employment assessment
-- professional psychological diagnosis
-- sophisticated Anti-Gaming system
-- adaptive item selection
+- formal psychometric validation;
+- large-scale norming;
+- Cronbach’s alpha optimization;
+- exploratory/confirmatory factor analysis;
+- Item Response Theory;
+- demographic norm calibration;
+- clinical interpretation or professional diagnosis;
+- hiring/employment assessment;
+- sophisticated anti-gaming;
+- adaptive item selection.
 
 ---
 
 ## 20. Future Improvement — Assessment Quality
 
-未来有额外时间时，可以逐题 review construct validity，重点检查：
+Future item-quality work may review construct validity, social-desirability bias, wording bias, cultural bias, and whether questions within one dimension are overly repetitive. With sufficient lawful anonymous data, reliability/factor structure could also be studied.
 
-- EI item 是否实际测到 sociability / social anxiety；
-- SN item 是否混入 openness；
-- TF item 是否主要测 empathy / agreeableness；
-- JP item 是否混入 conscientiousness；
-- 是否存在明显 social desirability bias；
-- 是否存在 wording bias；
-- 是否存在 cultural bias；
-- 同一 dimension 的 items 是否过度重复。
-
-如果有足够真实、匿名且合规的数据，还可以进一步研究 reliability / factor structure。
+These improvements are not blockers for the engineering MVP.
 
 ---
 
 ## 21. Future Improvement — Anti-Gaming
 
-未来的重要目标之一：
+A future goal is to make it difficult to deliberately force a target type even when the user understands conventional personality-test patterns.
 
-> 即使用户熟悉传统 personality test，也不应该能够非常容易地通过“选择看起来像目标人格的答案”指定最终类型。
+Potential techniques include:
 
-例如用户希望故意得到 `INFJ` 时，不应让每一道题都明显暴露：
+- indirect situational items;
+- contextual questions across work/learning/social/decision/planning/stress contexts;
+- cross-checking the same construct with different wording/context;
+- larger item pools with per-assessment selection;
+- question/presentation randomization;
+- consistency/confidence analysis;
+- contextual AI clarification.
 
-```text
-this answer → I
-this answer → N
-this answer → F
-this answer → J
-```
+The design principle is:
 
-### 21.1 Design Direction
+~~~text
+Question meaning     = clear to the user
+Scoring implication  != obvious to the user
+~~~
 
-未来可以探索：
-
-#### Indirect Items
-
-避免直接询问人格标签明显对应的行为，改为具体情境中的 preference。
-
-#### Contextual Questions
-
-在不同 context 中测量同一个 construct，例如：
-
-- work
-- learning
-- social interaction
-- decision making
-- planning
-- stress
-
-#### Cross-Checking
-
-使用不同 wording / context 对同一 underlying preference 进行交叉验证。
-
-如果用户为了目标 type 刻意作答但相关回答产生明显 contradiction，可以降低该 dimension 的 confidence。
-
-#### Larger Item Pool
-
-从：
-
-```text
-48 fixed questions
-```
-
-演进到：
-
-```text
-80–120 candidate items
-        ↓
-select 48 per assessment
-```
-
-这样既降低固定答案模板的价值，也为后续 item analysis 提供空间。
-
-#### Question Randomization
-
-未来可以随机：
-
-```text
-question order
-presentation direction
-```
-
-但必须保持 stable question ID 和 scoring definition。
-
-#### Contextual AI Clarification
-
-AI clarification 不直接问：
-
-```text
-Are you more introverted or extroverted?
-```
-
-而使用具体场景追问，从而降低目标 pole 的明显程度。
-
-### 21.2 Anti-Gaming Principle
-
-目标是：
-
-```text
-Question meaning
-    = clear to the user
-
-Scoring implication
-    ≠ obvious to the user
-```
-
-而不是：
-
-```text
-Question meaning
-    = intentionally confusing
-```
-
-Anti-Gaming 不应以降低可理解性、制造双重否定或欺骗用户为代价。
+Anti-gaming must not rely on confusing language, double negatives, or deception. Stable question IDs and scoring definitions remain required.
 
 ---
 
 ## 22. Engineering Value of Future Anti-Gaming
 
-Anti-Gaming 也可以成为后续 Portfolio 的技术扩展点：
+Possible future concepts include QuestionBank, QuestionSelectionStrategy, ConsistencyScore, DimensionConfidence, and ClarificationTrigger.
 
-```text
-Question Bank
-        ↓
-Assessment Version
-        ↓
-Question Selection Strategy
-        ↓
-Response Analysis
-        ↓
-Consistency / Confidence
-        ↓
-AI Clarification
-        ↓
-Deterministic Finalization
-        ↓
-Final Type
-```
-
-可能引入的 domain concepts：
-
-- `QuestionBank`
-- `QuestionSelectionStrategy`
-- `ConsistencyScore`
-- `DimensionConfidence`
-- `AssessmentVersion`
-- `ClarificationTrigger`
-
-这些均为 Future Enhancement，不影响当前 MVP。
+These are future enhancements and do not change the current MVP.
 
 ---
 
@@ -1373,68 +747,66 @@ Final Type
 
 ### Questionnaire
 
-- [ ] 一个完整 assessment 恰好包含 48 道题。
-- [ ] EI / SN / TF / JP 各 12 道题。
-- [ ] 每维包含 6 个 Pole A keyed items 和 6 个 Pole B keyed items。
-- [ ] 每题只接受 `1..5`。
-- [ ] 未完成全部必答题前不能完成 questionnaire。
+- [x] One complete assessment contains exactly 48 questions.
+- [x] EI / SN / TF / JP each contain 12 questions.
+- [x] Each dimension contains six Pole A-keyed and six Pole B-keyed items.
+- [x] Each question accepts only 1..5.
+- [x] Questionnaire completion requires all mandatory answers.
 
 ### Scoring
 
-- [ ] 每题转换后的 score 只能为 `-2..+2`。
-- [ ] 每维 raw score 只能位于 `-24..+24`。
-- [ ] 相同 answers 必须始终得到相同 `InitialAssessmentResult`。
-- [ ] `abs(rawScore) <= 2` 时 `ambiguous = true`。
-- [ ] percentage rounding 不影响 ambiguity decision。
+- [x] Each transformed item score is -2..+2.
+- [x] Each dimension raw score is -24..+24.
+- [x] Identical answers produce the same InitialAssessmentResult.
+- [x] abs(rawScore) <= 2 sets ambiguous = true.
+- [x] Percentage rounding does not affect ambiguity.
 
-### AI Clarification
+### Clarification Boundary
 
-- [ ] Non-ambiguous dimension 不允许进入 clarification。
-- [ ] AI structured business output 不直接包含 technical failure state。
-- [ ] `RESOLVED` output 可以形成 accepted `ClarificationResult`。
-- [ ] `UNCLEAR` 形成 accepted `ClarificationResult`，但 `suggestedPole = null`，不得伪装成 resolved pole。
-- [ ] Technical AI failure 进入 `FAILED_RETRYABLE`，不会直接 finalize。
-- [ ] AI 不能覆盖 `InitialAssessmentResult`。
-- [ ] `AIProvenance` 由 Backend / AI Integration 从实际执行上下文记录。
-- [ ] Intermediate AI turn output 不等于最终 `ClarificationResult`。
-- [ ] MVP 不要求持久化完整 AI conversation transcript。
+- [x] Non-ambiguous dimensions cannot enter clarification.
+- [x] AI structured business output does not encode technical failure state.
+- [x] RESOLVED/UNCLEAR domain result semantics are defined.
+- [x] Technical failure maps to FAILED_RETRYABLE rather than finalization.
+- [x] AI cannot overwrite InitialAssessmentResult.
+- [x] AIProvenance is Backend-owned execution context.
+- [x] Intermediate turns are not durable ClarificationResult values.
+- [x] Complete AI transcript persistence is not required by MVP.
+- [ ] Provider-backed LLM execution, parsing, prompt/runtime context, and safety/privacy review are Step 8 work.
 
 ### Finalization
 
-- [ ] Non-ambiguous dimension 使用 questionnaire baseline。
-- [ ] Ambiguous dimension 可以被 accepted clarification 确认或翻转。
-- [ ] Flip 时 baseline 与 final preference 同时保留。
-- [ ] `UNCLEAR` + non-zero questionnaire baseline 使用 deterministic questionnaire fallback。
-- [ ] Technical AI failure 不自动转换为 questionnaire fallback；用户需 Retry 或显式 Skip。
-- [ ] Skip / Decline AI + non-zero baseline 使用 questionnaire fallback。
-- [ ] Exact tie + `UNCLEAR` / `SKIPPED` 进入 explicit user tie-break。
-- [ ] `DimensionTieBreak` 被持久保存：1.0 source 为 `USER_TIE_BREAK`，1.1 source 为 `TIE_BREAK_QUESTION`。
-- [ ] 1.1 每维恰好一道 contextual question；文案与 §12.8 完全一致，满足 §12.9 所有 validation。
-- [ ] Frontend 不接收或显示 option-to-pole mappings；乱序显示不改变 Backend 按稳定 ID 的解析。
-- [ ] 1.0 retirement 后现有 Sessions 仍可完成，无自动升级或伪造 question/option IDs。
-- [ ] Final type 只能由四个 `FinalDimensionConclusion` 组合。
+- [x] Non-ambiguous dimensions use questionnaire baseline.
+- [x] Accepted clarification may confirm or flip an ambiguous baseline.
+- [x] Baseline and final preference remain visible when clarification flips.
+- [x] UNCLEAR + non-zero baseline uses deterministic questionnaire fallback.
+- [x] Technical failure requires Retry or explicit Skip.
+- [x] Skip/Decline + non-zero baseline uses questionnaire fallback.
+- [x] Exact tie + UNCLEAR/SKIPPED requires explicit tie-break.
+- [x] DimensionTieBreak persists 1.0 USER_TIE_BREAK or 1.1 TIE_BREAK_QUESTION provenance.
+- [x] DefinitionVersion 1.1 has exactly one accepted contextual tie-break question per dimension.
+- [x] Frontend never receives option-to-pole mappings.
+- [x] Retired 1.0 Sessions remain executable without auto-upgrade.
+- [x] Final type is composed only from four FinalDimensionConclusion values.
 
-### Result Presentation
+### Result Presentation / Versioning / History
 
-- [ ] Questionnaire percentage 始终来自 deterministic raw score。
-- [ ] AI clarification 不生成或修改 percentage。
-- [ ] 当 final preference 与 questionnaire baseline 不同时，UI 明确区分 questionnaire evidence 与 final categorical conclusion。
-
-### Versioning / History
-
-- [ ] 每次 AssessmentSession 绑定具体 `AssessmentDefinitionVersion`。
-- [ ] executable / available DefinitionVersion 不允许原地修改。
-- [ ] 历史 answers、InitialResult、ClarificationResult、FinalResult 不被未来版本覆盖。
-- [ ] deterministic assessment components 可以基于 retained specification 重现；LLM clarification 只要求 traceable / explainable，不要求 strict reproducibility。
-- [ ] 用户可以查看历史完成的测试结果。
-- [ ] 删除测试历史时，按项目统一 delete policy 处理该 Assessment 及其 Session-dependent persisted records。
+- [x] Questionnaire percentage always comes from deterministic raw score.
+- [x] AI does not generate adjusted percentages.
+- [x] UI distinguishes evidence from final categorical conclusion.
+- [x] Every AssessmentSession binds an exact AssessmentDefinitionVersion.
+- [x] Executable/available DefinitionVersions are immutable.
+- [x] Historical evidence/results are not overwritten by later versions.
+- [x] DefinitionVersion 1.1 activation is complete for new Sessions.
+- [x] Users can view completed Assessment history.
+- [ ] Provider-backed LLM interaction remains the next product milestone.
+- [ ] Historical deletion orchestration remains blocked on the Group sharing boundary.
 
 ---
 
 # Appendix A — MVP Question Bank v1.0 (unchanged and reused by DefinitionVersion 1.1)
 
-> 当前题库用于实现 MVP。它满足工程需求，但没有经过专业 psychometric validation。  
-> 后续允许通过新的 `assessmentVersion` 修改 wording 或替换 items。
+> This question bank is the accepted MVP baseline. It satisfies the engineering requirements but has not undergone professional psychometric validation.  
+> Future wording/item changes require a new AssessmentDefinitionVersion rather than in-place mutation.
 
 | # | Dimension | Keyed Pole | Statement |
 |---:|---|---|---|
@@ -1491,46 +863,38 @@ Final Type
 
 # Appendix B — Final MVP Decisions
 
-1. 使用 48 道原创题。
-2. 每个 dimension 12 道题。
-3. 使用 5-point Likert scale。
-4. Q1 属于 EI；四个 dimensions 交错出现。
-5. 每维采用 6 + 6 balanced keying。
-6. Backend 使用 centered raw scoring。
-7. 每维 raw score 范围为 `-24..+24`。
-8. `abs(rawScore) <= 2` 定义为 ambiguous。
-9. 只有 ambiguous dimensions 允许进入 AI clarification。
-10. `InitialAssessmentResult` 是 deterministic、immutable baseline evidence。
-11. AI 只提供 bounded structured clarification business output，不直接决定 final type。
-12. AI structured business output 使用 `RESOLVED | UNCLEAR`；technical failure 由 Backend 映射为 `FAILED_RETRYABLE`。
-13. Intermediate AI turns 不直接形成持久化 `ClarificationResult`。
-14. `AIProvenance` 由 Backend / AI Integration 记录，表示 accepted ClarificationResult 的有效执行 provenance。
-15. `FinalizationPolicy` 是 deterministic business logic。
-16. AI clarification 可以在 ambiguous case 中翻转 questionnaire preference。
-17. 原始 `InitialAssessmentResult` 永远保留，不被 AI 覆盖。
-18. Technical AI failure 不直接 finalize；用户必须 Retry 或显式 Skip。
-19. Skip / Decline AI 时，non-zero baseline 使用 questionnaire fallback。
-20. Exact tie 且 clarification `UNCLEAR` / `SKIPPED` 时，由用户进行 explicit tie-break。
-21. `DimensionTieBreak` 作为持久业务事实参与 `FinalDimensionConclusion`：1.0 direct pole / `USER_TIE_BREAK`；1.1 contextual option / `TIE_BREAK_QUESTION`。
-22. 四个 `FinalDimensionConclusion` deterministic 地组成最终四字母 type。
-23. Questionnaire percentage 永远来自 deterministic raw score；AI 不生成“调整后百分比”。
-24. `AssessmentDefinitionVersion` 是 authoritative specification snapshot；内部 Policy 为 VO。
-25. executable / available DefinitionVersion 一旦对用户可用即 immutable。
-26. 历史解释强调 traceability / explainability；只有 deterministic components 要求 reproducibility。
-27. MVP 不持久化完整 AI conversation transcript 或完整 LLM retry history。
-28. MVP 不使用第三方测试题库。
-29. 产品不以 MBTI / 16Personalities 等第三方品牌命名。
-30. 当前 question accuracy optimization 不是 MVP blocker。
-31. Professional psychometric validation 不属于当前 scope。
-32. Advanced Anti-Gaming 作为 Future Improvement。
+1. The assessment uses 48 original questions, 12 per dimension.
+2. It uses a five-point Likert scale and 6+6 balanced keying per dimension.
+3. Backend scoring uses centered deterministic raw scores in -24..+24.
+4. abs(rawScore) <= 2 defines an ambiguous dimension.
+5. Only ambiguous dimensions may enter clarification.
+6. InitialAssessmentResult is deterministic, immutable baseline evidence.
+7. AI produces bounded structured clarification output and never directly decides final type.
+8. AI business resolution is RESOLVED or UNCLEAR; technical failure maps to FAILED_RETRYABLE outside model output.
+9. Intermediate AI turns do not directly become durable ClarificationResult values.
+10. AIProvenance is recorded by Backend / AI Integration for the accepted execution.
+11. FinalizationPolicy is deterministic business logic.
+12. Accepted clarification may flip an ambiguous questionnaire preference while preserving the baseline.
+13. Technical failure never directly finalizes; the user must Retry or explicitly Skip.
+14. Skip/Decline with a non-zero baseline uses questionnaire fallback.
+15. Exact tie with UNCLEAR/SKIPPED requires explicit version-aware tie-break.
+16. DimensionTieBreak is a durable business fact: 1.0 direct pole / USER_TIE_BREAK; 1.1 contextual option / TIE_BREAK_QUESTION.
+17. Four FinalDimensionConclusion values deterministically compose the final type.
+18. Questionnaire percentages always come from deterministic raw score; AI never creates adjusted percentages.
+19. AssessmentDefinitionVersion is the authoritative immutable specification snapshot.
+20. DefinitionVersion 1.1 is active for new Sessions; 1.0 is retired for new bindings but retained Sessions remain executable.
+21. Historical interpretation emphasizes traceability/explainability; deterministic components are reproducible.
+22. MVP does not persist complete AI transcripts or complete LLM retry history.
+23. MVP does not use third-party protected question banks or third-party product branding.
+24. Professional psychometric validation and advanced anti-gaming remain future work.
 
 ---
 
 ## 24. Design Summary
 
-当前方案可以概括为：
+The current design can be summarized as:
 
-```text
+~~~text
 Original Questionnaire
         +
 Deterministic Scoring
@@ -1544,25 +908,8 @@ Deterministic Finalization
 Assessment Versioning
         +
 Traceable Decision History
-```
+~~~
 
-对于本 Portfolio Project，核心展示价值是：
+The main portfolio value is the combination of Domain Modeling, explicit business rules, AI boundary design, explainability, persistence, testing, versioning, and the Frontend/Backend contract.
 
-```text
-Domain Modeling
-Business Rules
-AI Boundary Design
-Explainability
-Persistence
-Testing
-Versioning
-Frontend / Backend Contract
-```
-
-因此 MVP 的原则是：
-
-> **测试内容做到合理、完整、可实现即可；系统设计、工程质量、可解释性和可测试性是当前主要目标。**
-
-未来有额外时间时，再继续提升：
-
-> **Assessment Quality + Anti-Gaming Capability**
+For the MVP, assessment content must be reasonable, complete, and implementable; system design, engineering quality, explainability, and testability are the primary goals. Assessment-quality and anti-gaming improvements remain future work.
