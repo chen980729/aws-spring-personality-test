@@ -24,7 +24,7 @@ flowchart LR
     CD --> OIDC["OIDC → STS"]
     OIDC --> BE["Build/push image<br/>ECR → ECS"]
     OIDC --> FE["Build/sync assets<br/>S3 → CloudFront"]
-    BE --> Smoke["Public smoke test"]
+    BE --> Smoke["Post-deployment<br/>public smoke test"]
     FE --> Smoke
 ```
 
@@ -140,22 +140,21 @@ The frontend and backend jobs can run in parallel.
 
 Because those jobs run in parallel, application releases must tolerate a short **mixed-version window**. A new frontend may be published before the new ECS deployment has fully drained old tasks, or the new Backend may become available before the new static bundle reaches every client.
 
-For DefinitionVersion 1.1 Tie-break rollout, this requirement is handled explicitly:
+DefinitionVersion 1.1 used an explicit expand-then-promote rollout so this mixed-version window remained safe:
 
 ```text
-new Frontend + old Backend task
-  -> retained 1.0 Session uses the pre-existing direct-pole path
-  -> no dependency on the new GET /tie-breaks/{dimensionCode}
+compatibility release
+  -> new Frontend + old Backend tasks remain safe for retained 1.0 Sessions
+  -> compatible Backend understands both 1.0 and 1.1 semantics
+  -> 1.1 remains DRAFT
 
-new Frontend + compatibility Backend
-  -> 1.0 still works
-  -> staged 1.1 can use contextual GET/PUT
-
-1.1 activation
-  -> remains a later step after compatible Backend + Frontend are deployed
+activation release
+  -> Flyway V8 retires 1.0 for new bindings
+  -> 1.1 becomes the sole AVAILABLE version
+  -> retained 1.0 Sessions still use their original direct-pole semantics
 ```
 
-This is preferred over relying on deployment timing between the two parallel jobs.
+This rollout has now completed in production. It demonstrates why release compatibility is preferred over relying on timing between the parallel frontend/backend deployment jobs.
 
 ## 8. Public smoke test
 
@@ -187,9 +186,9 @@ This path has already been validated end-to-end in production:
 
 A `workflow_run` event listens for successful CI completion on a `main` push.
 
-The additional repository variable `CD_ENABLED` acts as a production gate. It was deliberately kept disabled while the new CD pipeline was being proven.
+The additional repository variable `CD_ENABLED` acts as a production gate. It was deliberately kept disabled while the new CD pipeline was being proven, then enabled after manual validation.
 
-The automatic path is implemented but its final real-world validation is scheduled for the next feature update. This avoids creating a meaningless change solely to exercise deployment automation.
+The automatic path is now verified end-to-end with real `main` feature releases, including the DefinitionVersion 1.1 activation release: CI completed successfully, `workflow_run` triggered CD, backend and frontend deployments succeeded, and the public smoke job passed.
 
 ## 10. Why CI and CD are separate workflows
 
@@ -231,7 +230,6 @@ See ADR-0017.
 
 Possible next steps include:
 
-- verify and permanently enable the automatic CD path;
 - GitHub Environment approval for production;
 - artifact attestations / SBOM / image vulnerability policy;
 - browser E2E smoke test after deployment;
