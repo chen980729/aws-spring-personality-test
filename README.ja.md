@@ -212,19 +212,20 @@ flowchart LR
     FTest --> DockerCheck
 
     DockerCheck -->|"CI success"| Gate{"CD_ENABLED<br/>production gate"}
-    Manual["workflow_dispatch<br/>manual deploy"] --> CD["CD workflow"]
-    Gate -->|"enabled"| CD
+    Manual["workflow_dispatch<br/>all / backend / frontend"] --> Detect["Detect deployment targets"]
+    Gate -->|"enabled"| Detect
 
-    CD --> OIDC["GitHub OIDC<br/>temporary AWS credentials"]
-    OIDC --> BackendDeploy["Backend<br/>build → ECR → ECS revision"]
-    OIDC --> FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
+    Detect -->|"backend/**"| BackendDeploy["Backend<br/>build → ECR → ECS revision"]
+    Detect -->|"frontend/**"| FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
+    Detect -->|"docs / README only"| Skip["No production deployment"]
+
     BackendDeploy --> Smoke["Post-deployment<br/>public smoke test"]
     FrontendDeploy --> Smoke
 ```
 
 GitHub Actions には長期 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` を保存せず、OIDC + STS temporary credentials を利用します。Deploy role は ECR push、ECS deployment、frontend S3、CloudFront invalidation、必要最小限の `iam:PassRole` のみに制限しています。
 
-Manual CD と automatic CD の両方を end-to-end で検証済みです。Automatic path は `CD_ENABLED` gate の後ろで、`main` push の CI success 後にのみ実行されます。Backend rolling deployment、frontend publish、public smoke test まで成功しています。
+Manual CD と automatic CD の両方を end-to-end で検証済みです。Automatic path は `CD_ENABLED` gate の後ろで `main` push の CI success 後にのみ実行され、変更された application area だけを deploy します。docs / README のみの変更では production deployment を行いません。
 
 Terraform は infrastructure baseline を管理し、CD は backend image / ECS Task Definition revision / frontend artifact といった application release を管理します。
 

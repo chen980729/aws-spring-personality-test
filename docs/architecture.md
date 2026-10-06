@@ -100,12 +100,12 @@ flowchart LR
     FrontendCI --> DockerCI
 
     DockerCI -->|"CI success"| Gate{"CD_ENABLED<br/>production gate"}
-    Manual["workflow_dispatch<br/>manual deployment"] --> CD["GitHub Actions CD"]
-    Gate -->|"enabled"| CD
+    Manual["workflow_dispatch<br/>all / backend / frontend"] --> Detect["Detect deployment targets"]
+    Gate -->|"enabled"| Detect
 
-    CD --> OIDC["GitHub OIDC<br/>STS temporary credentials"]
-    OIDC --> BackendCD["Backend<br/>build → ECR → ECS revision"]
-    OIDC --> FrontendCD["Frontend<br/>build → S3 → CloudFront invalidation"]
+    Detect -->|"backend/**"| BackendCD["Backend<br/>build → ECR → ECS revision"]
+    Detect -->|"frontend/**"| FrontendCD["Frontend<br/>build → S3 → CloudFront invalidation"]
+    Detect -->|"docs / README only"| Skip["No production deployment"]
     BackendCD --> Smoke["Post-deployment<br/>public smoke test"]
     FrontendCD --> Smoke
 ```
@@ -126,6 +126,8 @@ CI currently verifies:
 CD currently:
 
 - checks out the exact deployment commit;
+- detects whether Backend and/or Frontend deployment is required;
+- skips production deployment entirely for documentation-only changes;
 - builds the backend image for `linux/amd64`;
 - assumes an AWS role through GitHub OIDC;
 - pushes a unique immutable image tag to ECR;
@@ -137,7 +139,7 @@ CD currently:
 - creates and waits for a CloudFront invalidation;
 - verifies the public frontend root, SPA route and backend CSRF endpoint.
 
-Manual production CD and the automatic `CI success → CD` path are both verified end-to-end. The automatic path remains gated by the repository variable `CD_ENABLED` and runs only after successful CI on a `main` push; backend/frontend deployment and the post-deployment public smoke job have succeeded on real feature releases.
+Manual production CD and the automatic `CI success → CD` path are both verified end-to-end. The automatic path remains gated by `CD_ENABLED`, runs only after successful CI on a `main` push, and now performs path-aware target detection so documentation-only changes do not redeploy the application. Manual runs can explicitly choose `all`, `backend`, or `frontend`.
 
 ### 3.3 Deployment security
 

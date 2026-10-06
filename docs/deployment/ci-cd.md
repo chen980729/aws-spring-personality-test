@@ -18,12 +18,15 @@ flowchart LR
     Frontend --> Docker
 
     Docker -->|"success"| Gate{"CD_ENABLED"}
-    Manual["workflow_dispatch"] --> CD["CD workflow"]
-    Gate -->|"true"| CD
+    Manual["workflow_dispatch<br/>choose all/backend/frontend"] --> Detect["Detect deployment targets"]
+    Gate -->|"true"| Detect
 
-    CD --> OIDC["OIDC → STS"]
-    OIDC --> BE["Build/push image<br/>ECR → ECS"]
-    OIDC --> FE["Build/sync assets<br/>S3 → CloudFront"]
+    Detect -->|"backend changed"| BE["Build/push image<br/>ECR → ECS"]
+    Detect -->|"frontend changed"| FE["Build/sync assets<br/>S3 → CloudFront"]
+    Detect -->|"docs/README only"| Skip["No production deployment"]
+
+    BE --> OIDC["OIDC → STS"]
+    FE --> OIDC
     BE --> Smoke["Post-deployment<br/>public smoke test"]
     FE --> Smoke
 ```
@@ -94,7 +97,25 @@ Frontend:
 
 It cannot manage VPCs, modify RDS, read arbitrary secrets, create IAM roles, or administer the AWS account.
 
-## 6. Backend deployment
+## 6. Selective deployment
+
+Automatic CD first checks which application area changed in the merged `main` commit.
+
+Current rules:
+
+- `backend/**` → deploy Backend only;
+- `frontend/**` → deploy Frontend only;
+- both areas changed → deploy both;
+- README / `docs/**` only → no production deployment;
+- `.github/workflows/cd.yml` → deploy both, so pipeline changes are exercised once in production.
+
+Manual `workflow_dispatch` supports `all`, `backend`, or `frontend`.
+
+The repository currently uses squash/merge commits for PRs, so automatic change detection compares `HEAD^1..HEAD`. This assumption is documented in the workflow. A future switch to rebase merges or multi-commit direct pushes would require a different comparison strategy.
+
+This logic intentionally stays inside the CD workflow because deployment is triggered by `workflow_run` after CI succeeds; native `push.paths` filtering cannot express the same post-CI gate directly.
+
+## 7. Backend deployment
 
 CD checks out the exact commit being deployed and rebuilds the backend image.
 
@@ -125,7 +146,7 @@ After push, CD:
 
 This preserves runtime configuration such as secrets, environment variables, logging and roles while allowing each application release to create a new revision.
 
-## 7. Frontend deployment
+## 8. Frontend deployment
 
 CD independently rebuilds the frontend from the same deployment commit.
 
@@ -156,9 +177,9 @@ activation release
 
 This rollout has now completed in production. It demonstrates why release compatibility is preferred over relying on timing between the parallel frontend/backend deployment jobs.
 
-## 8. Public smoke test
+## 9. Public smoke test
 
-The smoke job runs only after both deployment jobs succeed.
+The smoke job runs after at least one selected deployment succeeds, provided no selected deployment failed. For a documentation-only change, both deploy jobs and the smoke job are skipped.
 
 It verifies:
 
@@ -168,13 +189,13 @@ It verifies:
 
 This is intentionally a lightweight deployment smoke test, not a replacement for browser E2E coverage.
 
-## 9. Manual vs automatic CD
+## 10. Manual vs automatic CD
 
 Two entry points exist:
 
 ### Manual
 
-`workflow_dispatch` is always available for `main`.
+`workflow_dispatch` is available for `main` and allows an operator to choose `all`, `backend`, or `frontend`.
 
 This path has already been validated end-to-end in production:
 
@@ -188,9 +209,9 @@ A `workflow_run` event listens for successful CI completion on a `main` push.
 
 The additional repository variable `CD_ENABLED` acts as a production gate. It was deliberately kept disabled while the new CD pipeline was being proven, then enabled after manual validation.
 
-The automatic path is now verified end-to-end with real `main` feature releases, including the DefinitionVersion 1.1 activation release: CI completed successfully, `workflow_run` triggered CD, backend and frontend deployments succeeded, and the public smoke job passed.
+The automatic path is verified end-to-end with real `main` feature releases. After CI succeeds, CD now performs path-aware target detection so documentation-only changes do not rebuild or redeploy the application.
 
-## 10. Why CI and CD are separate workflows
+## 11. Why CI and CD are separate workflows
 
 Alternatives considered:
 
@@ -203,7 +224,7 @@ Alternatives considered:
 
 The current project chooses a separate CD workflow gated by CI success.
 
-## 11. Build artifacts: rebuild vs pass from CI
+## 12. Build artifacts: rebuild vs pass from CI
 
 The current CD rebuilds the Docker image and frontend rather than downloading CI artifacts.
 
@@ -216,7 +237,7 @@ Why:
 
 Future optimization could publish signed/attested artifacts once build time or supply-chain requirements justify it.
 
-## 12. Terraform / CD boundary
+## 13. Terraform / CD boundary
 
 Terraform creates and configures ECS infrastructure; it does not deploy every application image.
 
@@ -226,7 +247,7 @@ This separation prevents routine application releases from requiring a full infr
 
 See ADR-0017.
 
-## 13. Future improvements
+## 14. Future improvements
 
 Possible next steps include:
 

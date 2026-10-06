@@ -210,19 +210,20 @@ flowchart LR
     FTest --> DockerCheck
 
     DockerCheck -->|"CI success"| Gate{"CD_ENABLED<br/>production gate"}
-    Manual["workflow_dispatch<br/>manual deploy"] --> CD["CD workflow"]
-    Gate -->|"enabled"| CD
+    Manual["workflow_dispatch<br/>all / backend / frontend"] --> Detect["Detect deployment targets"]
+    Gate -->|"enabled"| Detect
 
-    CD --> OIDC["GitHub OIDC<br/>temporary AWS credentials"]
-    OIDC --> BackendDeploy["Backend<br/>build → ECR → new ECS revision"]
-    OIDC --> FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
+    Detect -->|"backend/**"| BackendDeploy["Backend<br/>build → ECR → new ECS revision"]
+    Detect -->|"frontend/**"| FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
+    Detect -->|"docs / README only"| Skip["No production deployment"]
+
     BackendDeploy --> Smoke["Post-deployment<br/>public smoke test"]
     FrontendDeploy --> Smoke
 ```
 
 The CD role uses GitHub OIDC and STS temporary credentials; no long-lived AWS access keys are stored in GitHub. The deploy role is intentionally limited to the ECR repository, ECS deployment actions, the frontend S3 bucket, CloudFront invalidation and exact ECS `iam:PassRole` needs.
 
-Both manual and automatic production CD have been verified end-to-end, including backend rolling deployment, frontend publication and public smoke tests. The automatic path is gated by `CD_ENABLED` and runs only after a successful CI workflow on a `main` push.
+Both manual and automatic production CD have been verified end-to-end. Automatic CD is gated by `CD_ENABLED`, runs only after successful CI on a `main` push, and now deploys only the application area that changed. Documentation-only changes produce no production deployment.
 
 ### Runtime ownership boundary
 
