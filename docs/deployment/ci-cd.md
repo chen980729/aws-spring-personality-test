@@ -146,7 +146,7 @@ DefinitionVersion 1.1 used an explicit expand-then-promote rollout so this mixed
 compatibility release
   -> new Frontend + old Backend tasks remain safe for retained 1.0 Sessions
   -> compatible Backend understands both 1.0 and 1.1 semantics
-  -> 1.1 remains DRAFT
+  -> 1.1 stayed DRAFT throughout the compatibility release
 
 activation release
   -> Flyway V8 retires 1.0 for new bindings
