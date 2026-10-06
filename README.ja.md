@@ -57,6 +57,75 @@ GitHub 上で Repository を見るだけでも製品の見た目を把握でき�
 
 MVP は **Spring Boot Modular Monolith** として実装し、現在は AWS 上に full-stack application として deployment 済みです。Browser から見た public entry は CloudFront に一本化し、React/Vite の static assets は private S3 + OAC、`/api/*` は ALB → ECS Fargate の Spring Boot backend へ routing します。
 
+### Application Architecture
+
+Cloud topology と application 内部の module architecture は別の関心事として扱っています。単一の Spring Boot deployable の中でも business boundary を明確にし、Identity & Access と Assessment は実装済み、Group は design-frozen / implementation pending、AI Integration は Step 8 で provider runtime を接続する boundary としています。
+
+```mermaid
+flowchart LR
+    Browser["Browser"] --> React["React + TypeScript<br/>Frontend"]
+    React -->|"REST / JSON<br/>Session cookie + CSRF"| Web
+
+    subgraph Backend["Spring Boot Modular Monolith"]
+        Web["Web / Security<br/>Controllers + Spring Security"]
+        App["Application / Orchestration"]
+        Identity["Identity & Access<br/>implemented"]
+        Assessment["Assessment<br/>implemented"]
+        Group["Group<br/>design accepted / implementation pending"]
+        AI["AI Integration boundary<br/>provider runtime: Step 8"]
+        Infra["Persistence / Infrastructure adapters"]
+
+        Web --> App
+        App --> Identity
+        App --> Assessment
+        App -.-> Group
+        Assessment --> AI
+        Identity --> Infra
+        Assessment --> Infra
+        Group -.-> Infra
+    end
+
+    Infra --> PostgreSQL[("PostgreSQL")]
+    AI -.-> Provider["External LLM provider<br/>next milestone"]
+```
+
+Modular Monolith により deployment complexity を抑えつつ、module ownership / dependency rule は明示的に維持しています。Cross-module use case は Application layer が coordination し、Persistence や provider-specific detail は Infrastructure / adapter boundary の外側に閉じ込めます。
+
+### Current Backend Flow
+
+現在 production で動作している Assessment path は Backend-authoritative かつ DefinitionVersion-aware です。
+
+```mermaid
+flowchart TB
+    A["Register / Login / Session / CSRF"] --> B["Assessment Catalog"]
+    B --> C["Start / Resume<br/>bind exact DefinitionVersion"]
+    C --> D["Session-bound Questionnaire"]
+    D --> E["Autosave"]
+    E --> F["Submit"]
+    F --> G["Deterministic Scoring + Ambiguity"]
+
+    G -->|"No ambiguity"| H["Deterministic Finalization"]
+    G -->|"Ambiguous"| I["DimensionClarification workflow"]
+
+    I --> J{"Accepted outcome"}
+    J -->|"RESOLVED"| K["Use clarification preference"]
+    J -->|"UNCLEAR / SKIPPED<br/>non-zero baseline"| L["Questionnaire fallback"]
+    J -->|"UNCLEAR / SKIPPED<br/>exact tie"| M["Version-aware Tie-break"]
+
+    M --> M1["Retained 1.0 Session<br/>direct pole / USER_TIE_BREAK"]
+    M --> M2["Active 1.1 Session<br/>contextual question / TIE_BREAK_QUESTION"]
+
+    K --> H
+    L --> H
+    M1 --> H
+    M2 --> H
+
+    H --> N["Final Result"]
+    N --> O["History / Historical Detail"]
+```
+
+Provider-backed LLM execution は次の Assessment milestone であり、現時点の production capability ではありません。一方で Clarification lifecycle、retry / stale-result protection、accepted-result boundary、Skip、version-aware Tie-break、deterministic finalization はすでに実装済みで、Step 8 ではこの既存 boundary に provider execution を接続します。
+
 ### Production Architecture
 
 ```mermaid
@@ -126,7 +195,7 @@ flowchart LR
     CD --> OIDC["GitHub OIDC<br/>temporary AWS credentials"]
     OIDC --> BackendDeploy["Backend<br/>build → ECR → ECS revision"]
     OIDC --> FrontendDeploy["Frontend<br/>build → S3 → CloudFront invalidation"]
-    BackendDeploy --> Smoke["Public smoke test"]
+    BackendDeploy --> Smoke["Post-deployment<br/>public smoke test"]
     FrontendDeploy --> Smoke
 ```
 
@@ -259,10 +328,10 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 | Restart / Start New | ✅ Complete |
 | Assessment History + Historical Detail | ✅ Complete |
 | Clarification + Tie-break mutation | ✅ Complete |
-| External AI adapter / runtime context | ⏳ Cloud foundation 完了後に実装予定 |
+| External AI adapter / runtime context | 🚧 次の milestone — provider-backed Step 8 LLM clarification |
 | Historical assessment deletion | ⏸ Group sharing backend 実装後まで deferred |
 | Group / Membership / Sharing implementation | ⏳ 次期 product milestone |
-| React frontend | ✅ 現在の executable / staged Assessment scope を F1-F6 + F7-A–F7-D まで完了 |
+| React frontend | ✅ 現在の Assessment flow 向け F1-F7 compatibility / presentation scope を deployment 済み |
 | Docker application image | ✅ ECR / ECS で deployment 済み |
 | AWS deployment | ✅ Full-stack deployment 検証済み |
 | GitHub Actions CI/CD | ✅ CI + OIDC + automatic post-CI CD を end-to-end 検証済み |
@@ -298,7 +367,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 - clarification 不要時の immediate finalization
 - persisted Clarification lifecycle / stale external-result protection
 - Skip Current / Skip Remaining deterministic clarification mutation
-- version-aware exact-tie finalization: retained 1.0 direct-pole semantics + staged 1.1 contextual question support
+- version-aware exact-tie finalization: retained 1.0 direct-pole semantics + active 1.1 contextual-question semantics
 - completed Assessment History
 - historical Assessment detail
 - PostgreSQL-backed read projection
@@ -317,7 +386,7 @@ TanStack Query が server state を担当し、未保存 Questionnaire draft は
 - debounced・serialized な full-snapshot autosave と save/error/retry state
 - in-flight autosave と coordination した final Submit / already-submitted recovery
 - deterministic Clarification read model / Skip Current / Skip Remaining
-- dual-version exact-tie UI: retained 1.0 direct-pole flow + staged 1.1 contextual-question flow（option-to-pole mapping は Frontend に公開しない）
+- dual-version exact-tie UI: retained 1.0 direct-pole flow + active 1.1 contextual-question flow（option-to-pole mapping は Frontend に公開しない）
 - 8 preference-letter description / 16 type profile / optimized artwork を含む enriched Result presentation と、既存 per-dimension decision provenance
 - optimized four-profile Landing hero artwork
 - completed Assessment History / URL pagination / canonical Session detail navigation
@@ -497,9 +566,12 @@ V2__create_spring_session_tables.sql
 V3__create_assessment_tables.sql
 V4__seed_sixteen_personality_v1.sql
 V5__add_clarification_execution_token.sql
+V6__add_tie_break_question_provenance.sql
+V7__seed_sixteen_personality_v1_1_draft.sql
+V8__activate_sixteen_personality_v1_1.sql
 ```
 
-適用済み migration は immutable history として扱い、過去の design document に合わせるために renumber しません。今後の migration は `V6` 以降から追加します。
+適用済み migration は immutable history として扱い、過去の design document に合わせるために renumber しません。今後の migration は `V9` 以降から追加します。
 
 ---
 
