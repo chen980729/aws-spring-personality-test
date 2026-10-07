@@ -21,6 +21,17 @@ spring:
   flyway:
     enabled: true
 
+app:
+  assessment:
+    clarification:
+      ai:
+        bedrock:
+          enabled: ${BEDROCK_CLARIFICATION_ENABLED:false}
+          region: ${AWS_REGION:ap-northeast-1}
+          model-id: ${BEDROCK_CLARIFICATION_MODEL_ID:}
+          api-call-timeout: 20s
+          api-call-attempt-timeout: 18s
+
 management:
   endpoints:
     web:
