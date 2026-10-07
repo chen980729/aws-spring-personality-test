@@ -41,4 +41,19 @@ class ArchitectureTest {
 
         rule.check(productionClasses);
     }
+
+    @Test
+    void awsSdkMustRemainOutsideDomainApplicationAndWeb() {
+        ArchRule rule = noClasses()
+                .that().resideInAnyPackage(
+                        "..domain..",
+                        "..application..",
+                        "..web.."
+                )
+                .should().dependOnClassesThat()
+                .resideInAPackage("software.amazon.awssdk..")
+                .allowEmptyShould(true);
+
+        rule.check(productionClasses);
+    }
 }
