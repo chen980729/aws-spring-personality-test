@@ -18,6 +18,9 @@ public final class BedrockClarificationRequestFactory {
                     + "questionnaire evidence supplied in the "
                     + "system instructions.";
 
+    private static final String NL =
+            System.lineSeparator();
+
     private final BedrockClarificationProperties properties;
 
     private final BedrockClarificationToolContract
@@ -107,23 +110,27 @@ public final class BedrockClarificationRequestFactory {
 
         if (request.finalModelTurn()) {
             prompt.append(
-                    """
-                    
-                    This is the final allowed model turn. You must submit a judgement. If the evidence is not sufficient for RESOLVED, submit UNCLEAR.
-                    """
+                    NL
+            ).append(
+                    "This is the final allowed model turn. "
+                            + "You must submit a judgement. "
+                            + "If the evidence is not sufficient "
+                            + "for RESOLVED, submit UNCLEAR."
             );
         }
 
         prompt.append(
-                "
-Clarification policy revision: "
+                NL
+        ).append(
+                "Clarification policy revision: "
         ).append(
                 request.clarificationPolicyRevision()
         );
 
         prompt.append(
-                "
-Model turn: "
+                NL
+        ).append(
+                "Model turn: "
         ).append(
                 request.currentModelTurn()
         ).append(
@@ -133,8 +140,9 @@ Model turn: "
         );
 
         prompt.append(
-                "
-Target dimension: "
+                NL
+        ).append(
+                "Target dimension: "
         ).append(
                 request
                         .targetDimension()
@@ -143,8 +151,9 @@ Target dimension: "
         );
 
         prompt.append(
-                "
-Pole A: "
+                NL
+        ).append(
+                "Pole A: "
         ).append(
                 request
                         .targetDimension()
@@ -153,8 +162,9 @@ Pole A: "
         );
 
         prompt.append(
-                "
-Pole B: "
+                NL
+        ).append(
+                "Pole B: "
         ).append(
                 request
                         .targetDimension()
@@ -163,9 +173,11 @@ Pole B: "
         );
 
         prompt.append(
-                "
-
-<QuestionnaireEvidence>"
+                NL
+        ).append(
+                NL
+        ).append(
+                "<QuestionnaireEvidence>"
         );
 
         int index = 1;
@@ -175,8 +187,9 @@ Pole B: "
                 : request.questionnaireEvidence()
         ) {
             prompt.append(
-                    "
-["
+                    NL
+            ).append(
+                    "["
             ).append(
                     index++
             ).append(
@@ -184,21 +197,24 @@ Pole B: "
             ).append(
                     evidence.questionText()
             ).append(
-                    "
-Answer: "
+                    NL
+            ).append(
+                    "Answer: "
             ).append(
                     evidence.answerLabel()
             ).append(
-                    "
-Keyed pole: "
+                    NL
+            ).append(
+                    "Keyed pole: "
             ).append(
                     evidence.keyedPole().value()
             );
         }
 
         prompt.append(
-                "
-</QuestionnaireEvidence>"
+                NL
+        ).append(
+                "</QuestionnaireEvidence>"
         );
 
         return prompt.toString();
