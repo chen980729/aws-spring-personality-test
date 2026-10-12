@@ -1,5 +1,6 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
+import dev.springawsportfolio.portfolio.assessment.application.clarification.prompt.ClarificationPromptPolicyRegistry;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -75,11 +76,13 @@ class BedrockRuntimeConfiguration {
     BedrockClarificationRequestFactory
     bedrockClarificationRequestFactory(
             BedrockClarificationProperties properties,
-            BedrockClarificationToolContract toolContract
+            BedrockClarificationToolContract toolContract,
+            ClarificationPromptPolicyRegistry promptPolicyRegistry
     ) {
         return new BedrockClarificationRequestFactory(
                 properties,
-                toolContract
+                toolContract,
+                promptPolicyRegistry
         );
     }
 
