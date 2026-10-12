@@ -6,6 +6,7 @@ import java.util.Objects;
 
 public record ClarificationRuntimeTurnResult(
         Status status,
+        Integer assistantSequence,
         String followUpQuestion,
         AssessmentSessionResult session
 ) {
@@ -26,6 +27,16 @@ public record ClarificationRuntimeTurnResult(
         switch (status) {
             case FOLLOW_UP_REQUIRED -> {
                 if (
+                        assistantSequence == null
+                                || assistantSequence <= 0
+                                || assistantSequence % 2 == 0
+                ) {
+                    throw new IllegalArgumentException(
+                            "FOLLOW_UP_REQUIRED must contain positive odd assistantSequence"
+                    );
+                }
+
+                if (
                         followUpQuestion == null
                                 || followUpQuestion.isBlank()
                 ) {
@@ -43,9 +54,12 @@ public record ClarificationRuntimeTurnResult(
 
             case JUDGEMENT_ACCEPTED,
                  FAILED_RETRYABLE -> {
-                if (followUpQuestion != null) {
+                if (
+                        assistantSequence != null
+                                || followUpQuestion != null
+                ) {
                     throw new IllegalArgumentException(
-                            "terminal runtime result must not contain question"
+                            "terminal runtime result must not contain follow-up payload"
                     );
                 }
 
@@ -57,7 +71,8 @@ public record ClarificationRuntimeTurnResult(
 
             case STALE_DISCARDED -> {
                 if (
-                        followUpQuestion != null
+                        assistantSequence != null
+                                || followUpQuestion != null
                                 || session != null
                 ) {
                     throw new IllegalArgumentException(
@@ -69,10 +84,12 @@ public record ClarificationRuntimeTurnResult(
     }
 
     public static ClarificationRuntimeTurnResult followUp(
+            int assistantSequence,
             String question
     ) {
         return new ClarificationRuntimeTurnResult(
                 Status.FOLLOW_UP_REQUIRED,
+                assistantSequence,
                 question,
                 null
         );
@@ -84,6 +101,7 @@ public record ClarificationRuntimeTurnResult(
         return new ClarificationRuntimeTurnResult(
                 Status.JUDGEMENT_ACCEPTED,
                 null,
+                null,
                 session
         );
     }
@@ -94,6 +112,7 @@ public record ClarificationRuntimeTurnResult(
         return new ClarificationRuntimeTurnResult(
                 Status.FAILED_RETRYABLE,
                 null,
+                null,
                 session
         );
     }
@@ -101,6 +120,7 @@ public record ClarificationRuntimeTurnResult(
     public static ClarificationRuntimeTurnResult staleDiscarded() {
         return new ClarificationRuntimeTurnResult(
                 Status.STALE_DISCARDED,
+                null,
                 null,
                 null
         );
