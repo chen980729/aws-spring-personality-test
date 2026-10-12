@@ -44,7 +44,7 @@ class BedrockClarificationPropertiesTest {
         );
 
         assertEquals(
-                512,
+                1024,
                 properties.maxTokens()
         );
 
