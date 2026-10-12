@@ -36,7 +36,7 @@ app:
           model-id: ${BEDROCK_CLARIFICATION_MODEL_ID:}
           api-call-timeout: 20s
           api-call-attempt-timeout: 18s
-          max-tokens: ${BEDROCK_CLARIFICATION_MAX_TOKENS:512}
+          max-tokens: ${BEDROCK_CLARIFICATION_MAX_TOKENS:1024}
           strict-tool-schema: ${BEDROCK_CLARIFICATION_STRICT_TOOL_SCHEMA:false}
 
 management:
