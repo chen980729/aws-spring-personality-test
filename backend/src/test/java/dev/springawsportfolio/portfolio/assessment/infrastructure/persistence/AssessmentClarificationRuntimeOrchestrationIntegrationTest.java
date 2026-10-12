@@ -2,14 +2,20 @@ package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence;
 
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationAiCallCommitService;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationAiCallPreparationService;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationExecutionRecoveryService;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationRuntimeOrchestrator;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationRuntimeTurnResult;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ContinueDimensionClarificationCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.RetryDimensionClarificationCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.RetryDimensionClarificationService;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.clarification.SkipDimensionClarificationService;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.StartDimensionClarificationCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.clarification.StartDimensionClarificationService;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
+import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionCommand;
+import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionService;
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
@@ -74,6 +80,15 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
 
     @Autowired
     ClarificationAiCallCommitService commitService;
+
+    @Autowired
+    ClarificationExecutionRecoveryService recoveryService;
+
+    @Autowired
+    SkipDimensionClarificationService skipDimensionClarificationService;
+
+    @Autowired
+    RestartAssessmentSessionService restartAssessmentSessionService;
 
     @Autowired
     AssessmentDefinitionRepository definitionRepository;
@@ -351,6 +366,237 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
         );
     }
 
+    @Test
+    void expiredInFlightAnswerCanBeRecoveredByRetry() {
+        SubmittedClarification submitted =
+                submittedClarification();
+
+        QueueAiPort aiPort =
+                new QueueAiPort(
+                        request ->
+                                new ClarificationAiTurn.FollowUpQuestion(
+                                        "First follow-up?"
+                                ),
+                        this::resolvedJudgement
+                );
+
+        ClarificationRuntimeOrchestrator orchestrator =
+                orchestrator(
+                        aiPort
+                );
+
+        ClarificationRuntimeTurnResult first =
+                orchestrator.start(
+                        new StartDimensionClarificationCommand(
+                                submitted.userId(),
+                                submitted.session().id(),
+                                submitted.dimension().code()
+                        )
+                );
+
+        preparationService.prepareContinue(
+                new ContinueDimensionClarificationCommand(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code(),
+                        first.assistantSequence(),
+                        "This answer was persisted before the process died."
+                )
+        );
+
+        jdbcTemplate.update(
+                """
+                UPDATE assessment_clarification_runtime_messages
+                SET created_at = ?
+                WHERE clarification_id = (
+                    SELECT id
+                    FROM assessment_dimension_clarifications
+                    WHERE session_id = ?
+                      AND dimension_code = ?
+                )
+                  AND sequence_number = 2
+                """,
+                Timestamp.from(
+                        Instant.now().minusSeconds(
+                                120
+                        )
+                ),
+                submitted.session().id().value(),
+                submitted.dimension().code().value()
+        );
+
+        ClarificationRuntimeTurnResult retried =
+                orchestrator.retry(
+                        new RetryDimensionClarificationCommand(
+                                submitted.userId(),
+                                submitted.session().id(),
+                                submitted.dimension().code()
+                        )
+                );
+
+        assertEquals(
+                ClarificationRuntimeTurnResult.Status.JUDGEMENT_ACCEPTED,
+                retried.status()
+        );
+
+        assertEquals(
+                DimensionClarificationStatus.CLARIFIED,
+                clarificationRepository
+                        .findBySessionIdAndDimension(
+                                submitted.session().id(),
+                                submitted.dimension().code()
+                        )
+                        .orElseThrow()
+                        .status()
+        );
+
+        assertEquals(
+                2,
+                aiPort.callCount()
+        );
+    }
+
+    @Test
+    void unexpectedAiRuntimeFailureCompensatesStateAndRethrows() {
+        SubmittedClarification submitted =
+                submittedClarification();
+
+        ClarificationAiPort explodingPort =
+                request -> {
+                    throw new IllegalStateException(
+                            "synthetic adapter bug"
+                    );
+                };
+
+        ClarificationRuntimeOrchestrator orchestrator =
+                orchestrator(
+                        explodingPort
+                );
+
+        assertThrows(
+                IllegalStateException.class,
+                () ->
+                        orchestrator.start(
+                                new StartDimensionClarificationCommand(
+                                        submitted.userId(),
+                                        submitted.session().id(),
+                                        submitted.dimension().code()
+                                )
+                        )
+        );
+
+        assertEquals(
+                DimensionClarificationStatus.FAILED_RETRYABLE,
+                clarificationRepository
+                        .findBySessionIdAndDimension(
+                                submitted.session().id(),
+                                submitted.dimension().code()
+                        )
+                        .orElseThrow()
+                        .status()
+        );
+
+        assertEquals(
+                0,
+                runtimeRowsForSession(
+                        submitted.session().id()
+                )
+        );
+    }
+
+    @Test
+    void skipDeletesTemporaryRuntimeContext() {
+        SubmittedClarification submitted =
+                submittedClarification();
+
+        ClarificationRuntimeOrchestrator orchestrator =
+                orchestrator(
+                        new QueueAiPort(
+                                request ->
+                                        new ClarificationAiTurn
+                                                .FollowUpQuestion(
+                                                "Temporary follow-up?"
+                                        )
+                        )
+                );
+
+        orchestrator.start(
+                new StartDimensionClarificationCommand(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code()
+                )
+        );
+
+        assertEquals(
+                1,
+                runtimeRowsForSession(
+                        submitted.session().id()
+                )
+        );
+
+        skipDimensionClarificationService.execute(
+                new SkipDimensionClarificationCommand(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code()
+                )
+        );
+
+        assertEquals(
+                0,
+                runtimeRowsForSession(
+                        submitted.session().id()
+                )
+        );
+    }
+
+    @Test
+    void restartDeletesTemporaryRuntimeContext() {
+        SubmittedClarification submitted =
+                submittedClarification();
+
+        ClarificationRuntimeOrchestrator orchestrator =
+                orchestrator(
+                        new QueueAiPort(
+                                request ->
+                                        new ClarificationAiTurn
+                                                .FollowUpQuestion(
+                                                "Temporary follow-up?"
+                                        )
+                        )
+                );
+
+        orchestrator.start(
+                new StartDimensionClarificationCommand(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code()
+                )
+        );
+
+        assertEquals(
+                1,
+                runtimeRowsForSession(
+                        submitted.session().id()
+                )
+        );
+
+        restartAssessmentSessionService.execute(
+                new RestartAssessmentSessionCommand(
+                        submitted.userId(),
+                        submitted.session().id()
+                )
+        );
+
+        assertEquals(
+                0,
+                runtimeRowsForSession(
+                        submitted.session().id()
+                )
+        );
+    }
+
     private ClarificationRuntimeOrchestrator orchestrator(
             ClarificationAiPort aiPort
     ) {
@@ -359,6 +605,7 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
                 retryService,
                 preparationService,
                 commitService,
+                recoveryService,
                 aiPort
         );
     }
@@ -474,6 +721,22 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
                 """,
                 Integer.class,
                 executionToken
+        );
+    }
+
+    private int runtimeRowsForSession(
+            AssessmentSessionId sessionId
+    ) {
+        return jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM assessment_clarification_runtime_messages message
+                JOIN assessment_dimension_clarifications clarification
+                  ON clarification.id = message.clarification_id
+                WHERE clarification.session_id = ?
+                """,
+                Integer.class,
+                sessionId.value()
         );
     }
 
