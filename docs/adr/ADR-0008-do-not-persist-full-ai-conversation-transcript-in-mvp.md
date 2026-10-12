@@ -40,6 +40,8 @@ expiry timestamp
 
 It does not persist raw Bedrock request/response objects, tool-use IDs, provider JSON, user identity fields, email, IP address, or the system prompt.
 
+While an active execution is waiting for a user answer, the owner may re-read only the **current** persisted assistant question and its `assistantSequence` for browser-refresh or lost-response recovery. The API does not expose prior transcript messages or the internal execution token. This read does not promote temporary context into authoritative Assessment history and does not invoke the AI provider.
+
 After an accepted clarification result, authoritative history still consists only of:
 
 ~~~
