@@ -2,7 +2,7 @@
 
 > **Checkpoint:** Step 8F-R  
 > **Date:** 2026-10-12  
-> **Status:** Runtime hardening before public HTTP/Frontend exposure
+> **Status:** Runtime hardening complete; Step 8F-R2 contract consistency guards follow before public HTTP/Frontend exposure
 
 ## 1. Scope
 
@@ -190,7 +190,7 @@ Infrastructure runtime configuration creates the orchestrator only when a Clarif
 
 This keeps orchestration provider-neutral and allows a future provider adapter to replace Bedrock without moving Application workflow code.
 
-Step 8G must explicitly map unavailable AI capability to an HTTP-level availability response (planned: 503 AI_CLARIFICATION_UNAVAILABLE) rather than treating absence as UNCLEAR.
+Step 8F-R2 freezes unavailable AI capability as `503 AI_CLARIFICATION_UNAVAILABLE` for provider-backed commands rather than treating absence as UNCLEAR. It also separates temporary/current-turn conflicts as `409 CLARIFICATION_TURN_CONFLICT` from semantic eligibility failures that remain 422.
 
 ## 9. PostgreSQL and backup boundary
 
