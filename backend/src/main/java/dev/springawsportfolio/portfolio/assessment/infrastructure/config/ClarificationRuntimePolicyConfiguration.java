@@ -17,7 +17,8 @@ public class ClarificationRuntimePolicyConfiguration {
     ) {
         return new ClarificationRuntimePolicy(
                 properties.maximumModelTurns(),
-                properties.contextTtl()
+                properties.contextTtl(),
+                properties.inFlightExecutionLease()
         );
     }
 }
