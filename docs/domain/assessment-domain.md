@@ -3,7 +3,7 @@
 > **DefinitionVersion 1.1 status (ADR-0018):** Backend Domain/Application/Persistence compatibility, Frontend dual-version integration, and Flyway V8 activation are complete. DefinitionVersion 1.1 is now `AVAILABLE` for new Session binding; 1.0 is `RETIRED` for new bindings while retained 1.0 Sessions remain immutable and supported.
 
 > **Status:** Accepted Assessment Domain Baseline — Step 7 legacy behavior plus implemented dual-version tie-break semantics
-> **Last updated:** 2026-10-06
+> **Last updated:** 2026-10-12
 
 ## 1. Scope
 
@@ -57,9 +57,9 @@ The following are **not** top-level Session lifecycle states:
 
 ### Clarification runtime recovery
 
-`CLARIFICATION_IN_PROGRESS` does not make an incomplete AI conversation authoritative history. Conversation context is ephemeral in MVP.
+`CLARIFICATION_IN_PROGRESS` does not make an incomplete AI conversation authoritative history. Conversation context is temporary runtime state in MVP; it may be persisted for short-lived execution continuity without becoming Assessment history.
 
-If runtime conversation context is lost before an accepted `ClarificationResult` is durably persisted, recovery may normalize the affected clarification to a clarification-ready/retryable condition, and the Session can return to `AWAITING_CLARIFICATION`. The existing submitted response and `InitialAssessmentResult` remain unchanged.
+If runtime conversation context is lost, expires, or an external execution becomes orphaned before an accepted `ClarificationResult` is durably persisted, recovery normalizes the affected clarification to `FAILED_RETRYABLE`, and the Session can return to `AWAITING_CLARIFICATION`. The existing submitted response and `InitialAssessmentResult` remain unchanged.
 
 If the parent Session is transitioned to `ABANDONED` while an external LLM call is in flight, the late provider result is stale. The post-call transaction must reload/revalidate the Session and discard that result rather than mutate the abandoned attempt.
 
@@ -377,8 +377,11 @@ A Session directly binds its exact `AssessmentDefinitionVersion`; the specificat
 
 At minimum it conceptually records:
 
+- Provider identifier.
 - Model Identifier.
 - Actual AI Clarification Policy revision/version.
+
+The recorded ClarificationPolicy revision must resolve to the concrete prompt/policy semantics used by the accepted execution. A material prompt-policy change therefore requires a new revision rather than silently reusing the previous revision label.
 
 It does **not** represent:
 
@@ -394,9 +397,9 @@ If future audit requirements justify full execution history, a separate concept 
 
 AI conversation content is not authoritative Assessment history.
 
-Temporary/ephemeral runtime state may support multi-turn clarification, but its technical representation is deferred to specialist AI/Backend design.
+Temporary runtime state may support multi-turn clarification. ADR-0008 permits short-lived PostgreSQL persistence for this runtime-only state, with lifecycle deletion, TTL cleanup, input bounds and execution-lease recovery. This technical runtime state is not part of the Domain history model.
 
-MVP does not guarantee exact mid-conversation resume. If temporary context is lost before an accepted result is persisted:
+MVP does not guarantee exact mid-conversation resume. If temporary context is lost or an in-flight execution is recovered before an accepted result is persisted:
 
 - Session integrity remains intact.
 - Submitted questionnaire remains frozen.
