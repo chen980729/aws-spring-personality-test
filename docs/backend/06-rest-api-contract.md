@@ -160,9 +160,26 @@ PUT  .../tie-breaks/{dimensionCode}
 
 They return the authoritative current `AssessmentSessionResponse` after re-evaluating deterministic finalization readiness.
 
-The design also reserves Start / Continue / Retry interaction routes. Those runtime assistant-output endpoints remain deferred until Step 8 wires the external LLM boundary; they must not be exposed as a fake half-implemented interaction surface merely because the Application execution boundary already exists internally.
+The design also reserves Start / Continue / Retry interaction routes. Steps 8B-8F-R now implement the internal runtime, but the public controllers remain deferred until Step 8G.
+
+The planned Continue request shape is:
+
+~~~json
+{
+  "assistantSequence": 1,
+  "answer": "I usually need some quiet time after a busy social day."
+}
+~~~
+
+`assistantSequence` is a non-sensitive optimistic turn version. The client must echo the odd sequence number returned with the assistant question. A delayed/replayed answer for an older question is rejected instead of being applied to a newer follow-up. The internal execution token remains server-only.
+
+The answer is limited to 1000 Unicode code points. Provider-generated follow-up questions are limited to 500 Unicode code points.
 
 When provider integration is enabled, technical AI failures become `FAILED_RETRYABLE`; they are never represented as the business result `UNCLEAR`. Retry reuses the same logical `Session + Dimension` lifecycle after ownership/state/eligibility revalidation and creates a new internal execution correlation token.
+
+Retry also owns crash recovery for an orphaned `IN_PROGRESS` external execution. The runtime uses a 60-second in-flight execution lease, separate from the 1-hour temporary conversation TTL. Expired in-flight work is normalized to `FAILED_RETRYABLE` before the normal Retry lifecycle creates a fresh token.
+
+If no `ClarificationAiPort` is available, Step 8G must expose capability unavailability as an HTTP service-availability error (planned `503 AI_CLARIFICATION_UNAVAILABLE`), not as business `UNCLEAR` and not as a fabricated provider result.
 
 ### Tie-break
 
