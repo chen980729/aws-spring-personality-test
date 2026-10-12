@@ -309,6 +309,56 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
     }
 
     @Test
+    void retryDoesNotDiscardValidCurrentAssistantQuestion() {
+        SubmittedClarification submitted =
+                submittedClarification();
+
+        ClarificationRuntimeOrchestrator orchestrator =
+                orchestrator(
+                        new QueueAiPort(
+                                request ->
+                                        new ClarificationAiTurn
+                                                .FollowUpQuestion(
+                                                "Current question?"
+                                        )
+                        )
+                );
+
+        ClarificationRuntimeTurnResult first =
+                orchestrator.start(
+                        new StartDimensionClarificationCommand(
+                                submitted.userId(),
+                                submitted.session().id(),
+                                submitted.dimension().code()
+                        )
+                );
+
+        assertEquals(
+                ClarificationRuntimeTurnResult.Status.FOLLOW_UP_REQUIRED,
+                first.status()
+        );
+
+        assertThrows(
+                ClarificationTurnConflictException.class,
+                () ->
+                        orchestrator.retry(
+                                new RetryDimensionClarificationCommand(
+                                        submitted.userId(),
+                                        submitted.session().id(),
+                                        submitted.dimension().code()
+                                )
+                        )
+        );
+
+        assertEquals(
+                1,
+                runtimeRowsForSession(
+                        submitted.session().id()
+                )
+        );
+    }
+
+    @Test
     void technicalProviderFailureBecomesFailedRetryableAndCleansContext() {
         SubmittedClarification submitted =
                 submittedClarification();
