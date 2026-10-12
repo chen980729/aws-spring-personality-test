@@ -6,6 +6,7 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.Assessm
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyCompletedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationTurnConflictException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidDimensionTieBreakException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakAlreadyDecidedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.TieBreakInteractionUnavailableException;
@@ -341,6 +342,39 @@ public class AssessmentExceptionHandler {
         problem.setProperty(
                 "code",
                 "CLARIFICATION_NOT_ALLOWED"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            ClarificationTurnConflictException.class
+    )
+    ProblemDetail handleClarificationTurnConflict() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.CONFLICT
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/clarification-turn-conflict"
+                )
+        );
+
+        problem.setTitle(
+                "Clarification turn conflicts with current state"
+        );
+
+        problem.setDetail(
+                "The clarification interaction changed or is still "
+                        + "being processed. Read the current turn "
+                        + "before retrying."
+        );
+
+        problem.setProperty(
+                "code",
+                "CLARIFICATION_TURN_CONFLICT"
         );
 
         return problem;
