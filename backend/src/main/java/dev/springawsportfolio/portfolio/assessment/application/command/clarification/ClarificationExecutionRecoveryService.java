@@ -181,10 +181,9 @@ public class ClarificationExecutionRecoveryService {
             );
         }
 
-        runtimeContextStore.deleteExecution(
+        runtimeContextStore.deleteDimension(
                 ticket.sessionId(),
-                ticket.dimension(),
-                ticket.executionToken()
+                ticket.dimension()
         );
     }
 
