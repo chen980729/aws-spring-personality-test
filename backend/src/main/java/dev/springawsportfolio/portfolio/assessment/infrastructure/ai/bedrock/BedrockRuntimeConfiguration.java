@@ -1,10 +1,5 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
-import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationAiCallCommitService;
-import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationAiCallPreparationService;
-import dev.springawsportfolio.portfolio.assessment.application.command.clarification.ClarificationRuntimeOrchestrator;
-import dev.springawsportfolio.portfolio.assessment.application.command.clarification.RetryDimensionClarificationService;
-import dev.springawsportfolio.portfolio.assessment.application.command.clarification.StartDimensionClarificationService;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -108,23 +103,6 @@ class BedrockRuntimeConfiguration {
                 transport,
                 requestFactory,
                 responseParser
-        );
-    }
-
-    @Bean
-    ClarificationRuntimeOrchestrator clarificationRuntimeOrchestrator(
-            StartDimensionClarificationService startService,
-            RetryDimensionClarificationService retryService,
-            ClarificationAiCallPreparationService preparationService,
-            ClarificationAiCallCommitService commitService,
-            ClarificationAiPort aiPort
-    ) {
-        return new ClarificationRuntimeOrchestrator(
-                startService,
-                retryService,
-                preparationService,
-                commitService,
-                aiPort
         );
     }
 }
