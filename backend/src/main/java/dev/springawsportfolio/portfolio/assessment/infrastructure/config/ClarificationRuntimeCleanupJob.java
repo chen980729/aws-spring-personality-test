@@ -39,6 +39,8 @@ public final class ClarificationRuntimeCleanupJob {
 
     @Scheduled(
             fixedDelayString =
+                    "${app.assessment.clarification.runtime.cleanup-interval-ms:900000}",
+            initialDelayString =
                     "${app.assessment.clarification.runtime.cleanup-interval-ms:900000}"
     )
     public void deleteExpiredRuntimeContext() {
