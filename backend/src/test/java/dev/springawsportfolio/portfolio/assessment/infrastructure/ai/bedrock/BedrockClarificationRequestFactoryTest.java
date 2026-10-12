@@ -1,6 +1,8 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
+import dev.springawsportfolio.portfolio.assessment.application.clarification.prompt.ClarificationPromptPolicyRegistry;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiTechnicalException;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.PoleCode;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BedrockClarificationRequestFactoryTest {
@@ -29,7 +32,8 @@ class BedrockClarificationRequestFactoryTest {
                         properties,
                         new BedrockClarificationToolContract(
                                 false
-                        )
+                        ),
+                        new ClarificationPromptPolicyRegistry()
                 );
 
         ConverseRequest request =
@@ -119,6 +123,51 @@ class BedrockClarificationRequestFactoryTest {
                         "Answer: Agree"
                 )
         );
+
+        assertTrue(
+                systemPrompt.contains(
+                        "Extraversion"
+                )
+        );
+
+        assertTrue(
+                systemPrompt.contains(
+                        "Introversion"
+                )
+        );
+    }
+
+    @Test
+    void rejectsUnsupportedClarificationPolicyRevision() {
+        BedrockClarificationRequestFactory factory =
+                new BedrockClarificationRequestFactory(
+                        properties(
+                                false
+                        ),
+                        new BedrockClarificationToolContract(
+                                false
+                        ),
+                        new ClarificationPromptPolicyRegistry()
+                );
+
+        ClarificationAiRequest unsupported =
+                new ClarificationAiRequest(
+                        targetDimension(),
+                        List.of(
+                                evidence()
+                        ),
+                        List.of(),
+                        1,
+                        3,
+                        "v999"
+                );
+
+        assertThrows(
+                ClarificationAiTechnicalException.class,
+                () -> factory.create(
+                        unsupported
+                )
+        );
     }
 
     @Test
@@ -130,7 +179,8 @@ class BedrockClarificationRequestFactoryTest {
                         ),
                         new BedrockClarificationToolContract(
                                 false
-                        )
+                        ),
+                        new ClarificationPromptPolicyRegistry()
                 );
 
         ConverseRequest request =
@@ -181,7 +231,8 @@ class BedrockClarificationRequestFactoryTest {
                         ),
                         new BedrockClarificationToolContract(
                                 true
-                        )
+                        ),
+                        new ClarificationPromptPolicyRegistry()
                 );
 
         ConverseRequest request =
