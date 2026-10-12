@@ -11,6 +11,12 @@ public record ClarificationRuntimeMessage(
         Instant expiresAt
 ) {
 
+    public static final int MAX_ASSISTANT_QUESTION_CODE_POINTS =
+            500;
+
+    public static final int MAX_USER_ANSWER_CODE_POINTS =
+            1000;
+
     public ClarificationRuntimeMessage {
         if (sequenceNumber <= 0) {
             throw new IllegalArgumentException(
@@ -31,6 +37,24 @@ public record ClarificationRuntimeMessage(
         if (text.isBlank()) {
             throw new IllegalArgumentException(
                     "text must not be blank"
+            );
+        }
+
+        int codePoints =
+                text.codePointCount(
+                        0,
+                        text.length()
+                );
+
+        int maximumCodePoints =
+                role == Role.ASSISTANT_QUESTION
+                        ? MAX_ASSISTANT_QUESTION_CODE_POINTS
+                        : MAX_USER_ANSWER_CODE_POINTS;
+
+        if (codePoints > maximumCodePoints) {
+            throw new IllegalArgumentException(
+                    "text exceeds maximum code point length for "
+                            + role
             );
         }
 
