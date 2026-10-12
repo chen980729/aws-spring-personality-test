@@ -16,7 +16,7 @@ import dev.springawsportfolio.portfolio.assessment.application.command.submissio
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
 import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionService;
-import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationTurnConflictException;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiTechnicalException;
@@ -295,7 +295,7 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
         );
 
         assertThrows(
-                ClarificationNotAllowedException.class,
+                ClarificationTurnConflictException.class,
                 () ->
                         orchestrator.continueClarification(
                                 firstAnswer
