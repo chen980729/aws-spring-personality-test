@@ -1,5 +1,6 @@
 package dev.springawsportfolio.portfolio.assessment.application.command.clarification;
 
+import dev.springawsportfolio.portfolio.assessment.application.clarification.runtime.ClarificationRuntimeMessage;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
 import dev.springawsportfolio.portfolio.assessment.domain.session.AssessmentSessionId;
 import dev.springawsportfolio.portfolio.identity.api.UserId;
@@ -47,6 +48,25 @@ public record ContinueDimensionClarificationCommand(
         if (answer.isEmpty()) {
             throw new IllegalArgumentException(
                     "answer must not be blank"
+            );
+        }
+
+        int codePoints =
+                answer.codePointCount(
+                        0,
+                        answer.length()
+                );
+
+        if (
+                codePoints
+                        > ClarificationRuntimeMessage
+                        .MAX_USER_ANSWER_CODE_POINTS
+        ) {
+            throw new IllegalArgumentException(
+                    "answer exceeds maximum length of "
+                            + ClarificationRuntimeMessage
+                            .MAX_USER_ANSWER_CODE_POINTS
+                            + " Unicode code points"
             );
         }
     }
