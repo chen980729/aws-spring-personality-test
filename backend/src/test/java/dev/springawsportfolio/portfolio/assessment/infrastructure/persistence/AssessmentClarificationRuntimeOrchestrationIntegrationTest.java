@@ -516,7 +516,6 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
     ) {
     }
 
-    @SafeVarargs
     private static final class QueueAiPort
             implements ClarificationAiPort {
 
