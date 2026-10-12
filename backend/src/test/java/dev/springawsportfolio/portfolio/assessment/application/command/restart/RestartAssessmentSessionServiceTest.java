@@ -3,6 +3,7 @@ package dev.springawsportfolio.portfolio.assessment.application.command.restart;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyAbandonedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyCompletedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationRuntimeContextStore;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
@@ -64,6 +65,9 @@ class RestartAssessmentSessionServiceTest {
     private AssessmentDefinitionVersionRepository
             versionRepository;
 
+    private ClarificationRuntimeContextStore
+            runtimeContextStore;
+
     private RestartAssessmentSessionService service;
 
     private UserId actorUserId;
@@ -85,11 +89,17 @@ class RestartAssessmentSessionServiceTest {
                         AssessmentDefinitionVersionRepository.class
                 );
 
+        runtimeContextStore =
+                mock(
+                        ClarificationRuntimeContextStore.class
+                );
+
         service =
                 new RestartAssessmentSessionService(
                         sessionRepository,
                         definitionRepository,
                         versionRepository,
+                        runtimeContextStore,
                         Clock.fixed(
                                 NOW,
                                 ZoneOffset.UTC
@@ -204,6 +214,12 @@ class RestartAssessmentSessionServiceTest {
         assertEquals(
                 NOW,
                 oldSession.abandonedAt()
+        );
+
+        verify(
+                runtimeContextStore
+        ).deleteSession(
+                oldSession.id()
         );
 
         assertEquals(
