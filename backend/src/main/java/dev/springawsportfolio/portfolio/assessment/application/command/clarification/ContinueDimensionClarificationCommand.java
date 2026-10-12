@@ -10,6 +10,7 @@ public record ContinueDimensionClarificationCommand(
         UserId actorUserId,
         AssessmentSessionId sessionId,
         DimensionCode dimension,
+        int expectedAssistantSequence,
         String answer
 ) {
 
@@ -26,6 +27,16 @@ public record ContinueDimensionClarificationCommand(
                 dimension,
                 "dimension must not be null"
         );
+
+        if (
+                expectedAssistantSequence <= 0
+                        || expectedAssistantSequence % 2 == 0
+        ) {
+            throw new IllegalArgumentException(
+                    "expectedAssistantSequence must be a positive odd number"
+            );
+        }
+
         Objects.requireNonNull(
                 answer,
                 "answer must not be null"
