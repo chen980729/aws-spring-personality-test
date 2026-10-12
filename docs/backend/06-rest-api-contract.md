@@ -3,7 +3,7 @@
 > **DefinitionVersion status (ADR-0018):** `SIXTEEN_PERSONALITY` 1.1 is activated by V8 for new Sessions. Published 1.0 is `RETIRED` for new binding but remains immutable and supported for Sessions already bound to it.
 
 > **Status:** Version-aware Tie-break REST/Application + finalization provenance + Frontend integration + 1.1 activation implemented
-> **Last updated:** 2026-10-05
+> **Last updated:** 2026-10-12
 > **Security transport:** server-side Session + Spring Session JDBC + Secure/HttpOnly cookie + CSRF
 
 ## 1. API style
@@ -63,6 +63,7 @@ PUT    /api/v1/assessment-sessions/{sessionId}/questionnaire
 POST   /api/v1/assessment-sessions/{sessionId}/questionnaire/submission
 
 POST   /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/start
+GET    /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/current-turn
 POST   /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/messages
 POST   /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/retry
 POST   /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/skip
@@ -160,9 +161,28 @@ PUT  .../tie-breaks/{dimensionCode}
 
 They return the authoritative current `AssessmentSessionResponse` after re-evaluating deterministic finalization readiness.
 
-The design also reserves Start / Continue / Retry interaction routes. Steps 8B-8F-R now implement the internal runtime, but the public controllers remain deferred until Step 8G.
+The design also reserves Start / Current Turn / Continue / Retry interaction routes. Steps 8B-8F-R2 implement and harden the internal runtime plus freeze this public contract, but the provider-backed public controllers remain deferred until Step 8G.
 
-The planned Continue request shape is:
+Refresh / lost-response recovery uses:
+
+~~~text
+GET .../clarifications/{dimensionCode}/current-turn
+~~~
+
+When the active clarification is waiting for the user, the response returns only the currently answerable temporary turn:
+
+~~~json
+{
+  "sessionId": "session-id",
+  "dimensionCode": "EI",
+  "assistantSequence": 1,
+  "question": "After a busy social day, what usually helps you recover?"
+}
+~~~
+
+It does **not** expose prior transcript messages, the execution token, provider payloads or prompt internals. Reading the current turn does not invoke the AI provider. A normal waiting `ASSISTANT_QUESTION` is therefore resumed after browser refresh or a lost Start/Continue HTTP response instead of being discarded through Retry.
+
+The Continue request shape is:
 
 ~~~json
 {
@@ -171,7 +191,7 @@ The planned Continue request shape is:
 }
 ~~~
 
-`assistantSequence` is a non-sensitive optimistic turn version. The client must echo the odd sequence number returned with the assistant question. A delayed/replayed answer for an older question is rejected instead of being applied to a newer follow-up. The internal execution token remains server-only.
+`assistantSequence` is a non-sensitive optimistic turn version. The client must echo the odd sequence number returned with the assistant question. A delayed/replayed answer for an older question is a current-state conflict and is rejected instead of being applied to a newer follow-up. The internal execution token remains server-only.
 
 The answer is limited to 1000 Unicode code points. Provider-generated follow-up questions are limited to 500 Unicode code points.
 
@@ -179,7 +199,29 @@ When provider integration is enabled, technical AI failures become `FAILED_RETRY
 
 Retry also owns crash recovery for an orphaned `IN_PROGRESS` external execution. The runtime uses a 60-second in-flight execution lease, separate from the 1-hour temporary conversation TTL. Expired in-flight work is normalized to `FAILED_RETRYABLE` before the normal Retry lifecycle creates a fresh token.
 
-If no `ClarificationAiPort` is available, Step 8G must expose capability unavailability as an HTTP service-availability error (planned `503 AI_CLARIFICATION_UNAVAILABLE`), not as business `UNCLEAR` and not as a fabricated provider result.
+If no `ClarificationAiPort` is available, Step 8G must expose capability unavailability as `503 AI_CLARIFICATION_UNAVAILABLE`, not as business `UNCLEAR` and not as a fabricated provider result.
+
+Clarification HTTP semantics are frozen as:
+
+~~~text
+409 CLARIFICATION_TURN_CONFLICT
+  - execution is still starting
+  - previous answer is still processing
+  - submitted assistantSequence is stale
+  - Retry is attempted while a valid current question is waiting
+
+422 CLARIFICATION_NOT_ALLOWED
+  - requested clarification action is not semantically eligible for the
+    current Session/Dimension lifecycle
+
+503 AI_CLARIFICATION_UNAVAILABLE
+  - provider capability required by Start / Continue / Retry is unavailable
+
+500
+  - unexpected programming/configuration defect
+~~~
+
+Frontend recovery from 409 is to re-read the authoritative Session/current-turn state rather than retrying blindly.
 
 ### Tie-break
 
@@ -346,6 +388,9 @@ Do not expose generic arbitrary sorting. Each use case defines stable business o
 - Restart targets a completed AssessmentSession.
 - Group already disbanded.
 - concurrent modification.
+- clarification execution is still starting/processing.
+- stale clarification `assistantSequence`.
+- Retry while an unexpired assistant question is waiting.
 
 422 examples:
 
@@ -400,10 +445,10 @@ QUESTIONNAIRE_INCOMPLETE
 INVALID_QUESTIONNAIRE_RESPONSE
 CLARIFICATION_NOT_ALLOWED
 CLARIFICATION_NOT_RETRYABLE
-CLARIFICATION_ALREADY_IN_PROGRESS
+CLARIFICATION_TURN_CONFLICT
 TIE_BREAK_NOT_REQUIRED
 INVALID_DIMENSION_TIE_BREAK
-AI_CLARIFICATION_TEMPORARILY_UNAVAILABLE
+AI_CLARIFICATION_UNAVAILABLE
 ```
 
 Java exception class names are not the API contract.
@@ -447,7 +492,7 @@ docs/api/openapi.yaml
 OpenAPI Specification: 3.1.2
 ```
 
-The design-first machine-readable contract is OpenAPI **info.version 0.5.0** (OpenAPI format 3.1.2, HTTP prefix `/api/v1`). It adds the accepted, pending 1.1 contextual tie-break design while preserving the Step 7 legacy contract, including the `422` business-semantic response for `skip-remaining`. Runtime Start / Continue / Retry clarification routes remain design-frozen for Step 8 provider integration rather than being represented as already-implemented runtime AI behavior.
+The design-first machine-readable contract is OpenAPI **info.version 0.6.0** (OpenAPI format 3.1.2, HTTP prefix `/api/v1`). It preserves the deployed 1.1 contextual tie-break contract and freezes the Step 8 clarification interaction contract, including Current Turn recovery, `assistantSequence + answer`, 409 turn conflicts and 503 AI capability unavailability. These provider-backed routes remain a Step 8G executable implementation target rather than a claim that the public runtime Controllers already exist.
 
 The Step 5 Restart and Step 6 History list-item contracts remain unchanged; the History item matches the implemented response exactly. Session/history detail retains its legacy shape while the accepted design adds the contextual TieBreakState variant:
 
@@ -460,7 +505,7 @@ AssessmentHistoryItem
   - completedAt
 ```
 
-The earlier v0.3.0 bump captured the implemented History schema correction; v0.4.0 recorded Step 7 deterministic Clarification/Tie-break alignment. Version 0.5.0 adds the version-aware GET interaction, exclusive PUT request shapes, version-specific tie-break state projections and both final decision sources. It does not claim implementation or deployment of DefinitionVersion 1.1.
+The earlier v0.3.0 bump captured the implemented History schema correction; v0.4.0 recorded Step 7 deterministic Clarification/Tie-break alignment; v0.5.0 froze the version-aware contextual tie-break contract. Version 0.6.0 aligns the provider-backed clarification design with the Step 8F-R2 runtime: Current Turn recovery, optimistic assistant sequence, bounded answer/question fields and stable 409/503 semantics.
 
 It freezes:
 
