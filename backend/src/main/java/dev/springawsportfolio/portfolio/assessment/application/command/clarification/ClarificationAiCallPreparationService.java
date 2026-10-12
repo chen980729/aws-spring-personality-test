@@ -282,6 +282,15 @@ public class ClarificationAiCallPreparationService {
             );
         }
 
+        if (
+                latest.sequenceNumber()
+                        != command.expectedAssistantSequence()
+        ) {
+            throw new ClarificationNotAllowedException(
+                    "clarification answer targets a stale assistant turn"
+            );
+        }
+
         int maximumFollowUpQuestionSequence =
                 2 * runtimePolicy.maximumModelTurns() - 3;
 
