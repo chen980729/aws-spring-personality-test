@@ -257,6 +257,7 @@ public class ClarificationAiCallCommitService {
         }
 
         return ClarificationRuntimeTurnResult.followUp(
+                nextSequence,
                 followUp.text()
         );
     }
