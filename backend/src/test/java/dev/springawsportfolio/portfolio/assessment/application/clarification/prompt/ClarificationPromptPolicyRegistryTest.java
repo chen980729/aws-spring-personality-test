@@ -141,16 +141,9 @@ class ClarificationPromptPolicyRegistryTest {
                     );
                 });
 
-        int separatorLength =
-                System.lineSeparator()
-                        .length()
-                        + 3
-                        + System.lineSeparator()
-                        .length();
-
         canonical.setLength(
                 canonical.length()
-                        - separatorLength
+                        - "\n---\n".length()
         );
 
         return canonical.toString();
@@ -164,13 +157,7 @@ class ClarificationPromptPolicyRegistryTest {
                 section
         );
         canonical.append(
-                System.lineSeparator()
-        );
-        canonical.append(
-                "---"
-        );
-        canonical.append(
-                System.lineSeparator()
+                "\n---\n"
         );
     }
 }
