@@ -12,7 +12,9 @@ public record BedrockClarificationProperties(
         String region,
         String modelId,
         Duration apiCallTimeout,
-        Duration apiCallAttemptTimeout
+        Duration apiCallAttemptTimeout,
+        Integer maxTokens,
+        boolean strictToolSchema
 ) {
 
     private static final String DEFAULT_REGION =
@@ -23,6 +25,9 @@ public record BedrockClarificationProperties(
 
     private static final Duration DEFAULT_API_CALL_ATTEMPT_TIMEOUT =
             Duration.ofSeconds(18);
+
+    private static final int DEFAULT_MAX_TOKENS =
+            512;
 
     public BedrockClarificationProperties {
         region =
@@ -45,6 +50,11 @@ public record BedrockClarificationProperties(
                 apiCallAttemptTimeout == null
                         ? DEFAULT_API_CALL_ATTEMPT_TIMEOUT
                         : apiCallAttemptTimeout;
+
+        maxTokens =
+                maxTokens == null
+                        ? DEFAULT_MAX_TOKENS
+                        : maxTokens;
 
         if (
                 apiCallTimeout.isZero()
@@ -73,6 +83,12 @@ public record BedrockClarificationProperties(
             throw new IllegalArgumentException(
                     "apiCallAttemptTimeout must be shorter "
                             + "than apiCallTimeout"
+            );
+        }
+
+        if (maxTokens <= 0) {
+            throw new IllegalArgumentException(
+                    "maxTokens must be positive"
             );
         }
 

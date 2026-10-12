@@ -1,5 +1,6 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
+import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -57,6 +58,51 @@ class BedrockRuntimeConfiguration {
     ) {
         return new BedrockConverseTransport(
                 client
+        );
+    }
+
+    @Bean
+    BedrockClarificationToolContract
+    bedrockClarificationToolContract(
+            BedrockClarificationProperties properties
+    ) {
+        return new BedrockClarificationToolContract(
+                properties.strictToolSchema()
+        );
+    }
+
+    @Bean
+    BedrockClarificationRequestFactory
+    bedrockClarificationRequestFactory(
+            BedrockClarificationProperties properties,
+            BedrockClarificationToolContract toolContract
+    ) {
+        return new BedrockClarificationRequestFactory(
+                properties,
+                toolContract
+        );
+    }
+
+    @Bean
+    BedrockClarificationResponseParser
+    bedrockClarificationResponseParser(
+            BedrockClarificationProperties properties
+    ) {
+        return new BedrockClarificationResponseParser(
+                properties
+        );
+    }
+
+    @Bean
+    ClarificationAiPort clarificationAiPort(
+            BedrockConverseTransport transport,
+            BedrockClarificationRequestFactory requestFactory,
+            BedrockClarificationResponseParser responseParser
+    ) {
+        return new BedrockClarificationAdapter(
+                transport,
+                requestFactory,
+                responseParser
         );
     }
 }

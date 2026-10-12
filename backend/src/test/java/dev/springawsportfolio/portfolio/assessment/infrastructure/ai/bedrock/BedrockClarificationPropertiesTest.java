@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BedrockClarificationPropertiesTest {
@@ -17,7 +18,9 @@ class BedrockClarificationPropertiesTest {
                         null,
                         null,
                         null,
-                        null
+                        null,
+                        null,
+                        false
                 );
 
         assertEquals(
@@ -39,6 +42,15 @@ class BedrockClarificationPropertiesTest {
                 Duration.ofSeconds(18),
                 properties.apiCallAttemptTimeout()
         );
+
+        assertEquals(
+                512,
+                properties.maxTokens()
+        );
+
+        assertFalse(
+                properties.strictToolSchema()
+        );
     }
 
     @Test
@@ -50,7 +62,9 @@ class BedrockClarificationPropertiesTest {
                         "ap-northeast-1",
                         " ",
                         Duration.ofSeconds(20),
-                        Duration.ofSeconds(18)
+                        Duration.ofSeconds(18),
+                        512,
+                        false
                 )
         );
     }
@@ -64,7 +78,25 @@ class BedrockClarificationPropertiesTest {
                         "ap-northeast-1",
                         null,
                         Duration.ofSeconds(20),
-                        Duration.ofSeconds(20)
+                        Duration.ofSeconds(20),
+                        512,
+                        false
+                )
+        );
+    }
+
+    @Test
+    void requiresPositiveMaxTokens() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new BedrockClarificationProperties(
+                        false,
+                        "ap-northeast-1",
+                        null,
+                        Duration.ofSeconds(20),
+                        Duration.ofSeconds(18),
+                        0,
+                        false
                 )
         );
     }

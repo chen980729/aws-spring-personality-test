@@ -17,7 +17,9 @@ class BedrockRuntimeConfigurationTest {
                         "ap-northeast-1",
                         "test-model",
                         Duration.ofSeconds(20),
-                        Duration.ofSeconds(18)
+                        Duration.ofSeconds(18),
+                        512,
+                        false
                 );
 
         BedrockRuntimeConfiguration configuration =
