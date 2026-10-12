@@ -1,6 +1,5 @@
 package dev.springawsportfolio.portfolio.assessment.web.error;
 
-import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationTurnConflictException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -15,11 +14,7 @@ class AssessmentExceptionHandlerTest {
                 new AssessmentExceptionHandler();
 
         ProblemDetail problem =
-                handler.handleClarificationTurnConflict(
-                        new ClarificationTurnConflictException(
-                                "synthetic turn conflict"
-                        )
-                );
+                handler.handleClarificationTurnConflict();
 
         assertEquals(
                 HttpStatus.CONFLICT.value(),
