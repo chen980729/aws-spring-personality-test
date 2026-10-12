@@ -1,8 +1,8 @@
 # API Contract
 
-> **Status:** OpenAPI v0.5.0 — active accepted design contract
-> **Last updated:** 2026-10-06
-> **Implementation alignment:** Backend implements the v0.5.0 version-aware tie-break GET/PUT boundary, contextual persistence/history projection, v1/v2 finalization provenance, final Session-lock concurrency, and activation regression coverage. Frontend F7-A/F7-B implements both retained 1.0 and 1.1 interaction contracts, while F7-C/F7-D completes the associated result/Landing presentation work. Flyway V8 promotes DefinitionVersion 1.1 to AVAILABLE and retires 1.0 for new Session binding.
+> **Status:** OpenAPI v0.6.0 — active accepted design contract
+> **Last updated:** 2026-10-12
+> **Implementation alignment:** Backend implements the deployed 1.0/1.1 tie-break boundary and the internal AI clarification runtime through Step 8F-R2. OpenAPI v0.6.0 additionally freezes the pending Step 8G public clarification interaction contract: current-turn recovery, assistantSequence-based Continue, stable 409 turn conflicts and 503 AI capability unavailability. Those provider-backed Controllers are not yet claimed as executable.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -31,6 +31,19 @@ The OpenAPI document is the accepted **design-first MVP target**, not a claim th
 The React frontend therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. This rule has now been exercised through F7-D: the frontend calls only implemented Identity/Assessment endpoints and deliberately does not instantiate runtime dependencies on Group, historical deletion or provider-backed clarification paths merely because they exist in the design-first target. Full-client generation can be reconsidered once the target contract and executable surface converge.
 
 ## Contract version history
+
+### v0.6.0 — 2026-10-12
+
+Aligns the design-first provider-backed clarification contract with the hardened Step 8F-R2 runtime:
+
+- adds `GET .../clarifications/{dimensionCode}/current-turn` for browser-refresh / lost-response recovery;
+- exposes only the current temporary question plus `assistantSequence`, never the transcript or execution token;
+- changes Continue to `assistantSequence + answer`;
+- bounds user answers to 1000 Unicode code points and assistant questions to 500;
+- defines `409 CLARIFICATION_TURN_CONFLICT` for temporary/current-turn conflicts;
+- defines `503 AI_CLARIFICATION_UNAVAILABLE` for unavailable provider capability;
+- preserves 422 for business-semantic clarification ineligibility;
+- keeps provider-backed runtime Controllers as a Step 8G implementation target rather than claiming they are already executable.
 
 ### v0.5.0 — 2026-10-05
 
