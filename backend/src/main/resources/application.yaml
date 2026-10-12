@@ -24,6 +24,9 @@ spring:
 app:
   assessment:
     clarification:
+      runtime:
+        maximum-model-turns: ${CLARIFICATION_MAXIMUM_MODEL_TURNS:3}
+        context-ttl: ${CLARIFICATION_CONTEXT_TTL:24h}
       ai:
         bedrock:
           enabled: ${BEDROCK_CLARIFICATION_ENABLED:false}
