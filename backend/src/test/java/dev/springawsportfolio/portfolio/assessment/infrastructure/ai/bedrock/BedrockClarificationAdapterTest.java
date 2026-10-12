@@ -1,5 +1,6 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
+import dev.springawsportfolio.portfolio.assessment.application.clarification.prompt.ClarificationPromptPolicyRegistry;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiTurn;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
@@ -64,7 +65,8 @@ class BedrockClarificationAdapterTest {
                                 properties,
                                 new BedrockClarificationToolContract(
                                         false
-                                )
+                                ),
+                                new ClarificationPromptPolicyRegistry()
                         ),
                         new BedrockClarificationResponseParser(
                                 properties
