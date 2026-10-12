@@ -1,14 +1,16 @@
 openapi: 3.1.2
 info:
   title: Spring AWS Portfolio API
-  version: 0.5.0
+  version: 0.6.0
   summary: MVP HTTP contract for the Spring AWS Portfolio project.
   description: |
     Design-first API contract for the first-party React + Spring Boot application.
-    Version 0.5.0 records accepted DefinitionVersion 1.1 contextual tie-break design;
-    implementation/migration/publication remain pending (ADR-0018). This is not a
-    claim that 1.1 is deployed. HTTP paths remain /api/v1. Legacy 1.0 is immutable;
-    existing Sessions retain their original semantics after its eventual retirement.
+    Version 0.6.0 aligns the accepted provider-backed clarification interaction
+    contract with Step 8F-R2 while preserving the deployed DefinitionVersion 1.1
+    contextual tie-break contract. Runtime clarification Controllers remain a Step 8G
+    implementation target; their presence here freezes request/response/error semantics,
+    not a claim that the public runtime endpoints are already executable. HTTP paths
+    remain /api/v1. Retained 1.0 Sessions keep their immutable legacy semantics.
 
     Authentication uses a server-side Spring Session persisted through JDBC. Production
     uses an HttpOnly/Secure `__Host-SESSION` cookie. Unsafe requests require the CSRF
@@ -501,6 +503,38 @@ paths:
           $ref: '#/components/responses/UnprocessableContent'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/assessment-sessions/{sessionId}/clarifications/{dimensionCode}/current-turn:
+    parameters:
+      - $ref: '#/components/parameters/SessionIdPath'
+      - $ref: '#/components/parameters/DimensionCodePath'
+    get:
+      tags: [Clarifications]
+      operationId: getCurrentClarificationTurn
+      summary: Read the current persisted assistant question for refresh/lost-response recovery.
+      description: |
+        Returns only the currently answerable assistant question and its optimistic
+        assistantSequence. It does not expose the clarification transcript or internal
+        execution token. Reading the current turn does not invoke the AI provider.
+      responses:
+        '200':
+          description: Current clarification turn is waiting for the user's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClarificationCurrentTurnResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -1892,16 +1926,43 @@ components:
     ClarificationMessageRequest:
       type: object
       additionalProperties: false
-      required: [message]
+      required: [assistantSequence, answer]
       properties:
-        message:
+        assistantSequence:
+          type: integer
+          minimum: 1
+          description: |
+            Odd optimistic turn version returned with the assistant question.
+            The server rejects stale/replayed answers with 409.
+        answer:
           type: string
           minLength: 1
+          maxLength: 1000
+          description: User clarification answer, limited to 1000 Unicode code points.
+
+    ClarificationCurrentTurnResponse:
+      type: object
+      additionalProperties: false
+      required: [sessionId, dimensionCode, assistantSequence, question]
+      properties:
+        sessionId:
+          $ref: '#/components/schemas/Uuid'
+        dimensionCode:
+          type: string
+        assistantSequence:
+          type: integer
+          minimum: 1
+          description: Odd optimistic turn version required by the Continue request.
+        question:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Current temporary assistant question; not durable Assessment history.
 
     ClarificationInteractionResponse:
       type: object
       additionalProperties: false
-      required: [sessionId, dimensionCode, clarificationStatus, assistantMessage, result, sessionStatus, workflow]
+      required: [sessionId, dimensionCode, clarificationStatus, assistantSequence, question, result, sessionStatus, workflow]
       properties:
         sessionId:
           $ref: '#/components/schemas/Uuid'
@@ -1909,9 +1970,14 @@ components:
           type: string
         clarificationStatus:
           $ref: '#/components/schemas/ClarificationStatus'
-        assistantMessage:
+        assistantSequence:
+          type: [integer, 'null']
+          minimum: 1
+          description: Present only when a follow-up question is waiting for an answer.
+        question:
           type: [string, 'null']
-          description: Runtime interaction text; not durable Assessment history.
+          maxLength: 500
+          description: Current temporary assistant question; not durable Assessment history.
         result:
           anyOf:
             - $ref: '#/components/schemas/ClarificationResult'
