@@ -27,7 +27,7 @@ public record BedrockClarificationProperties(
             Duration.ofSeconds(18);
 
     private static final int DEFAULT_MAX_TOKENS =
-            512;
+            1024;
 
     public BedrockClarificationProperties {
         region =

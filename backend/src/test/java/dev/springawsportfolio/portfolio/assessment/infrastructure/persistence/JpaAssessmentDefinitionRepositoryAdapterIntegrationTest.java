@@ -1,5 +1,7 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.persistence;
 
+import dev.springawsportfolio.portfolio.assessment.application.clarification.prompt.ClarificationPromptPolicy;
+import dev.springawsportfolio.portfolio.assessment.application.clarification.prompt.ClarificationPromptPolicyRegistry;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionId;
@@ -11,11 +13,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -51,6 +55,12 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
 
     @Autowired
     AssessmentDefinitionVersionRepository versionRepository;
+
+    @Autowired
+    ClarificationPromptPolicyRegistry promptPolicyRegistry;
+
+    @Autowired
+    JdbcTemplate jdbcTemplate;
 
     @Test
     void loadsActivatedSixteenPersonalityVersionOnePointOne() {
@@ -374,6 +384,86 @@ class JpaAssessmentDefinitionRepositoryAdapterIntegrationTest {
                 "I keep the structure relatively open at first, gather more information, and commit to details when they become necessary.",
                 "P"
         );
+    }
+
+    @Test
+    void everySeededDefinitionVersionHasCompatiblePromptPolicySemantics() {
+        List<UUID> versionIds =
+                jdbcTemplate.queryForList(
+                        """
+                        SELECT id
+                        FROM assessment_definition_versions
+                        ORDER BY version_code
+                        """,
+                        UUID.class
+                );
+
+        assertTrue(
+                !versionIds.isEmpty()
+        );
+
+        for (UUID versionId : versionIds) {
+            AssessmentDefinitionVersion version =
+                    versionRepository
+                            .findById(
+                                    new AssessmentDefinitionVersionId(
+                                            versionId
+                                    )
+                            )
+                            .orElseThrow();
+
+            String revision =
+                    version
+                            .specification()
+                            .clarificationPolicy()
+                            .revision();
+
+            assertTrue(
+                    promptPolicyRegistry
+                            .supportedRevisions()
+                            .contains(
+                                    revision
+                            ),
+                    "Missing prompt policy revision for DefinitionVersion "
+                            + version.versionCode()
+                            + ": "
+                            + revision
+            );
+
+            ClarificationPromptPolicy policy =
+                    promptPolicyRegistry.require(
+                            revision
+                    );
+
+            version
+                    .specification()
+                    .dimensions()
+                    .forEach(dimension -> {
+                        ClarificationPromptPolicy.DimensionSemantics
+                                semantics =
+                                policy.requireDimension(
+                                        dimension.code()
+                                );
+
+                        assertEquals(
+                                dimension.poleA(),
+                                semantics
+                                        .requirePole(
+                                                dimension.poleA()
+                                        )
+                                        .code()
+                        );
+
+                        assertEquals(
+                                dimension.poleB(),
+                                semantics
+                                        .requirePole(
+                                                dimension.poleB()
+                                        )
+                                        .code()
+                        );
+                    });
+        }
     }
 
     private void assertTieBreakQuestion(

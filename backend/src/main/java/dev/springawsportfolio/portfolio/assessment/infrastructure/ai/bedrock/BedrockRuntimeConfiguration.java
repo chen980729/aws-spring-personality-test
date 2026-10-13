@@ -1,6 +1,7 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
 import dev.springawsportfolio.portfolio.assessment.application.clarification.prompt.ClarificationPromptPolicyRegistry;
+import dev.springawsportfolio.portfolio.assessment.application.clarification.runtime.ClarificationRuntimePolicy;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -21,6 +22,18 @@ import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
         havingValue = "true"
 )
 class BedrockRuntimeConfiguration {
+
+    @Bean
+    BedrockClarificationRuntimeCompatibility
+    bedrockClarificationRuntimeCompatibility(
+            BedrockClarificationProperties properties,
+            ClarificationRuntimePolicy runtimePolicy
+    ) {
+        return new BedrockClarificationRuntimeCompatibility(
+                properties,
+                runtimePolicy
+        );
+    }
 
     @Bean
     BedrockRuntimeClient bedrockRuntimeClient(

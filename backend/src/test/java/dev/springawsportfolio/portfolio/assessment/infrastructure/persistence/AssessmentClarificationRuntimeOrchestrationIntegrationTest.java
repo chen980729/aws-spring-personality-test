@@ -16,7 +16,7 @@ import dev.springawsportfolio.portfolio.assessment.application.command.submissio
 import dev.springawsportfolio.portfolio.assessment.application.command.submission.SubmitQuestionnaireService;
 import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionService;
-import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationTurnConflictException;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiTechnicalException;
@@ -295,7 +295,7 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
         );
 
         assertThrows(
-                ClarificationNotAllowedException.class,
+                ClarificationTurnConflictException.class,
                 () ->
                         orchestrator.continueClarification(
                                 firstAnswer
@@ -305,6 +305,56 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
         assertEquals(
                 2,
                 aiPort.callCount()
+        );
+    }
+
+    @Test
+    void retryDoesNotDiscardValidCurrentAssistantQuestion() {
+        SubmittedClarification submitted =
+                submittedClarification();
+
+        ClarificationRuntimeOrchestrator orchestrator =
+                orchestrator(
+                        new QueueAiPort(
+                                request ->
+                                        new ClarificationAiTurn
+                                                .FollowUpQuestion(
+                                                "Current question?"
+                                        )
+                        )
+                );
+
+        ClarificationRuntimeTurnResult first =
+                orchestrator.start(
+                        new StartDimensionClarificationCommand(
+                                submitted.userId(),
+                                submitted.session().id(),
+                                submitted.dimension().code()
+                        )
+                );
+
+        assertEquals(
+                ClarificationRuntimeTurnResult.Status.FOLLOW_UP_REQUIRED,
+                first.status()
+        );
+
+        assertThrows(
+                ClarificationTurnConflictException.class,
+                () ->
+                        orchestrator.retry(
+                                new RetryDimensionClarificationCommand(
+                                        submitted.userId(),
+                                        submitted.session().id(),
+                                        submitted.dimension().code()
+                                )
+                        )
+        );
+
+        assertEquals(
+                1,
+                runtimeRowsForSession(
+                        submitted.session().id()
+                )
         );
     }
 

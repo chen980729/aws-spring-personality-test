@@ -5,6 +5,7 @@ import dev.springawsportfolio.portfolio.assessment.application.clarification.run
 import dev.springawsportfolio.portfolio.assessment.application.clarification.runtime.ClarificationRuntimePolicy;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationTurnConflictException;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationRuntimeContextStore;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
@@ -157,7 +158,7 @@ public class ClarificationExecutionRecoveryService {
                         now
                 )
         ) {
-            throw new ClarificationNotAllowedException(
+            throw new ClarificationTurnConflictException(
                     "clarification execution is still active or awaiting an answer"
             );
         }

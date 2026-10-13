@@ -5,6 +5,7 @@ import dev.springawsportfolio.portfolio.assessment.application.clarification.run
 import dev.springawsportfolio.portfolio.assessment.application.clarification.runtime.ClarificationRuntimePolicy;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationTurnConflictException;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationRuntimeContextStore;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
@@ -271,7 +272,7 @@ public class ClarificationAiCallPreparationService {
                 );
             }
 
-            throw new ClarificationNotAllowedException(
+            throw new ClarificationTurnConflictException(
                     "clarification execution is still starting"
             );
         }
@@ -310,7 +311,7 @@ public class ClarificationAiCallPreparationService {
                 );
             }
 
-            throw new ClarificationNotAllowedException(
+            throw new ClarificationTurnConflictException(
                     "previous clarification answer is still processing"
             );
         }
@@ -319,7 +320,7 @@ public class ClarificationAiCallPreparationService {
                 latest.sequenceNumber()
                         != command.expectedAssistantSequence()
         ) {
-            throw new ClarificationNotAllowedException(
+            throw new ClarificationTurnConflictException(
                     "clarification answer targets a stale assistant turn"
             );
         }

@@ -92,7 +92,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** the Step 7 deterministic baseline remains intact, DefinitionVersion 1.1 is activated, and Step 8B-8F-R now implements the internal provider-neutral AI boundary, temporary runtime persistence, Bedrock Converse adapter/tool contract, runtime orchestration, crash recovery, privacy retention and prompt-policy versioning. Public Start / Continue / Retry HTTP endpoints, Frontend AI conversation UX, deployment IAM/configuration, model evaluation and live Bedrock smoke validation remain the next Step 8 milestones.
+**Current status:** the Step 7 deterministic baseline remains intact, DefinitionVersion 1.1 is activated, and Step 8B-8F-R2 now implements/hardens the internal provider-neutral AI boundary, temporary runtime persistence, Bedrock Converse adapter/tool contract, runtime orchestration, crash recovery, privacy retention, prompt-policy versioning and DefinitionVersion/prompt contract guards. OpenAPI v0.6.0 freezes Current Turn recovery plus 409/422/503 semantics. Public Start / Current Turn / Continue / Retry HTTP endpoints, Frontend AI conversation UX, deployment IAM/configuration, model evaluation and live Bedrock smoke validation remain the next Step 8 milestones.
 
 ### Domain/Application
 
@@ -207,7 +207,7 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] DefinitionVersion 1.1 pre-activation acceptance sweep (Step 2E): immutable content equivalence, UNCLEAR/SKIPPED matrix, retries/conflicts, 50/50 evidence, persisted history and Session-lock finalization race.
 - [x] DefinitionVersion 1.1 activation migration + post-activation retained-1.0/new-1.1 binding verification (V8 / checkpoint 17).
 - [x] Frontend contextual Tie-break integration — F7-A contract compatibility + F7-B UI interaction complete; activation requires no additional Frontend code.
-- [x] Internal AI adapter / runtime context / orchestration through Step 8F-R; public HTTP/Frontend/deployment enablement remains Step 8G+.
+- [x] Internal AI adapter / runtime context / orchestration through Step 8F-R2, including retention/recovery hardening, prompt-policy consistency guards and current-turn/error-contract freeze; public HTTP/Frontend/deployment enablement remains Step 8G+.
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
 - [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-7 coverage.

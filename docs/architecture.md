@@ -425,6 +425,8 @@ scheduled expired-row cleanup = every 15 minutes
 
 Runtime context is deleted immediately when its business purpose ends: accepted judgement, accepted technical failure, Skip, Skip Remaining, or Restart/abandon. Scheduled cleanup is a safety net for expired orphan rows. Live-table deletion is distinct from RDS automated-backup retention; ADR-0008 records that boundary.
 
+An unexpired current `ASSISTANT_QUESTION` is valid resumable interaction state rather than an orphan. The Step 8G HTTP contract therefore includes an owner-only Current Turn read that returns only the latest question plus `assistantSequence` after browser refresh or a lost mutation response; prior transcript messages and the execution token remain private.
+
 The system does not guarantee exact resume from the Nth AI message after a failed external call. If runtime context expires or an in-flight execution becomes orphaned before an accepted `ClarificationResult` is durably persisted:
 
 - The persisted `AssessmentSession` remains valid.
