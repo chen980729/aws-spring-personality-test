@@ -10,6 +10,7 @@ import dev.springawsportfolio.portfolio.assessment.domain.clarification.Clarific
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
+import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersionId;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionCode;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.specification.DimensionDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionVersionRepository;
@@ -70,6 +71,8 @@ class GetCurrentClarificationTurnServiceTest {
     void givenActiveOwnedClarification() {
         AssessmentSession session = mock(AssessmentSession.class);
         when(session.status()).thenReturn(AssessmentSessionStatus.CLARIFICATION_IN_PROGRESS);
+        AssessmentDefinitionVersionId versionId = AssessmentDefinitionVersionId.newId();
+        when(session.definitionVersionId()).thenReturn(versionId);
 
         AssessmentDefinitionVersion version = mock(
                 AssessmentDefinitionVersion.class, RETURNS_DEEP_STUBS
@@ -80,7 +83,7 @@ class GetCurrentClarificationTurnServiceTest {
 
         when(sessionRepository.findOwnedById(sessionId, actor))
                 .thenReturn(Optional.of(session));
-        when(versionRepository.findById(any()))
+        when(versionRepository.findById(versionId))
                 .thenReturn(Optional.of(version));
 
         DimensionClarification clarification = mock(DimensionClarification.class);
