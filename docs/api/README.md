@@ -1,8 +1,8 @@
 # API Contract
 
 > **Status:** OpenAPI v0.6.0 — active accepted design contract
-> **Last updated:** 2026-10-12
-> **Implementation alignment:** Backend implements the deployed 1.0/1.1 tie-break boundary and the internal AI clarification runtime through Step 8F-R2. OpenAPI v0.6.0 additionally freezes the pending Step 8G public clarification interaction contract: current-turn recovery, assistantSequence-based Continue, stable 409 turn conflicts and 503 AI capability unavailability. Those provider-backed Controllers are not yet claimed as executable.
+> **Last updated:** 2026-10-14
+> **Implementation alignment:** Step 8G-A implements the OpenAPI v0.6.0 clarification HTTP boundary (Start / Continue / Retry / read-only Current Turn) on the Backend. React interaction remains Step 8G-B; Bedrock stays disabled by default until AWS enablement in Step 8H/8I. This branch is not yet claimed as deployed.
 
 `openapi.yaml` is the machine-readable HTTP contract for the Backend MVP.
 
@@ -26,9 +26,19 @@ OpenAPI version `3.1.2` is used for the project contract. Although OpenAPI 3.2 e
 
 ## Frontend executable-contract rule
 
-The OpenAPI document is the accepted **design-first MVP target**, not a claim that every path is executable in the current Spring runtime. In particular, Group, historical deletion and provider-backed clarification interaction can remain design-frozen before their Controllers are implemented.
+The OpenAPI document is the accepted **design-first MVP target**, not a claim that every path is executable in the current Spring runtime. Group and historical deletion remain design-frozen. Step 8G-A implements provider-backed clarification routes but provider capability remains disabled until configuration and rollout.
 
-The React frontend therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. This rule has now been exercised through F7-D: the frontend calls only implemented Identity/Assessment endpoints and deliberately does not instantiate runtime dependencies on Group, historical deletion or provider-backed clarification paths merely because they exist in the design-first target. Full-client generation can be reconsidered once the target contract and executable surface converge.
+The React frontend therefore uses implemented **Controller + DTO + SecurityConfig + accepted backend checkpoint behavior** as the executable baseline. This rule has now been exercised through F7-D: the frontend calls only implemented Identity/Assessment endpoints and deliberately does not instantiate runtime dependencies on Group, historical deletion or provider-backed clarification paths merely because they exist in the design-first target. Step 8G-B will add the React clarification interactions. Full-client generation can be reconsidered once the target contract and executable surface converge.
+
+## Implementation checkpoints
+
+### Step 8G-A — Backend HTTP adapter
+
+- `POST start`, `POST messages` and `POST retry` use the owner inferred from the authenticated principal, require CSRF and delegate to the existing Application orchestrator.
+- `GET current-turn` is a read-only, owner-scoped recovery query; it does not require a configured AI provider, does not re-invoke the model, and returns only the active unexpired question plus optimistic assistantSequence.
+- Client payload validation uses Unicode code points and odd positive assistantSequence values; stale answers produce 409, invalid clarification lifecycle produces 422, unavailable AI capability produces 503.
+- Internal execution tokens, provider prompts and temporary transcripts are never serialized in public DTOs.
+- This implements the frozen v0.6.0 schema without changing it. It is not a Bedrock production activation; Frontend UX and AWS rollout remain separate.
 
 ## Contract version history
 
@@ -43,7 +53,7 @@ Aligns the design-first provider-backed clarification contract with the hardened
 - defines `409 CLARIFICATION_TURN_CONFLICT` for temporary/current-turn conflicts;
 - defines `503 AI_CLARIFICATION_UNAVAILABLE` for unavailable provider capability;
 - preserves 422 for business-semantic clarification ineligibility;
-- keeps provider-backed runtime Controllers as a Step 8G implementation target rather than claiming they are already executable.
+- established these routes as a Step 8G contract; Step 8G-A now implements them behind the existing optional AI capability.
 
 ### v0.5.0 — 2026-10-05
 
