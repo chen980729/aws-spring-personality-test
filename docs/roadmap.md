@@ -92,7 +92,7 @@ UI/UX answers what the user sees and does. React implementation answers how that
 
 Translate the architecture contract into implementable backend design without changing the domain semantics silently.
 
-**Current status:** the Step 7 runtime baseline remains intact, DefinitionVersion 1.1 compatibility completed the pre-activation acceptance sweep, and the V8 activation release is deployed. New Sessions now bind 1.1 while retained 1.0 Sessions preserve their original direct-pole semantics. OpenAPI v0.5.0 matches the implemented GET/PUT boundary, version-specific projections and final-source semantics. Real provider-backed clarification interaction is the next backend milestone: Step 8.
+**Current status:** the Step 7 deterministic baseline remains intact, DefinitionVersion 1.1 is activated, and Step 8B-8F-R now implements the internal provider-neutral AI boundary, temporary runtime persistence, Bedrock Converse adapter/tool contract, runtime orchestration, crash recovery, privacy retention and prompt-policy versioning. Public Start / Continue / Retry HTTP endpoints, Frontend AI conversation UX, deployment IAM/configuration, model evaluation and live Bedrock smoke validation remain the next Step 8 milestones.
 
 ### Domain/Application
 
@@ -147,16 +147,19 @@ Accepted Spring/backend architecture artifacts are `docs/backend/01-*` through `
 
 ## 7. AI Clarification Detailed Design
 
-- [ ] Prompt/policy design aligned with non-clinical positioning.
+- [x] Prompt/policy design aligned with non-clinical positioning; revision-aware policy v1 is bound to provenance.
 - [x] Domain structured-output contract (`ClarificationResult` + `AIProvenance`) used by Assessment finalization.
-- [ ] Provider-specific structured-output parsing/validation.
-- [ ] Temporary multi-turn runtime context design.
+- [x] Bedrock Converse tool schema + provider response parsing/semantic validation.
+- [x] Temporary multi-turn runtime context design and PostgreSQL persistence.
 - [x] Sequential clarification flow: at most one `DimensionClarification` in `IN_PROGRESS` per Session.
-- [ ] Decide memory/cache/temporary persistence approach without turning transcript into authoritative history.
-- [x] Durable failure/retry/stale-result boundary (`FAILED_RETRYABLE` + execution correlation token); provider timeout policy wiring remains Step 8.
-- [x] Provenance ownership/required fields for accepted result; provider-specific capture implementation remains later.
-- [x] ClarificationPolicy provenance binding: expected/default revision in DefinitionVersion + actual accepted-run provenance.
-- [ ] Safety/privacy review.
+- [x] Runtime persistence decision: short-lived PostgreSQL state, non-authoritative, 1h sliding TTL + lifecycle/scheduled deletion.
+- [x] Durable failure/retry/stale-result boundary (`FAILED_RETRYABLE` + execution correlation token + assistant sequence + 60s execution lease).
+- [x] Provenance ownership/required fields and effective provider/model capture for accepted result.
+- [x] ClarificationPolicy provenance binding: DefinitionVersion revision resolves concrete versioned prompt semantics.
+- [x] Runtime safety/privacy hardening: bounded input/output, prompt-injection boundary, cleanup and backup-retention documentation.
+- [ ] Public Start / Continue / Retry HTTP contract + Frontend interaction.
+- [ ] Terraform ECS task-role Bedrock permission/configuration + CloudFront timeout alignment.
+- [ ] Model evaluation and explicit live Bedrock smoke validation.
 
 Exact mid-conversation resume after runtime loss remains out of MVP scope.
 
@@ -204,7 +207,7 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] DefinitionVersion 1.1 pre-activation acceptance sweep (Step 2E): immutable content equivalence, UNCLEAR/SKIPPED matrix, retries/conflicts, 50/50 evidence, persisted history and Session-lock finalization race.
 - [x] DefinitionVersion 1.1 activation migration + post-activation retained-1.0/new-1.1 binding verification (V8 / checkpoint 17).
 - [x] Frontend contextual Tie-break integration — F7-A contract compatibility + F7-B UI interaction complete; activation requires no additional Frontend code.
-- [ ] real AI integration adapter / runtime context (Step 8).
+- [x] Internal AI adapter / runtime context / orchestration through Step 8F-R; public HTTP/Frontend/deployment enablement remains Step 8G+.
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
 - [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-7 coverage.

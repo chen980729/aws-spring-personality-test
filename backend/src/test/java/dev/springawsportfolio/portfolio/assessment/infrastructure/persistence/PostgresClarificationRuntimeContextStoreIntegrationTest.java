@@ -380,6 +380,60 @@ class PostgresClarificationRuntimeContextStoreIntegrationTest {
         );
     }
 
+    @Test
+    void databaseRejectsOversizedUserAnswer() {
+        StartedClarification started =
+                startClarification();
+
+        UUID clarificationId =
+                jdbcTemplate.queryForObject(
+                        """
+                        SELECT id
+                        FROM assessment_dimension_clarifications
+                        WHERE session_id = ?
+                          AND dimension_code = ?
+                        """,
+                        UUID.class,
+                        started.session().id().value(),
+                        started.dimension().code().value()
+                );
+
+        assertThrows(
+                DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update(
+                        """
+                        INSERT INTO assessment_clarification_runtime_messages (
+                            clarification_id,
+                            execution_token,
+                            sequence_number,
+                            message_role,
+                            message_text,
+                            created_at,
+                            expires_at
+                        )
+                        VALUES (?, ?, 2, 'USER_ANSWER', ?, ?, ?)
+                        """,
+                        clarificationId,
+                        started.ticket().executionToken().value(),
+                        "a".repeat(
+                                ClarificationRuntimeMessage
+                                        .MAX_USER_ANSWER_CODE_POINTS
+                                        + 1
+                        ),
+                        Timestamp.from(
+                                Instant.parse(
+                                        "2026-10-07T10:00:00Z"
+                                )
+                        ),
+                        Timestamp.from(
+                                Instant.parse(
+                                        "2026-10-07T11:00:00Z"
+                                )
+                        )
+                )
+        );
+    }
+
     private StartedClarification startClarification() {
         UserId userId =
                 createUser();

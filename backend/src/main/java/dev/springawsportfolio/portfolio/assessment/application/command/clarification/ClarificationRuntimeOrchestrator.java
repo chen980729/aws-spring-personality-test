@@ -20,6 +20,9 @@ public final class ClarificationRuntimeOrchestrator {
     private final ClarificationAiCallCommitService
             commitService;
 
+    private final ClarificationExecutionRecoveryService
+            recoveryService;
+
     private final ClarificationAiPort
             aiPort;
 
@@ -28,6 +31,7 @@ public final class ClarificationRuntimeOrchestrator {
             RetryDimensionClarificationService retryService,
             ClarificationAiCallPreparationService preparationService,
             ClarificationAiCallCommitService commitService,
+            ClarificationExecutionRecoveryService recoveryService,
             ClarificationAiPort aiPort
     ) {
         this.startService =
@@ -52,6 +56,12 @@ public final class ClarificationRuntimeOrchestrator {
                 Objects.requireNonNull(
                         commitService,
                         "commitService must not be null"
+                );
+
+        this.recoveryService =
+                Objects.requireNonNull(
+                        recoveryService,
+                        "recoveryService must not be null"
                 );
 
         this.aiPort =
@@ -82,12 +92,18 @@ public final class ClarificationRuntimeOrchestrator {
     public ClarificationRuntimeTurnResult retry(
             RetryDimensionClarificationCommand command
     ) {
+        Objects.requireNonNull(
+                command,
+                "command must not be null"
+        );
+
+        recoveryService.recoverExpiredExecutionForRetry(
+                command
+        );
+
         ClarificationExecutionTicket ticket =
                 retryService.execute(
-                        Objects.requireNonNull(
-                                command,
-                                "command must not be null"
-                        )
+                        command
                 );
 
         return executePrepared(
@@ -132,22 +148,36 @@ public final class ClarificationRuntimeOrchestrator {
     private ClarificationRuntimeTurnResult executeExternalCall(
             ClarificationAiCallPreparation preparation
     ) {
+        ClarificationAiTurn turn;
+
         try {
-            ClarificationAiTurn turn =
+            turn =
                     aiPort.nextTurn(
                             preparation.request()
                     );
-
-            return commitService.commit(
-                    preparation,
-                    turn
-            );
         } catch (
                 ClarificationAiTechnicalException technicalFailure
         ) {
             return commitService.failRetryable(
                     preparation.ticket()
             );
+        } catch (RuntimeException unexpectedFailure) {
+            try {
+                commitService.failRetryable(
+                        preparation.ticket()
+                );
+            } catch (RuntimeException compensationFailure) {
+                unexpectedFailure.addSuppressed(
+                        compensationFailure
+                );
+            }
+
+            throw unexpectedFailure;
         }
+
+        return commitService.commit(
+                preparation,
+                turn
+        );
     }
 }

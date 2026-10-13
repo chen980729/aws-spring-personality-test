@@ -1,5 +1,6 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
+import dev.springawsportfolio.portfolio.assessment.application.clarification.runtime.ClarificationRuntimeMessage;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
 import software.amazon.awssdk.core.document.Document;
 import software.amazon.awssdk.services.bedrockruntime.model.Tool;
@@ -81,6 +82,14 @@ public final class BedrockClarificationToolContract {
                 "minLength",
                 Document.fromNumber(
                         1
+                )
+        );
+
+        questionSchema.put(
+                "maxLength",
+                Document.fromNumber(
+                        ClarificationRuntimeMessage
+                                .MAX_ASSISTANT_QUESTION_CODE_POINTS
                 )
         );
 

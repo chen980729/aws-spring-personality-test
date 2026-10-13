@@ -413,16 +413,27 @@ MVP clarification execution is sequential within one `AssessmentSession`: at mos
 
 Each active external execution also has an opaque correlation token persisted only while that Clarification is `IN_PROGRESS`. Retry creates a new token for the same logical Clarification. External completion is accepted only when the returned/internal ticket still matches the current token after Session + Clarification revalidation; older completions are discarded as stale. The token is workflow coordination metadata, not AI conversation history or user-facing provenance.
 
-An active clarification may require temporary/ephemeral runtime conversation context. The implementation may later use memory, cache, temporary persistence, or another mechanism; this architecture baseline intentionally does not choose one.
+Active clarification uses short-lived PostgreSQL runtime persistence for normalized `ASSISTANT_QUESTION` / `USER_ANSWER` messages. This state survives ordinary ECS task replacement without becoming authoritative Assessment history.
 
-The system does not guarantee exact resume from the Nth AI message after browser closure, server restart, or runtime-context loss.
+The runtime policy currently uses:
 
-If runtime context is lost before an accepted `ClarificationResult` is durably persisted:
+~~~text
+sliding conversation TTL = 1 hour
+in-flight external-call lease = 60 seconds
+scheduled expired-row cleanup = every 15 minutes
+~~~
+
+Runtime context is deleted immediately when its business purpose ends: accepted judgement, accepted technical failure, Skip, Skip Remaining, or Restart/abandon. Scheduled cleanup is a safety net for expired orphan rows. Live-table deletion is distinct from RDS automated-backup retention; ADR-0008 records that boundary.
+
+The system does not guarantee exact resume from the Nth AI message after a failed external call. If runtime context expires or an in-flight execution becomes orphaned before an accepted `ClarificationResult` is durably persisted:
 
 - The persisted `AssessmentSession` remains valid.
 - The existing `InitialAssessmentResult` remains unchanged.
-- The affected dimension can return to a clarification-ready/retryable state and restart clarification. Technical failures are represented as `FAILED_RETRYABLE`, and Retry remains within the same logical `Session + Dimension` clarification lifecycle.
+- The affected execution is normalized to `FAILED_RETRYABLE`.
+- Retry creates a fresh execution token within the same logical `Session + Dimension` clarification lifecycle.
 - No incomplete conversation is treated as accepted domain evidence.
+
+The runtime also bounds free text to 1000 Unicode code points for a user answer and 500 for an assistant follow-up question.
 
 After successful clarification, durable business history keeps only:
 
@@ -432,8 +443,11 @@ After successful clarification, durable business history keeps only:
 
 `AIProvenance` represents the effective successful AI execution provenance associated with the accepted result, not the complete execution/audit trail. At minimum it records conceptually:
 
+- Provider identifier.
 - Model identifier.
 - AI Clarification Policy revision/version.
+
+The ClarificationPolicy revision resolves a versioned prompt policy. Material prompt-policy changes require a new revision; current policy v1 also supplies neutral EI/SN/TF/JP pole semantics so the model is not expected to infer single-letter meanings from prior knowledge.
 
 Future full AI audit requirements may justify `ClarificationAttempt[]`; MVP does not model it.
 

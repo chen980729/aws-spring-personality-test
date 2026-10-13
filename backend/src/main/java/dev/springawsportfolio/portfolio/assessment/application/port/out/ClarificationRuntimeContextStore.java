@@ -30,6 +30,15 @@ public interface ClarificationRuntimeContextStore {
             ClarificationExecutionToken executionToken
     );
 
+    void deleteDimension(
+            AssessmentSessionId sessionId,
+            DimensionCode dimension
+    );
+
+    void deleteSession(
+            AssessmentSessionId sessionId
+    );
+
     int deleteExpired(
             Instant cutoff
     );

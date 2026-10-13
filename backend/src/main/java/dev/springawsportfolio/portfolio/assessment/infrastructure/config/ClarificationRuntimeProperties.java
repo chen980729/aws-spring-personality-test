@@ -10,7 +10,8 @@ import java.util.Objects;
 )
 public record ClarificationRuntimeProperties(
         Integer maximumModelTurns,
-        Duration contextTtl
+        Duration contextTtl,
+        Duration inFlightExecutionLease
 ) {
 
     private static final int DEFAULT_MAXIMUM_MODEL_TURNS =
@@ -18,7 +19,12 @@ public record ClarificationRuntimeProperties(
 
     private static final Duration DEFAULT_CONTEXT_TTL =
             Duration.ofHours(
-                    24
+                    1
+            );
+
+    private static final Duration DEFAULT_IN_FLIGHT_EXECUTION_LEASE =
+            Duration.ofSeconds(
+                    60
             );
 
     public ClarificationRuntimeProperties {
@@ -31,6 +37,11 @@ public record ClarificationRuntimeProperties(
                 contextTtl == null
                         ? DEFAULT_CONTEXT_TTL
                         : contextTtl;
+
+        inFlightExecutionLease =
+                inFlightExecutionLease == null
+                        ? DEFAULT_IN_FLIGHT_EXECUTION_LEASE
+                        : inFlightExecutionLease;
 
         if (maximumModelTurns <= 0) {
             throw new IllegalArgumentException(
@@ -49,6 +60,30 @@ public record ClarificationRuntimeProperties(
         ) {
             throw new IllegalArgumentException(
                     "contextTtl must be positive"
+            );
+        }
+
+        Objects.requireNonNull(
+                inFlightExecutionLease,
+                "inFlightExecutionLease must not be null"
+        );
+
+        if (
+                inFlightExecutionLease.isZero()
+                        || inFlightExecutionLease.isNegative()
+        ) {
+            throw new IllegalArgumentException(
+                    "inFlightExecutionLease must be positive"
+            );
+        }
+
+        if (
+                inFlightExecutionLease.compareTo(
+                        contextTtl
+                ) >= 0
+        ) {
+            throw new IllegalArgumentException(
+                    "inFlightExecutionLease must be shorter than contextTtl"
             );
         }
     }

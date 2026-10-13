@@ -1,5 +1,6 @@
 package dev.springawsportfolio.portfolio.assessment.infrastructure.ai.bedrock;
 
+import dev.springawsportfolio.portfolio.assessment.application.clarification.runtime.ClarificationRuntimeMessage;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiTechnicalException;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiTurn;
@@ -162,11 +163,27 @@ public final class BedrockClarificationResponseParser {
                 BedrockClarificationToolContract.ASK_FOLLOWUP
         );
 
-        return new ClarificationAiTurn.FollowUpQuestion(
+        String question =
                 requireNonBlankString(
                         fields,
                         "question"
+                );
+
+        if (
+                question.codePointCount(
+                        0,
+                        question.length()
                 )
+                        > ClarificationRuntimeMessage
+                        .MAX_ASSISTANT_QUESTION_CODE_POINTS
+        ) {
+            throw invalid(
+                    "follow-up question exceeds maximum length"
+            );
+        }
+
+        return new ClarificationAiTurn.FollowUpQuestion(
+                question
         );
     }
 

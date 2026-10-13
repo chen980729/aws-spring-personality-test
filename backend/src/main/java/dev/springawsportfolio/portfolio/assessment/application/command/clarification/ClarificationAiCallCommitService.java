@@ -298,10 +298,9 @@ public class ClarificationAiCallCommitService {
             return ClarificationRuntimeTurnResult.staleDiscarded();
         }
 
-        runtimeContextStore.deleteExecution(
+        runtimeContextStore.deleteDimension(
                 preparation.ticket().sessionId(),
-                preparation.ticket().dimension(),
-                preparation.ticket().executionToken()
+                preparation.ticket().dimension()
         );
 
         return ClarificationRuntimeTurnResult.judgementAccepted(
@@ -321,10 +320,9 @@ public class ClarificationAiCallCommitService {
             return ClarificationRuntimeTurnResult.staleDiscarded();
         }
 
-        runtimeContextStore.deleteExecution(
+        runtimeContextStore.deleteDimension(
                 ticket.sessionId(),
-                ticket.dimension(),
-                ticket.executionToken()
+                ticket.dimension()
         );
 
         return ClarificationRuntimeTurnResult.failedRetryable(

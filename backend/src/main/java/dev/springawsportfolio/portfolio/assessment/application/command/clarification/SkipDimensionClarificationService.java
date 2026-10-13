@@ -4,6 +4,7 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.Assessm
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationRuntimeContextStore;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
@@ -46,6 +47,9 @@ public class SkipDimensionClarificationService {
     private final DimensionTieBreakRepository
             tieBreakRepository;
 
+    private final ClarificationRuntimeContextStore
+            runtimeContextStore;
+
     private final Clock clock;
 
     private final AssessmentFinalizationService
@@ -57,6 +61,7 @@ public class SkipDimensionClarificationService {
             AssessmentDefinitionVersionRepository versionRepository,
             DimensionClarificationRepository clarificationRepository,
             DimensionTieBreakRepository tieBreakRepository,
+            ClarificationRuntimeContextStore runtimeContextStore,
             Clock clock
     ) {
         this.sessionRepository =
@@ -87,6 +92,12 @@ public class SkipDimensionClarificationService {
                 Objects.requireNonNull(
                         tieBreakRepository,
                         "tieBreakRepository must not be null"
+                );
+
+        this.runtimeContextStore =
+                Objects.requireNonNull(
+                        runtimeContextStore,
+                        "runtimeContextStore must not be null"
                 );
 
         this.clock =
@@ -173,6 +184,11 @@ public class SkipDimensionClarificationService {
 
         AssessmentSessionStatus originalStatus =
                 session.status();
+
+        runtimeContextStore.deleteDimension(
+                session.id(),
+                command.dimension()
+        );
 
         target.skip(
                 now

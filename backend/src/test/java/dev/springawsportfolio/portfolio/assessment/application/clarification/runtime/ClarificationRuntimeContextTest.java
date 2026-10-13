@@ -147,6 +147,42 @@ class ClarificationRuntimeContextTest {
     }
 
     @Test
+    void messageRejectsOversizedAssistantQuestion() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ClarificationRuntimeMessage(
+                        1,
+                        ClarificationRuntimeMessage.Role.ASSISTANT_QUESTION,
+                        "a".repeat(
+                                ClarificationRuntimeMessage
+                                        .MAX_ASSISTANT_QUESTION_CODE_POINTS
+                                        + 1
+                        ),
+                        CREATED_AT,
+                        EXPIRES_AT
+                )
+        );
+    }
+
+    @Test
+    void messageRejectsOversizedUserAnswer() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new ClarificationRuntimeMessage(
+                        2,
+                        ClarificationRuntimeMessage.Role.USER_ANSWER,
+                        "a".repeat(
+                                ClarificationRuntimeMessage
+                                        .MAX_USER_ANSWER_CODE_POINTS
+                                        + 1
+                        ),
+                        CREATED_AT,
+                        EXPIRES_AT
+                )
+        );
+    }
+
+    @Test
     void messageRejectsRoleSequenceMismatch() {
         assertThrows(
                 IllegalArgumentException.class,

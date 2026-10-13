@@ -4,6 +4,7 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.Assessm
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionAlreadyCompletedException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationRuntimeContextStore;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinitionVersion;
 import dev.springawsportfolio.portfolio.assessment.domain.repository.AssessmentDefinitionRepository;
@@ -31,12 +32,16 @@ public class RestartAssessmentSessionService {
     private final AssessmentDefinitionVersionRepository
             versionRepository;
 
+    private final ClarificationRuntimeContextStore
+            runtimeContextStore;
+
     private final Clock clock;
 
     public RestartAssessmentSessionService(
             AssessmentSessionRepository sessionRepository,
             AssessmentDefinitionRepository definitionRepository,
             AssessmentDefinitionVersionRepository versionRepository,
+            ClarificationRuntimeContextStore runtimeContextStore,
             Clock clock
     ) {
         this.sessionRepository =
@@ -47,6 +52,12 @@ public class RestartAssessmentSessionService {
 
         this.versionRepository =
                 versionRepository;
+
+        this.runtimeContextStore =
+                Objects.requireNonNull(
+                        runtimeContextStore,
+                        "runtimeContextStore must not be null"
+                );
 
         this.clock =
                 Objects.requireNonNull(
@@ -131,6 +142,10 @@ public class RestartAssessmentSessionService {
 
         Instant now =
                 clock.instant();
+
+        runtimeContextStore.deleteSession(
+                oldSession.id()
+        );
 
         oldSession.abandon(
                 now

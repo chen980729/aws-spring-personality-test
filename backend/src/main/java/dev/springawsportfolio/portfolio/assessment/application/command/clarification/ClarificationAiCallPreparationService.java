@@ -161,6 +161,17 @@ public class ClarificationAiCallPreparationService {
             );
         }
 
+        if (
+                leaseExpired(
+                        clarification.updatedAt(),
+                        clock.instant()
+                )
+        ) {
+            return ClarificationAiCallPreparation.stateLost(
+                    ticket
+            );
+        }
+
         AssessmentDefinitionVersion version =
                 loadBoundVersion(
                         session
@@ -245,14 +256,25 @@ public class ClarificationAiCallPreparationService {
                         ticket.executionToken()
                 );
 
-        if (context.isEmpty()) {
-            return ClarificationAiCallPreparation.stateLost(
-                    ticket
-            );
-        }
-
         Instant now =
                 clock.instant();
+
+        if (context.isEmpty()) {
+            if (
+                    leaseExpired(
+                            clarification.updatedAt(),
+                            now
+                    )
+            ) {
+                return ClarificationAiCallPreparation.stateLost(
+                        ticket
+                );
+            }
+
+            throw new ClarificationNotAllowedException(
+                    "clarification execution is still starting"
+            );
+        }
 
         if (
                 !context
@@ -275,10 +297,21 @@ public class ClarificationAiCallPreparationService {
 
         if (
                 latest.role()
-                        != ClarificationRuntimeMessage.Role.ASSISTANT_QUESTION
+                        == ClarificationRuntimeMessage.Role.USER_ANSWER
         ) {
+            if (
+                    leaseExpired(
+                            latest.createdAt(),
+                            now
+                    )
+            ) {
+                return ClarificationAiCallPreparation.stateLost(
+                        ticket
+                );
+            }
+
             throw new ClarificationNotAllowedException(
-                    "clarification is not awaiting a user answer"
+                    "previous clarification answer is still processing"
             );
         }
 
@@ -364,6 +397,17 @@ public class ClarificationAiCallPreparationService {
                         runtimePolicy.maximumModelTurns()
                 ),
                 updatedContext.latestSequence()
+        );
+    }
+
+    private boolean leaseExpired(
+            Instant beganAt,
+            Instant now
+    ) {
+        return !now.isBefore(
+                beganAt.plus(
+                        runtimePolicy.inFlightExecutionLease()
+                )
         );
     }
 

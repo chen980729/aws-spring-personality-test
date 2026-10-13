@@ -106,6 +106,23 @@ public class PostgresClarificationRuntimeContextStore
               AND message.execution_token = ?
             """;
 
+    private static final String DELETE_DIMENSION_SQL =
+            """
+            DELETE FROM assessment_clarification_runtime_messages message
+            USING assessment_dimension_clarifications clarification
+            WHERE message.clarification_id = clarification.id
+              AND clarification.session_id = ?
+              AND clarification.dimension_code = ?
+            """;
+
+    private static final String DELETE_SESSION_SQL =
+            """
+            DELETE FROM assessment_clarification_runtime_messages message
+            USING assessment_dimension_clarifications clarification
+            WHERE message.clarification_id = clarification.id
+              AND clarification.session_id = ?
+            """;
+
     private static final String DELETE_EXPIRED_SQL =
             """
             DELETE FROM assessment_clarification_runtime_messages
@@ -265,6 +282,42 @@ public class PostgresClarificationRuntimeContextStore
                 sessionId.value(),
                 dimension.value(),
                 executionToken.value()
+        );
+    }
+
+    @Override
+    public void deleteDimension(
+            AssessmentSessionId sessionId,
+            DimensionCode dimension
+    ) {
+        Objects.requireNonNull(
+                sessionId,
+                "sessionId must not be null"
+        );
+        Objects.requireNonNull(
+                dimension,
+                "dimension must not be null"
+        );
+
+        jdbcTemplate.update(
+                DELETE_DIMENSION_SQL,
+                sessionId.value(),
+                dimension.value()
+        );
+    }
+
+    @Override
+    public void deleteSession(
+            AssessmentSessionId sessionId
+    ) {
+        Objects.requireNonNull(
+                sessionId,
+                "sessionId must not be null"
+        );
+
+        jdbcTemplate.update(
+                DELETE_SESSION_SQL,
+                sessionId.value()
         );
     }
 

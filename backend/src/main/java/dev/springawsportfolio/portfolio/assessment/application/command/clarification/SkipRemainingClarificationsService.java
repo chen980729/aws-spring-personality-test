@@ -4,6 +4,7 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.Assessm
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionResult;
 import dev.springawsportfolio.portfolio.assessment.application.session.AssessmentSessionWorkflowSnapshot;
+import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationRuntimeContextStore;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarification;
 import dev.springawsportfolio.portfolio.assessment.domain.clarification.DimensionClarificationStatus;
 import dev.springawsportfolio.portfolio.assessment.domain.definition.AssessmentDefinition;
@@ -45,6 +46,9 @@ public class SkipRemainingClarificationsService {
     private final DimensionTieBreakRepository
             tieBreakRepository;
 
+    private final ClarificationRuntimeContextStore
+            runtimeContextStore;
+
     private final Clock clock;
 
     private final AssessmentFinalizationService
@@ -56,6 +60,7 @@ public class SkipRemainingClarificationsService {
             AssessmentDefinitionVersionRepository versionRepository,
             DimensionClarificationRepository clarificationRepository,
             DimensionTieBreakRepository tieBreakRepository,
+            ClarificationRuntimeContextStore runtimeContextStore,
             Clock clock
     ) {
         this.sessionRepository =
@@ -86,6 +91,12 @@ public class SkipRemainingClarificationsService {
                 Objects.requireNonNull(
                         tieBreakRepository,
                         "tieBreakRepository must not be null"
+                );
+
+        this.runtimeContextStore =
+                Objects.requireNonNull(
+                        runtimeContextStore,
+                        "runtimeContextStore must not be null"
                 );
 
         this.clock =
@@ -147,6 +158,10 @@ public class SkipRemainingClarificationsService {
         boolean hadInProgress =
                 session.status()
                         == AssessmentSessionStatus.CLARIFICATION_IN_PROGRESS;
+
+        runtimeContextStore.deleteSession(
+                session.id()
+        );
 
         for (
                 DimensionClarification clarification

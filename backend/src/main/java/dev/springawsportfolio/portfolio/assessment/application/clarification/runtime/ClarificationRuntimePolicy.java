@@ -5,7 +5,8 @@ import java.util.Objects;
 
 public record ClarificationRuntimePolicy(
         int maximumModelTurns,
-        Duration contextTtl
+        Duration contextTtl,
+        Duration inFlightExecutionLease
 ) {
 
     public ClarificationRuntimePolicy {
@@ -26,6 +27,30 @@ public record ClarificationRuntimePolicy(
         ) {
             throw new IllegalArgumentException(
                     "contextTtl must be positive"
+            );
+        }
+
+        Objects.requireNonNull(
+                inFlightExecutionLease,
+                "inFlightExecutionLease must not be null"
+        );
+
+        if (
+                inFlightExecutionLease.isZero()
+                        || inFlightExecutionLease.isNegative()
+        ) {
+            throw new IllegalArgumentException(
+                    "inFlightExecutionLease must be positive"
+            );
+        }
+
+        if (
+                inFlightExecutionLease.compareTo(
+                        contextTtl
+                ) >= 0
+        ) {
+            throw new IllegalArgumentException(
+                    "inFlightExecutionLease must be shorter than contextTtl"
             );
         }
     }
