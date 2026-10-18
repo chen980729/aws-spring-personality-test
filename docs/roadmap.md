@@ -210,7 +210,8 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] Internal AI adapter / runtime context / orchestration through Step 8F-R2, including retention/recovery hardening, prompt-policy consistency guards and current-turn/error-contract freeze.
 - [x] Step 8G-A Backend HTTP adapter: Start / Continue / Retry with CSRF and stable errors, owner-scoped read-only current-turn recovery, optimistic assistantSequence and bounded answer validation. Provider disabled by default.
 - [x] Step 8G-B React Clarification UI with browser-refresh/current-turn recovery and safe no-POST-replay semantics.
-- [ ] Step 8H AWS IAM/Terraform provider enablement and Step 8I live model validation.
+- [x] Step 8H Terraform-only Japan Bedrock IAM + ECS configuration blueprint, disabled by default (infrastructure apply and live rollout are separate operator gates).
+- [ ] Step 8I verify account-specific JP profile, apply scoped IAM, promote ECS Task Definition, run live model validation and observe costs.
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
 - [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-7 coverage.
