@@ -66,6 +66,13 @@ if ! jq -e \
   exit 1
 fi
 
+if ! jq -e   '(.services[0].deployments | length) == 1
+   and .services[0].deployments[0].status == "PRIMARY"
+   and .services[0].deployments[0].rolloutState == "COMPLETED"'   <<< "$services" >/dev/null; then
+  echo "FAIL: ECS has an in-progress or incomplete deployment. Wait for stability." >&2
+  exit 1
+fi
+
 task_arn="$(jq -er '.services[0].taskDefinition' <<< "$services")"
 running="$(jq -er '.services[0].runningCount' <<< "$services")"
 desired="$(jq -er '.services[0].desiredCount' <<< "$services")"
