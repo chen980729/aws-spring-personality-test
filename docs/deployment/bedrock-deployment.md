@@ -3,22 +3,56 @@
 > **Checkpoint:** Step 8H — Infrastructure preparation, not live activation
 > **Date:** 2026-10-18
 > **AWS source Region:** ap-northeast-1 (Tokyo)
-> **Planned provider:** Amazon Bedrock Converse, Claude Haiku 4.5, Japan geographic inference
+> **Planned provider:** Amazon Bedrock Converse, Amazon Nova 2 Lite, Japan geographic inference
 
 ## 1. Purpose and scope
 
 The Assessment backend and React UI already support provider-backed clarification through Step 8G. Step 8H prepares AWS IAM and ECS runtime configuration for Amazon Bedrock without immediately enabling model calls or changing the currently running ECS Service.
 
-The accepted candidate model for the first live verification is:
+The **accepted first-choice model** for live verification is Amazon Nova 2 Lite.
+This follows the project's model evaluation: Japan-resident inference,
+Chinese-language task suitability, and cost/quality balance were preferred
+over the former Claude candidate. The actual Chinese clarification quality,
+user eligibility, quota, and terms must still be verified before activation.
+
+The selected model IDs are:
 
 ```text
-Foundation model: anthropic.claude-haiku-4-5-20251001-v1:0
-Inference profile: jp.anthropic.claude-haiku-4-5-20251001-v1:0
+Foundation model: amazon.nova-2-lite-v1:0
+Inference profile: jp.amazon.nova-2-lite-v1:0
 Request Region:    ap-northeast-1 (Tokyo)
 Destination Regions (expected): ap-northeast-1, ap-northeast-3 (Osaka)
 ```
 
-AWS officially documents this Japan inference profile and those destinations. **Before activation**, verify the profile from the target AWS account; model access, exact destinations, quotas, and availability are account-specific.
+AWS documents this Amazon Nova 2 Lite Japan inference profile and those destination Regions. **Before activation**, verify the profile from the target AWS account; model access, exact destinations, quotas, and availability are account-specific.
+
+### Structured output implementation note
+
+The Bedrock model card lists **native Structured Outputs** as unsupported
+for Nova 2 Lite. Nova 2 Lite does support **Converse Tool Calling**, including
+the `toolChoice=any` or `toolChoice=tool` alternatives for obtaining
+schema-shaped tool inputs. Our existing Backend uses `toolChoice=any` with
+`ask_followup` and `submit_judgement` tools, then parses and checks the
+result in the Application/Infrastructure boundary.
+
+Therefore the project's requirement is **validated Tool Calling output**,
+not a claim that Nova 2 Lite supports native Bedrock JSON Schema structured
+outputs. Step 8I must empirically test:
+- whether the current tool schemas (including top-level
+  `additionalProperties`) are accepted;
+- that `toolChoice=any` reliably returns exactly one acceptable business
+  action, including the final-turn `submit_judgement` path;
+- that schema violations, Chinese free-text inputs, follow-up language, and
+  malformed model output produce bounded failures without corrupting
+  persisted Assessment decisions;
+- latency and token consumption under the configured 20s total timeout
+  and 1024-token limit.
+
+Do **not** turn on strict Tool Specification schema mode merely because
+the model can call tools: provider support and compatibility must be
+verified against live requests first.
+
+References: AWS Bedrock Nova 2 Lite model card and Amazon Nova 2 Tool Use guide.
 
 ## 2. Security architecture
 
@@ -57,8 +91,8 @@ Variables are in `infra/terraform/app/variables.tf`:
 |---|---|---|
 | `bedrock_task_access_enabled` | `false` | Create/attach exact JP Bedrock IAM policy to ECS Task Role |
 | `bedrock_clarification_enabled` | `false` | Initial ECS Task Definition app flag |
-| `bedrock_jp_inference_profile_id` | `jp.anthropic.claude-haiku-4-5-20251001-v1:0` | Approved Japan inference profile |
-| `bedrock_foundation_model_id` | `anthropic.claude-haiku-4-5-20251001-v1:0` | Matching foundation model |
+| `bedrock_jp_inference_profile_id` | `jp.amazon.nova-2-lite-v1:0` | Approved Japan inference profile |
+| `bedrock_foundation_model_id` | `amazon.nova-2-lite-v1:0` | Matching foundation model |
 | `bedrock_clarification_max_tokens` | `1024` | Current bounded output token budget |
 
 Validation rejects `bedrock_clarification_enabled=true` without `bedrock_task_access_enabled=true`; the profile must have the `jp.` prefix and match the foundation model; wildcard model IDs are rejected.
@@ -68,7 +102,7 @@ The bootstrap Task Definition declares:
 ```text
 AWS_REGION                           = ap-northeast-1
 BEDROCK_CLARIFICATION_ENABLED        = false
-BEDROCK_CLARIFICATION_MODEL_ID       = jp.anthropic.claude-haiku-4-5-20251001-v1:0
+BEDROCK_CLARIFICATION_MODEL_ID       = jp.amazon.nova-2-lite-v1:0
 BEDROCK_CLARIFICATION_MAX_TOKENS     = 1024
 ```
 
@@ -126,12 +160,12 @@ Before a **production** apply:
 
 ## 6. Account / model verification before Step 8I
 
-Use read-only commands (with an appropriately authorized operator identity):
+Use read-only commands (with an appropriately authorized operator identity); do not send private user answers during capability checks:
 
 ```bash
 aws bedrock get-inference-profile \
   --region ap-northeast-1 \
-  --inference-profile-identifier jp.anthropic.claude-haiku-4-5-20251001-v1:0 \
+  --inference-profile-identifier jp.amazon.nova-2-lite-v1:0 \
   --query '{arn:inferenceProfileArn,status:status,models:models[].modelArn}'
 
 aws sts get-caller-identity
