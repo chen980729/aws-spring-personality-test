@@ -106,7 +106,7 @@ From `infra/terraform/app`:
 
 ```bash
 terraform fmt -check -recursive
-terraform init -backend=false -lockfile=readonly
+terraform init -backend=false
 terraform validate
 
 # Remote-state init and plan require an operator's AWS permissions and
