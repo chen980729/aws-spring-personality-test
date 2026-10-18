@@ -1,9 +1,9 @@
 # Frontend Documentation
 
-> **Current checkpoint:** Frontend F7-E complete; DefinitionVersion 1.1 compatibility is deployed and activation requires no further frontend code
-> **Last updated:** 2026-10-06
-> **Project next focus:** provider-backed LLM clarification interaction; Group/Sharing follows when its backend capability becomes executable
-> **Deferred frontend work:** provider-backed LLM interaction, Group UI, and historical Assessment deletion after the required backend capabilities exist
+> **Current checkpoint:** Step 8G-B AI Clarification React interaction implemented on a feature branch; Bedrock production activation remains Step 8H/8I.
+> **Last updated:** 2026-10-18
+> **Project next focus:** AWS Bedrock IAM/ECS enablement and live model evaluation; Group/Sharing follows.
+> **Deferred frontend work:** Live Bedrock inference validation, Group UI, and historical Assessment deletion after the required backend capabilities exist.
 
 This directory contains the accepted frontend architecture baseline plus the implementation checkpoint for the currently executable browser application.
 
@@ -18,6 +18,7 @@ The frontend is not treated as a second source of business truth. It expresses u
 - [`05-implementation-checkpoint-f1-f6.md`](05-implementation-checkpoint-f1-f6.md) — implemented React stack, accepted F1-F6 behavior, post-F6 UI optimization checkpoint, integration findings, remaining boundaries and cloud handoff.
 - [`06-result-content-checkpoint-f7c.md`](06-result-content-checkpoint-f7c.md) — F7-C content-version boundary, 8-letter / 16-type catalogs, result imagery, UI hierarchy, tests and acceptance checkpoint.
 - [`07-landing-hero-checkpoint-f7d.md`](07-landing-hero-checkpoint-f7d.md) — F7-D Landing hero asset integration, responsive/LCP/accessibility decisions and acceptance checkpoint.
+- [`09-ai-clarification-checkpoint-8gb.md`](09-ai-clarification-checkpoint-8gb.md) — React Start / Continue / Retry, current-turn recovery, optimistic versioned answers, safe failure UX and Test strategy.
 - [`08-final-review-checkpoint-f7e.md`](08-final-review-checkpoint-f7e.md) — F7-E final regression/documentation/release-readiness review, merge strategy and staged activation checklist.
 
 ## Current implementation summary
@@ -35,7 +36,9 @@ Submit
         ↓
 Backend-authoritative Workflow Resolver
         ↓
-Clarification Read / Skip / Skip Remaining
+Clarification AI Start / Continue / Retry / Refresh Recovery
+        ↓
+Deterministic Skip / Skip Remaining fallback
         ↓
 Exact Tie-break when required
         ↓
@@ -77,7 +80,7 @@ The current executable frontend deliberately does **not** pretend that design-fi
 
 Still deferred:
 
-- provider-backed Start / Continue / Retry clarification interaction (Backend Step 8);
+- live provider-backed model invocation and AWS IAM/ECS integration (Step 8H/8I);
 - Group / Membership / Sharing UI until the Group backend is executable;
 - historical Assessment deletion until Group sharing exists, because deletion is a cross-domain operation that must end active shares before hard-deleting the Assessment Session;
 - dedicated Playwright E2E automation; the implemented flows are covered by Vitest/RTL/MSW and have also been exercised manually against the real Spring Boot + PostgreSQL stack.
