@@ -280,7 +280,9 @@ function useClarificationActionMutation<TPayload>(
         exact: true,
       })
       await queryClient.invalidateQueries({
-        queryKey: assessmentQueryKeys.activeSessionRoot(),
+        predicate: (query) =>
+          query.queryKey[0] === 'assessments' &&
+          query.queryKey[2] === 'active-session',
       })
     },
     onError: async (error) => {
