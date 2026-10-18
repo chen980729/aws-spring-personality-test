@@ -47,6 +47,22 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name  = "DB_URL"
           value = "jdbc:postgresql://${aws_db_instance.postgres.address}:${aws_db_instance.postgres.port}/${aws_db_instance.postgres.db_name}"
+        },
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        },
+        {
+          name  = "BEDROCK_CLARIFICATION_ENABLED"
+          value = tostring(var.bedrock_clarification_enabled)
+        },
+        {
+          name  = "BEDROCK_CLARIFICATION_MODEL_ID"
+          value = var.bedrock_jp_inference_profile_id
+        },
+        {
+          name  = "BEDROCK_CLARIFICATION_MAX_TOKENS"
+          value = tostring(var.bedrock_clarification_max_tokens)
         }
       ]
 
