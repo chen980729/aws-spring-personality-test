@@ -33,6 +33,16 @@ jobs:
       - name: Check Terraform formatting
         run: terraform fmt -check -recursive infra/terraform/app
 
+      # Temporary lockfile reconciliation: this provider lock was originally
+      # created on Windows. Include signed hashes for both developer and CI OS.
+      - name: Resolve signed Linux and Windows provider checksums
+        working-directory: infra/terraform/app
+        run: |
+          terraform providers lock -platform=linux_amd64 -platform=windows_amd64
+          echo 'BEGIN_RECONCILED_TERRAFORM_LOCK'
+          cat .terraform.lock.hcl
+          echo 'END_RECONCILED_TERRAFORM_LOCK'
+
       - name: Initialize providers without remote backend
         working-directory: infra/terraform/app
         run: terraform init -backend=false -input=false
