@@ -74,9 +74,9 @@ User-visible behavior for the currently executable Identity + deterministic Asse
 - [x] Autosave/progress UX.
 - [x] Submit confirmation and irreversible-boundary UX.
 - [x] Ambiguity evidence / deterministic clarification-ready presentation.
-- [ ] Provider-backed AI clarification conversation UX.
+- [x] Step 8G-B React AI clarification conversation UX (Start / Continue / current-turn / Retry), pending production Bedrock activation.
 - [x] Skip Current / Decline Remaining clarification UX.
-- [ ] Retry / temporary-runtime-loss UX for real AI clarification; deferred with Backend Step 8.
+- [x] Step 8G-B explicit Retry, 409 turn conflict and refresh/lost-response recovery UI; live model validation remains Step 8I.
 - [x] Exact-tie legacy direct-pole user decision UX.
 - [x] Frontend F7-A dual-version Tie-break API/type compatibility (`DIRECT_POLE_SELECTION` / `CONTEXTUAL_QUESTION`, exclusive PUT union, `TIE_BREAK_QUESTION` source).
 - [x] Frontend F7-B contextual Tie-break question interaction, including no-pole-mapping presentation and rolling-deploy compatibility for legacy 1.0 Sessions.
@@ -209,7 +209,7 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] Frontend contextual Tie-break integration — F7-A contract compatibility + F7-B UI interaction complete; activation requires no additional Frontend code.
 - [x] Internal AI adapter / runtime context / orchestration through Step 8F-R2, including retention/recovery hardening, prompt-policy consistency guards and current-turn/error-contract freeze.
 - [x] Step 8G-A Backend HTTP adapter: Start / Continue / Retry with CSRF and stable errors, owner-scoped read-only current-turn recovery, optimistic assistantSequence and bounded answer validation. Provider disabled by default.
-- [ ] Step 8G-B React Clarification UI with browser-refresh/current-turn recovery.
+- [x] Step 8G-B React Clarification UI with browser-refresh/current-turn recovery and safe no-POST-replay semantics.
 - [ ] Step 8H AWS IAM/Terraform provider enablement and Step 8I live model validation.
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
