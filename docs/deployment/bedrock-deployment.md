@@ -188,7 +188,19 @@ Before enabling paid inference, set a suitable AWS Budgets alert / cost notifica
 
 The first gate is an **explicit operator deployment**; routine CI must never invoke Bedrock.
 
-## 8. References
+## 8. Next checkpoint: Step 8I-A
+
+The read-only operator preflight and four-stage activation/rollback gates
+are now documented in [`bedrock-live-validation.md`](bedrock-live-validation.md).
+The `scripts/aws/bedrock-preflight.sh` helper verifies the configured
+JP inference profile and deployed ECS Task Definition without AWS mutations
+or paid Bedrock inference.
+
+**Important:** This helper being committed or syntax-tested does not mean
+it has been run with access to the operator's AWS account. It must be
+executed and reviewed before production Terraform plan/apply.
+
+## 9. References
 
 - `docs/deployment/aws-deployment.md`
 - `docs/deployment/ci-cd.md`
