@@ -63,9 +63,9 @@ A separate `Terraform validate` workflow runs for `infra/terraform/**` and
 its own workflow changes. It checks Terraform formatting, initializes local
 provider schemas with `-backend=false`, and validates the application
 configuration. It does not access production S3 state, assume AWS roles,
-run `terraform plan`, or apply changes. The provider lock file can be
-supplemented with Linux-platform checksums inside the temporary CI worktree;
-this does not commit lock-file changes back to the repository.
+run `terraform plan`, or apply changes. The committed AWS provider lock includes signed Windows and Linux checksums.
+CI initializes with `-lockfile=readonly`, so missing or inconsistent
+provider checksums fail the validation job rather than being silently repaired.
 
 The Step 8H Japan-only Bedrock Task Role policy is controlled by Terraform,
 not GitHub CD. Merging infrastructure code triggers validation but not an
