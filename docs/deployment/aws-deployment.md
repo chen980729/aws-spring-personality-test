@@ -154,7 +154,27 @@ Current tuned values:
 
 This was validated by a later successful CD run where the new Task Definition reached a stable deployment and the public smoke test passed.
 
-## 10. Current limitations
+## 10. Prepared Bedrock runtime boundary (Step 8H)
+
+Step 8H declares an opt-in, Japan-only Amazon Bedrock Converse IAM policy
+on the existing ECS **Task Role**, alongside an ECS Task Definition bootstrap
+environment contract that defaults to `BEDROCK_CLARIFICATION_ENABLED=false`.
+
+The selected Amazon Nova 2 Lite `jp.` inference profile routes from Tokyo to
+Tokyo/Osaka only. Model invocation is **not** active by default. Terraform
+must not attach the scoped policy until `bedrock_task_access_enabled=true`
+is explicitly planned and applied.
+
+This repo uses an intentional Terraform/CD ownership split: Terraform declares
+the Task Definition baseline but GitHub Actions CD preserves and deploys the
+currently active Task Definition. Therefore a Terraform apply does not promote
+new environment variables to the running ECS Service. Step 8I requires an
+explicit Task Definition promotion and live Bedrock validation.
+
+Detailed staged activation and rollback runbook:
+[`bedrock-deployment.md`](bedrock-deployment.md).
+
+## 11. Current limitations
 
 The following are intentionally not presented as completed production hardening:
 
@@ -169,7 +189,7 @@ The following are intentionally not presented as completed production hardening:
 
 These are acceptable for the current portfolio MVP and are tracked in `../future-work.md`.
 
-## 11. Destroy / cost awareness
+## 12. Destroy / cost awareness
 
 The deployment was intentionally designed to remain destroy-friendly for a personal project.
 
