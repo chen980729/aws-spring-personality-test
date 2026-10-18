@@ -35,7 +35,7 @@ jobs:
 
       - name: Initialize providers without remote backend
         working-directory: infra/terraform/app
-        run: terraform init -backend=false -lockfile=readonly -input=false
+        run: terraform init -backend=false -input=false
 
       - name: Validate Terraform configuration
         working-directory: infra/terraform/app
