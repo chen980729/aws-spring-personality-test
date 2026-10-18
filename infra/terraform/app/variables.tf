@@ -44,7 +44,7 @@ variable "backend_image_tag" {
   description = "Immutable ECR image tag deployed to ECS"
   type        = string
 }
-# Step 8H: controlled Japan-only Bedrock integration.
+# Step 8H: controlled Japan-only Amazon Nova 2 Lite Bedrock integration.
 # Defaults are non-invoking and grant no Bedrock permissions.
 
 variable "bedrock_task_access_enabled" {
@@ -65,9 +65,9 @@ variable "bedrock_clarification_enabled" {
 }
 
 variable "bedrock_jp_inference_profile_id" {
-  description = "Japan geo inference profile ID confirmed for the chosen model, not a Global/APAC inference profile"
+  description = "Japan geo inference profile ID for Amazon Nova 2 Lite; never a Global/APAC inference profile"
   type        = string
-  default     = "jp.anthropic.claude-haiku-4-5-20251001-v1:0"
+  default     = "jp.amazon.nova-2-lite-v1:0"
 
   validation {
     condition     = startswith(var.bedrock_jp_inference_profile_id, "jp.") && !strcontains(var.bedrock_jp_inference_profile_id, "*")
@@ -76,9 +76,9 @@ variable "bedrock_jp_inference_profile_id" {
 }
 
 variable "bedrock_foundation_model_id" {
-  description = "Foundation model ID underlying the approved Japan inference profile"
+  description = "Amazon Nova 2 Lite foundation model ID underlying the approved Japan profile"
   type        = string
-  default     = "anthropic.claude-haiku-4-5-20251001-v1:0"
+  default     = "amazon.nova-2-lite-v1:0"
 
   validation {
     condition     = var.bedrock_jp_inference_profile_id == "jp.${var.bedrock_foundation_model_id}" && !strcontains(var.bedrock_foundation_model_id, "*")
