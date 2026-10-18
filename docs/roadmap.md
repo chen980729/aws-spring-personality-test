@@ -211,7 +211,11 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] Step 8G-A Backend HTTP adapter: Start / Continue / Retry with CSRF and stable errors, owner-scoped read-only current-turn recovery, optimistic assistantSequence and bounded answer validation. Provider disabled by default.
 - [x] Step 8G-B React Clarification UI with browser-refresh/current-turn recovery and safe no-POST-replay semantics.
 - [x] Step 8H Terraform-only Japan Bedrock IAM + ECS configuration blueprint, disabled by default (infrastructure apply and live rollout are separate operator gates).
-- [ ] Step 8I verify account-specific JP profile, apply scoped IAM, promote ECS Task Definition, run live model validation and observe costs.
+- [x] Step 8I-A read-only account/profile/ECS preflight **tooling and runbook** prepared (AWS account checks not executed yet).
+- [ ] Step 8I-A confirm JP inference profile and current ECS runtime through operator's AWS CLI.
+- [ ] Step 8I-B review production Terraform remote-state plan, apply scoped Bedrock Task Role IAM after explicit approval.
+- [ ] Step 8I-C promote an explicitly reviewed ECS Task Definition with Nova 2 Lite enabled and rollback ready.
+- [ ] Step 8I-D run limited live model, lifecycle, safety and cost validation.
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
 - [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-7 coverage.
