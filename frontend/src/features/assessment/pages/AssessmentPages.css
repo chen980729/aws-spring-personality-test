@@ -1174,6 +1174,98 @@
   font-size: 1rem;
 }
 
+/* Step 8G-B: provider-backed Clarification UI, no transcript history. */
+.clarification-ai {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid #c7d2fe;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, #f8faff, #f5f3ff);
+}
+
+.clarification-ai h3 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.05rem;
+}
+
+.clarification-ai__hint {
+  max-width: 45rem;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.clarification-ai__form {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.clarification-ai__question {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.clarification-ai__question span {
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.clarification-ai__question p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.clarification-ai__form label {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.clarification-ai__form textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.clarification-ai__form textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.clarification-ai__form textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.clarification-ai__counter {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+}
+
+.clarification-ai__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .tie-break-notice {
   display: flex;
   align-items: center;

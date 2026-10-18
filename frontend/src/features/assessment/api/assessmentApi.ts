@@ -8,6 +8,9 @@ import type {
   AssessmentCatalog,
   AssessmentDetails,
   AssessmentHistoryResponse,
+  ClarificationInteractionResponse,
+  ClarificationMessageRequest,
+  CurrentClarificationTurn,
   AssessmentSession,
   QuestionnaireSnapshotRequest,
   RestartAssessmentResponse,
@@ -120,6 +123,48 @@ export async function submitQuestionnaire(
 
     throw error
   }
+}
+
+function clarificationBasePath(sessionId: string, dimensionCode: string): string {
+  return `/api/v1/assessment-sessions/${encodeURIComponent(sessionId)}/clarifications/${encodeURIComponent(dimensionCode)}`
+}
+
+export function startClarification(
+  sessionId: string,
+  dimensionCode: string,
+): Promise<ClarificationInteractionResponse> {
+  return postJson<ClarificationInteractionResponse>(
+    `${clarificationBasePath(sessionId, dimensionCode)}/start`,
+  )
+}
+
+export function getCurrentClarificationTurn(
+  sessionId: string,
+  dimensionCode: string,
+): Promise<CurrentClarificationTurn> {
+  return getJson<CurrentClarificationTurn>(
+    `${clarificationBasePath(sessionId, dimensionCode)}/current-turn`,
+  )
+}
+
+export function continueClarification(
+  sessionId: string,
+  dimensionCode: string,
+  request: ClarificationMessageRequest,
+): Promise<ClarificationInteractionResponse> {
+  return postJson<ClarificationInteractionResponse>(
+    `${clarificationBasePath(sessionId, dimensionCode)}/messages`,
+    request,
+  )
+}
+
+export function retryClarification(
+  sessionId: string,
+  dimensionCode: string,
+): Promise<ClarificationInteractionResponse> {
+  return postJson<ClarificationInteractionResponse>(
+    `${clarificationBasePath(sessionId, dimensionCode)}/retry`,
+  )
 }
 
 export function skipClarification(

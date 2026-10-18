@@ -1,3 +1,5 @@
+import { isApiError } from '../../../shared/api/apiError'
+
 import {
   QueryClient,
   useMutation,
@@ -11,6 +13,10 @@ import {
   getAssessmentDetails,
   getAssessmentHistory,
   getAssessmentSession,
+  getCurrentClarificationTurn,
+  startClarification,
+  continueClarification,
+  retryClarification,
   getDimensionTieBreakInteraction,
   getSessionQuestionnaire,
   restartAssessmentSession,
@@ -24,6 +30,9 @@ import {
 import { assessmentQueryKeys } from './assessmentQueryKeys'
 import type {
   AssessmentSession,
+  ClarificationInteractionResponse,
+  ClarificationMessageRequest,
+  CurrentClarificationTurn,
   QuestionAnswer,
   SessionQuestionnaire,
   TieBreakRequest,
@@ -217,6 +226,114 @@ export function useSubmitQuestionnaireMutation(
       )
     },
   })
+}
+
+export function useCurrentClarificationTurnQuery(
+  sessionId: string,
+  dimensionCode: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: assessmentQueryKeys.currentClarificationTurn(sessionId, dimensionCode),
+    queryFn: () => getCurrentClarificationTurn(sessionId, dimensionCode),
+    enabled,
+    // 409 means there is no answerable question at the moment, not an
+    // instruction to poll or repeat the previous answer.
+    retry: false,
+  })
+}
+
+/**
+ * All three commands share the same recovery rule:
+ * use the server's new question/version, then reload the authoritative Session.
+ * A lost response or 409 must never cause an automatic POST replay.
+ */
+function useClarificationActionMutation<TPayload>(
+  sessionId: string,
+  dimensionCode: string,
+  execute: (payload: TPayload) => Promise<ClarificationInteractionResponse>,
+) {
+  const queryClient = useQueryClient()
+  const currentTurnKey = assessmentQueryKeys.currentClarificationTurn(
+    sessionId, dimensionCode,
+  )
+
+  return useMutation({
+    mutationFn: execute,
+    onSuccess: async (response) => {
+      if (
+        response.clarificationStatus === 'IN_PROGRESS' &&
+        response.assistantSequence !== null &&
+        response.question !== null
+      ) {
+        queryClient.setQueryData<CurrentClarificationTurn>(currentTurnKey, {
+          sessionId: response.sessionId,
+          dimensionCode: response.dimensionCode,
+          assistantSequence: response.assistantSequence,
+          question: response.question,
+        })
+      } else {
+        queryClient.removeQueries({ queryKey: currentTurnKey, exact: true })
+      }
+      await queryClient.invalidateQueries({
+        queryKey: assessmentQueryKeys.session(sessionId),
+        exact: true,
+      })
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'assessments' &&
+          query.queryKey[2] === 'active-session',
+      })
+    },
+    onError: async (error) => {
+      // For 409/422 or an ambiguous network failure, read from the
+      // server before presenting the next action. No automatic retry.
+      if (!isApiError(error) || error.status === 409 || error.status === 422) {
+        await queryClient.invalidateQueries({
+          queryKey: assessmentQueryKeys.session(sessionId),
+          exact: true,
+        })
+        await queryClient.invalidateQueries({
+          queryKey: currentTurnKey,
+          exact: true,
+        })
+      }
+    },
+  })
+}
+
+export function useStartClarificationMutation(
+  sessionId: string,
+  dimensionCode: string,
+) {
+  return useClarificationActionMutation(
+    sessionId,
+    dimensionCode,
+    () => startClarification(sessionId, dimensionCode),
+  )
+}
+
+export function useContinueClarificationMutation(
+  sessionId: string,
+  dimensionCode: string,
+) {
+  return useClarificationActionMutation(
+    sessionId,
+    dimensionCode,
+    (request: ClarificationMessageRequest) =>
+      continueClarification(sessionId, dimensionCode, request),
+  )
+}
+
+export function useRetryClarificationMutation(
+  sessionId: string,
+  dimensionCode: string,
+) {
+  return useClarificationActionMutation(
+    sessionId,
+    dimensionCode,
+    () => retryClarification(sessionId, dimensionCode),
+  )
 }
 
 export function useSkipClarificationMutation(

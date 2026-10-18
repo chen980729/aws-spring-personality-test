@@ -6,7 +6,7 @@ The application is a first-party SPA that consumes the Spring Boot backend throu
 
 ## Current scope
 
-Implemented through Frontend F6:
+Implemented through Frontend Step 8G-B (AI clarification UI):
 
 - registration, login, Session restoration, protected routes and logout;
 - CSRF token management and one-time stale-token recovery;
@@ -14,7 +14,9 @@ Implemented through Frontend F6:
 - Session-bound questionnaire rendering, local draft ownership, debounced full-snapshot autosave and explicit save status;
 - final questionnaire submission with in-flight autosave coordination and lost-response recovery;
 - backend-authoritative Assessment workflow resolution;
-- deterministic clarification read/Skip/Skip Remaining interaction;
+- AI Clarification Start / Continue / Retry with optimistic `assistantSequence` and owner-scoped current-turn recovery;
+- explicit 409/network lost-response recovery by refreshing the authoritative Session and current turn rather than replaying POST;
+- consistent disabled-provider 503 fallback plus deterministic Skip / Skip Remaining;
 - exact-tie user decision and deterministic finalization;
 - completed Result read model with per-dimension decision provenance;
 - completed Assessment History with URL pagination and canonical Session detail navigation;
@@ -22,7 +24,7 @@ Implemented through Frontend F6:
 
 Deferred until their backend boundaries exist:
 
-- provider-backed LLM clarification interaction;
+- live AWS Bedrock activation and provider-level model evaluation (Step 8H/8I);
 - Group / Membership / Sharing frontend;
 - historical Assessment deletion.
 
@@ -91,6 +93,8 @@ The frontend follows these rules:
 - the browser owns the opaque HttpOnly Session cookie;
 - unsafe requests obtain CSRF state through the shared HTTP client;
 - mutations consume authoritative backend responses rather than manually advancing a client-side state machine;
+- AI response includes a public current-question version, not the internal execution token or complete transcript;
+- successful AI actions update the current-turn cache and invalidate the Session; lost responses/409 errors trigger reads without automatically resubmitting an answer;
 - deterministic `4xx` query failures are not generically retried, while network/`5xx` read failures may retry once;
 - design-first OpenAPI paths are not treated as executable until corresponding backend Controllers/DTOs exist.
 

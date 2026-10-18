@@ -31,6 +31,17 @@ export const assessmentQueryKeys = {
       'questionnaire',
     ] as const,
 
+  currentClarificationTurn: (
+    sessionId: string,
+    dimensionCode: string,
+  ) =>
+    [
+      'assessment-session',
+      sessionId,
+      'clarification-current-turn',
+      dimensionCode,
+    ] as const,
+
   tieBreakInteraction: (
     sessionId: string,
     dimensionCode: string,

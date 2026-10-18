@@ -236,6 +236,31 @@ export interface AssessmentWorkflow {
   completed: boolean
 }
 
+
+/** Public Step 8G clarification contracts; no transcript or execution token. */
+export interface CurrentClarificationTurn {
+  sessionId: string
+  dimensionCode: string
+  assistantSequence: number
+  question: string
+}
+
+export interface ClarificationMessageRequest {
+  assistantSequence: number
+  answer: string
+}
+
+export interface ClarificationInteractionResponse {
+  sessionId: string
+  dimensionCode: string
+  clarificationStatus: ClarificationStatus
+  assistantSequence: number | null
+  question: string | null
+  result: ClarificationResult | null
+  sessionStatus: AssessmentSessionStatus
+  workflow: AssessmentWorkflow
+}
+
 export interface AssessmentHistoryResponse {
   items: AssessmentHistoryItem[]
   page: number
