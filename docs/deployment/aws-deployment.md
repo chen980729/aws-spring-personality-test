@@ -160,7 +160,7 @@ Step 8H declares an opt-in, Japan-only Amazon Bedrock Converse IAM policy
 on the existing ECS **Task Role**, alongside an ECS Task Definition bootstrap
 environment contract that defaults to `BEDROCK_CLARIFICATION_ENABLED=false`.
 
-The intended Claude Haiku 4.5 `jp.` inference profile routes from Tokyo to
+The selected Amazon Nova 2 Lite `jp.` inference profile routes from Tokyo to
 Tokyo/Osaka only. Model invocation is **not** active by default. Terraform
 must not attach the scoped policy until `bedrock_task_access_enabled=true`
 is explicitly planned and applied.
