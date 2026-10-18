@@ -14,6 +14,7 @@ import dev.springawsportfolio.portfolio.assessment.application.exception.TieBrea
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidAssessmentHistoryPageException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.InvalidQuestionnaireResponseException;
 import dev.springawsportfolio.portfolio.assessment.application.exception.QuestionnaireIncompleteException;
+import dev.springawsportfolio.portfolio.assessment.web.clarification.AiClarificationUnavailableException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -375,6 +376,37 @@ public class AssessmentExceptionHandler {
         problem.setProperty(
                 "code",
                 "CLARIFICATION_TURN_CONFLICT"
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(
+            AiClarificationUnavailableException.class
+    )
+    ProblemDetail handleAiClarificationUnavailable() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(
+                        HttpStatus.SERVICE_UNAVAILABLE
+                );
+
+        problem.setType(
+                URI.create(
+                        "/problems/ai-clarification-unavailable"
+                )
+        );
+
+        problem.setTitle(
+                "AI clarification unavailable"
+        );
+
+        problem.setDetail(
+                "AI clarification is not configured on this deployment."
+        );
+
+        problem.setProperty(
+                "code",
+                "AI_CLARIFICATION_UNAVAILABLE"
         );
 
         return problem;

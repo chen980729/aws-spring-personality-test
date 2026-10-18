@@ -207,7 +207,10 @@ Current backend checkpoint: **Assessment Step 7 complete + DefinitionVersion 1.1
 - [x] DefinitionVersion 1.1 pre-activation acceptance sweep (Step 2E): immutable content equivalence, UNCLEAR/SKIPPED matrix, retries/conflicts, 50/50 evidence, persisted history and Session-lock finalization race.
 - [x] DefinitionVersion 1.1 activation migration + post-activation retained-1.0/new-1.1 binding verification (V8 / checkpoint 17).
 - [x] Frontend contextual Tie-break integration — F7-A contract compatibility + F7-B UI interaction complete; activation requires no additional Frontend code.
-- [x] Internal AI adapter / runtime context / orchestration through Step 8F-R2, including retention/recovery hardening, prompt-policy consistency guards and current-turn/error-contract freeze; public HTTP/Frontend/deployment enablement remains Step 8G+.
+- [x] Internal AI adapter / runtime context / orchestration through Step 8F-R2, including retention/recovery hardening, prompt-policy consistency guards and current-turn/error-contract freeze.
+- [x] Step 8G-A Backend HTTP adapter: Start / Continue / Retry with CSRF and stable errors, owner-scoped read-only current-turn recovery, optimistic assistantSequence and bounded answer validation. Provider disabled by default.
+- [ ] Step 8G-B React Clarification UI with browser-refresh/current-turn recovery.
+- [ ] Step 8H AWS IAM/Terraform provider enablement and Step 8I live model validation.
 - [ ] Historical assessment deletion orchestration.
 - [ ] Group/membership/sharing.
 - [x] Unit/Application/Web MVC/PostgreSQL integration test foundation and Step 1-7 coverage.

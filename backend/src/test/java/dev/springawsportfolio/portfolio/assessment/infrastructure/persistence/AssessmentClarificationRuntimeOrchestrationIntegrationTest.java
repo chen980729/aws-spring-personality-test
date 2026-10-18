@@ -17,6 +17,10 @@ import dev.springawsportfolio.portfolio.assessment.application.command.submissio
 import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionCommand;
 import dev.springawsportfolio.portfolio.assessment.application.command.restart.RestartAssessmentSessionService;
 import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationTurnConflictException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.ClarificationNotAllowedException;
+import dev.springawsportfolio.portfolio.assessment.application.exception.AssessmentSessionNotFoundException;
+import dev.springawsportfolio.portfolio.assessment.application.query.clarification.CurrentClarificationTurnResult;
+import dev.springawsportfolio.portfolio.assessment.application.query.clarification.GetCurrentClarificationTurnService;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiPort;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiRequest;
 import dev.springawsportfolio.portfolio.assessment.application.port.out.ClarificationAiTechnicalException;
@@ -104,6 +108,88 @@ class AssessmentClarificationRuntimeOrchestrationIntegrationTest {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    GetCurrentClarificationTurnService currentTurnService;
+
+    @Test
+    void readOnlyCurrentTurnRecoversPersistedQuestionsAndNeverReinvokesProvider() {
+        SubmittedClarification submitted = submittedClarification();
+
+        QueueAiPort aiPort = new QueueAiPort(
+                request -> new ClarificationAiTurn.FollowUpQuestion(
+                        "How do you usually recharge?"
+                ),
+                request -> new ClarificationAiTurn.FollowUpQuestion(
+                        "And when you have a free weekend?"
+                )
+        );
+        ClarificationRuntimeOrchestrator orchestrator = orchestrator(aiPort);
+
+        ClarificationRuntimeTurnResult started = orchestrator.start(
+                new StartDimensionClarificationCommand(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code()
+                )
+        );
+
+        CurrentClarificationTurnResult recovered = currentTurnService.execute(
+                submitted.userId(),
+                submitted.session().id(),
+                submitted.dimension().code()
+        );
+        assertEquals(started.assistantSequence(), recovered.assistantSequence());
+        assertEquals(started.followUpQuestion(), recovered.question());
+        assertEquals(1, aiPort.callCount());
+
+        assertThrows(
+                AssessmentSessionNotFoundException.class,
+                () -> currentTurnService.execute(
+                        createUser(),
+                        submitted.session().id(),
+                        submitted.dimension().code()
+                )
+        );
+
+        ClarificationRuntimeTurnResult continued = orchestrator.continueClarification(
+                new ContinueDimensionClarificationCommand(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code(),
+                        recovered.assistantSequence(),
+                        "I usually spend some time alone."
+                )
+        );
+
+        CurrentClarificationTurnResult afterContinue = currentTurnService.execute(
+                submitted.userId(),
+                submitted.session().id(),
+                submitted.dimension().code()
+        );
+        assertEquals(continued.assistantSequence(), afterContinue.assistantSequence());
+        assertEquals(3, afterContinue.assistantSequence());
+        assertEquals("And when you have a free weekend?", afterContinue.question());
+        assertEquals(2, aiPort.callCount());
+
+        skipDimensionClarificationService.execute(
+                new SkipDimensionClarificationCommand(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code()
+                )
+        );
+
+        assertThrows(
+                ClarificationNotAllowedException.class,
+                () -> currentTurnService.execute(
+                        submitted.userId(),
+                        submitted.session().id(),
+                        submitted.dimension().code()
+                )
+        );
+        assertEquals(2, aiPort.callCount());
+    }
 
     @Test
     void startFollowUpContinueAndAcceptJudgement() {
